@@ -47,8 +47,8 @@
 //
 // Target arguments
 enum dm_mks_args {
-    // Add args here. The end is nice to have
-    // as it provides a max argument count.
+    DM_MKS_ARG_PASSPHRASE = 0,
+    DM_MKS_ARG_BLOCKDEV,
     DM_MKS_ARG_END
 };
 
