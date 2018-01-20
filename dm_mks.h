@@ -10,6 +10,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/device-mapper.h>
+#include <linux/bio.h>
 
 //
 // Macros

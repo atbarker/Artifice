@@ -79,6 +79,8 @@ static int
 dm_mks_map(struct dm_target *ti, struct bio *bio)
 {
     dm_mks_info("In Map!\n");
+
+    bio_endio(bio);
     return DM_MAPIO_SUBMITTED;
 }
 
@@ -117,6 +119,7 @@ static void
 dm_mks_exit(void)
 {
     dm_unregister_target(&dm_mks_target);
+    dm_mks_debug("Unregistered dm_mks\n");
 }
 
 // Module Init
