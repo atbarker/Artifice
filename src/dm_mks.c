@@ -130,5 +130,5 @@ module_exit(dm_mks_exit);
 // MODULE_AUTHOR("");
 
 // Module parameters.
-module_param(debug_enable, int, 0644);
-MODULE_PARM_DESC(debug_enable, "Set to 1 to enable debugging");
+module_param(mks_debug_mode, int, 0644);
+MODULE_PARM_DESC(mks_debug_mode, "Set to 1 to enable debugging");

@@ -1,3 +1,0 @@
-Design Document for Matryoshka File System
-
-Please put all inane ramblings into the technotes file(s).

@@ -29,7 +29,7 @@
 
 #define dm_mks_debug(fmt, ...)                                  \
     do {                                                        \
-        if (debug_enable) {                                     \
+        if (mks_debug_mode) {                                   \
             printk(KERN_DEBUG "dm-mks-debug: [%s:%d] " fmt,     \
             __func__, __LINE__,                                 \
             ##__VA_ARGS__);                                     \
@@ -57,7 +57,7 @@ enum dm_mks_args {
 // Global variables
 //
 // Debug enable
-static int debug_enable = 0;
+static int mks_debug_mode = 0;
 
 //
 // Prototypes

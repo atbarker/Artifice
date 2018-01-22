@@ -1,11 +1,13 @@
 # Matryoshka
 
 ```
-Compile: make
-Insert: sudo insmod dm-mks.ko
-        or
-        sudo insmod dm-mks.ko debug_mode=1
-Remove: sudo rmmod dm_mks
+make
+sudo insmod dm-mks.ko mks_debug_mode=1
+sudo rmmod dm_mks
 ```
 
-I am not sure why it is "dm_mks" and not "dm-mks" for removing. Will look into it.
+### Targets
+
+```
+echo 0 1024 mks "passphrase" "/dev/sdXY" | dmsetup create matryoshka
+```
