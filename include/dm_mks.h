@@ -11,6 +11,7 @@
 #include <linux/init.h>
 #include <linux/device-mapper.h>
 #include <linux/bio.h>
+#include <linux/errno.h>
 
 //
 // Macros
@@ -29,7 +30,7 @@
 
 #define dm_mks_debug(fmt, ...)                                  \
     do {                                                        \
-        if (mks_debug_mode) {                                   \
+        if (dm_mks_debug_mode) {                                \
             printk(KERN_DEBUG "dm-mks-debug: [%s:%d] " fmt,     \
             __func__, __LINE__,                                 \
             ##__VA_ARGS__);                                     \
@@ -67,7 +68,7 @@ struct dm_mks_private {
 // Global variables
 //
 // Debug enable
-static int mks_debug_mode = 0;
+static int dm_mks_debug_mode = 0;
 
 //
 // Prototypes

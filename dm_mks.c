@@ -6,7 +6,7 @@
  * 
  * License: 
  */
-#include "dm_mks.h"
+#include <dm_mks.h>
 
 // Data structure used by the device mapper framework 
 // for registering our specific callbacks.
@@ -85,10 +85,12 @@ dm_mks_dtr(struct dm_target *ti)
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
  * we need to remap to our underlying device and then submit
- * the request. 
+ * the request. This function is essentially called for any I/O 
+ * on a device for this target.
  * 
- * This function is essentially called for any I/O on a device
- * for this target.
+ * The map function is called extensively for each I/O
+ * issued upon the device mapper target. For performance 
+ * consideration, the map function is verbose only for debug builds.
  * 
  * @param   ti      Target instance for the device.
  * @param   bio     The block I/O request to be processed.
@@ -103,15 +105,13 @@ dm_mks_dtr(struct dm_target *ti)
 static int
 dm_mks_map(struct dm_target *ti, struct bio *bio)
 {   
-    /*
-     * The map function is called extensively for each I/O
-     * issued upon the device mapper target. For performance 
-     * consideration, the map function is verbose only for debug builds.
-     */
     dm_mks_debug("entering mapper\n");
 
-    // TODO: Each bio needs to be handled somehow, otherwise the kernel thread
-    // belonging to it freezes. Even shutdown wont work. 
+    /*
+     * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
+     * belonging to it freezes. Even shutdown wont work as a kernel thread is
+     * engaged.
+     */ 
     bio_endio(bio);
     
     dm_mks_debug("exiting mapper\n");
@@ -126,7 +126,7 @@ dm_mks_map(struct dm_target *ti, struct bio *bio)
  * @return  0   Target registered, no errors.
  * @return  <0  Target registration failed.
  */
-static int 
+static __init int 
 dm_mks_init(void)
 {
     int ret;
@@ -134,9 +134,8 @@ dm_mks_init(void)
     ret = dm_register_target(&dm_mks_target);
     if (ret < 0) {
         dm_mks_alert("Registration failed: %d\n", ret);
-    } else {
-        dm_mks_debug("Registered dm_mks\n");
     }
+    dm_mks_debug("Registered dm_mks\n");
 
     return ret;
 }
@@ -161,9 +160,9 @@ module_init(dm_mks_init);
 module_exit(dm_mks_exit);
 
 // Module description
-MODULE_AUTHOR("Austen Barker");
+MODULE_AUTHOR("Austen Barker, Yash Gupta");
 MODULE_LICENSE("GPL");
 
 // Module parameters.
-module_param(mks_debug_mode, int, 0644);
-MODULE_PARM_DESC(mks_debug_mode, "Set to 1 to enable debugging");
+module_param(dm_mks_debug_mode, int, 0644);
+MODULE_PARM_DESC(dm_mks_debug_mode, "Set to 1 to enable debug mode {affects performance}");
