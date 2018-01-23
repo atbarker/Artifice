@@ -50,7 +50,17 @@
 enum dm_mks_args {
     DM_MKS_ARG_PASSPHRASE = 0,
     DM_MKS_ARG_BLOCKDEV,
-    DM_MKS_ARG_END
+    DM_MKS_ARG_MAX
+};
+
+//
+// Structures
+//
+// Private data per instance
+struct dm_mks_private {
+    // Program arguments
+    char *passphrase;
+    char *phys_block_dev;
 };
 
 //

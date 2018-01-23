@@ -33,18 +33,39 @@ static struct target_type dm_mks_target = {
  * 
  * @return  0       New device instance successfully created.
  * @return  <0      Error.
- *  -EINVAL:        ...
+ *  -EINVAL:        Not enough arguments.
+ *  -ERROR:         ...
  */
 static int
 dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
-    dm_mks_info("In Constructor!\n");
+    struct dm_mks_private *this_instance = NULL;
+
+    dm_mks_info("entering constructor\n");
+    dm_mks_debug("arg count: %d\n", argc);
+    if (argc != DM_MKS_ARG_MAX) {
+        dm_mks_alert("not enough arguments\n");
+        return -EINVAL;
+    }
+
+    this_instance = kmalloc(sizeof *this_instance, GFP_KERNEL);
+    if (!this_instance) {
+        dm_mks_alert("kmalloc failure\n");
+    }
+    dm_mks_debug("this_instance: %p\n", this_instance);
+
+    // TODO: Not sure if the argv pointers survive beyond constructor.
+    this_instance->passphrase = argv[DM_MKS_ARG_PASSPHRASE];
+    this_instance->phys_block_dev = argv[DM_MKS_ARG_BLOCKDEV];
+    ti->private = this_instance;
+
+    dm_mks_info("exiting constructor\n");
     return 0;
 }
 
 /**
  * Destructor function for this target. The destructor
- * is calle when a device instance for this target is
+ * is called when a device instance for this target is
  * destroyed. It frees up the space used up for this 
  * instance.
  * 
@@ -53,7 +74,11 @@ dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 static void 
 dm_mks_dtr(struct dm_target *ti)
 {
-    dm_mks_info("In Destructor!\n");
+    struct dm_mks_private *this_instance = ti->private;
+
+    dm_mks_info("entering destructor\n");
+    kfree(this_instance);
+    dm_mks_info("exiting destructor\n");
 }
 
 /**
@@ -77,10 +102,19 @@ dm_mks_dtr(struct dm_target *ti)
  */
 static int
 dm_mks_map(struct dm_target *ti, struct bio *bio)
-{
-    dm_mks_info("In Map!\n");
+{   
+    /*
+     * The map function is called extensively for each I/O
+     * issued upon the device mapper target. For performance 
+     * consideration, the map function is verbose only for debug builds.
+     */
+    dm_mks_debug("entering mapper\n");
 
+    // TODO: Each bio needs to be handled somehow, otherwise the kernel thread
+    // belonging to it freezes. Even shutdown wont work. 
     bio_endio(bio);
+    
+    dm_mks_debug("exiting mapper\n");
     return DM_MAPIO_SUBMITTED;
 }
 
@@ -127,7 +161,8 @@ module_init(dm_mks_init);
 module_exit(dm_mks_exit);
 
 // Module description
-// MODULE_AUTHOR("");
+MODULE_AUTHOR("Austen Barker");
+MODULE_LICENSE("GPL");
 
 // Module parameters.
 module_param(mks_debug_mode, int, 0644);
