@@ -8,17 +8,6 @@
  */
 #include <dm_mks.h>
 
-// Data structure used by the device mapper framework 
-// for registering our specific callbacks.
-static struct target_type dm_mks_target = {
-    .name = DM_MKS_NAME,
-    .version = {DM_MKS_MAJOR_VER, DM_MKS_MINOR_VER, DM_MKS_PATCH_VER},
-    .module = THIS_MODULE,
-    .ctr = dm_mks_ctr,
-    .dtr = dm_mks_dtr,
-    .map = dm_mks_map
-};
-
 /**
  * Constructor function for this target. The constructor
  * is called for each new instance of a device for this
@@ -107,6 +96,17 @@ dm_mks_map(struct dm_target *ti, struct bio *bio)
 {   
     dm_mks_debug("entering mapper\n");
 
+    switch(bio_op(bio)) {
+        case REQ_OP_READ:
+            dm_mks_debug("read op\n");
+            break;
+        case REQ_OP_WRITE:
+            dm_mks_debug("write op\n");
+            break;
+        default:
+            dm_mks_debug("unknown op\n");
+    }
+
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
      * belonging to it freezes. Even shutdown wont work as a kernel thread is
@@ -117,6 +117,15 @@ dm_mks_map(struct dm_target *ti, struct bio *bio)
     dm_mks_debug("exiting mapper\n");
     return DM_MAPIO_SUBMITTED;
 }
+
+static struct target_type dm_mks_target = {
+    .name = DM_MKS_NAME,
+    .version = {DM_MKS_MAJOR_VER, DM_MKS_MINOR_VER, DM_MKS_PATCH_VER},
+    .module = THIS_MODULE,
+    .ctr = dm_mks_ctr,
+    .dtr = dm_mks_dtr,
+    .map = dm_mks_map
+};
 
 /**
  * Initialization function called when the module
@@ -155,14 +164,14 @@ dm_mks_exit(void)
     dm_mks_debug("Unregistered dm_mks\n");
 }
 
-// Module Init
 module_init(dm_mks_init);
 module_exit(dm_mks_exit);
-
-// Module description
 MODULE_AUTHOR("Austen Barker, Yash Gupta");
 MODULE_LICENSE("GPL");
 
-// Module parameters.
+//
+// Module Parameters
+//
+// dm_mks_debug_mode
 module_param(dm_mks_debug_mode, int, 0644);
 MODULE_PARM_DESC(dm_mks_debug_mode, "Set to 1 to enable debug mode {affects performance}");
