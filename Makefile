@@ -18,7 +18,7 @@ clean:
 # Hack for easier loading and unloading
 debug:
 	@sudo insmod dm_mks.ko dm_mks_debug_mode=1
-	@echo 0 1024 mks pass bug | sudo dmsetup create matryoshka
+	@echo 0 1024 mks pass test_drive | sudo dmsetup create matryoshka
 
 debug_end:
 	@sudo dmsetup remove matryoshka

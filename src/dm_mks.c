@@ -1,12 +1,11 @@
 /**
  * Target file source for the matryoshka file system.
  * 
- * Author: 
+ * Author: Yash Gupta <ygupta@ucsc.edu>, 
  * Copyright: UC Santa Cruz, SSRC
- * 
- * License: 
  */
 #include <dm_mks.h>
+#include <utilities.h>
 
 /**
  * Constructor function for this target. The constructor
@@ -28,7 +27,7 @@
 static int
 dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
-    struct dm_mks_private *this_instance = NULL;
+    struct dm_mks_private *context = NULL;
 
     dm_mks_info("entering constructor\n");
     dm_mks_debug("arg count: %d\n", argc);
@@ -37,17 +36,16 @@ dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         return -EINVAL;
     }
 
-    this_instance = kmalloc(sizeof *this_instance, GFP_KERNEL);
-    if (!this_instance) {
+    context = kmalloc(sizeof *context, GFP_KERNEL);
+    if (!context) {
         dm_mks_alert("kmalloc failure\n");
     }
-    dm_mks_debug("this_instance: %p\n", this_instance);
+    dm_mks_debug("context: %p\n", context);
 
-    // TODO: Not sure if the argv pointers survive beyond constructor.
-    this_instance->passphrase = argv[DM_MKS_ARG_PASSPHRASE];
-    this_instance->phys_block_dev = argv[DM_MKS_ARG_BLOCKDEV];
-    ti->private = this_instance;
+    strcpy(context->passphrase, argv[DM_MKS_ARG_PASSPHRASE]);
+    strcpy(context->passive_dev_name, argv[DM_MKS_ARG_PASSIVE_DEV]);
 
+    ti->private = context;
     dm_mks_info("exiting constructor\n");
     return 0;
 }
@@ -63,10 +61,10 @@ dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 static void 
 dm_mks_dtr(struct dm_target *ti)
 {
-    struct dm_mks_private *this_instance = ti->private;
+    struct dm_mks_private *context = ti->private;
 
     dm_mks_info("entering destructor\n");
-    kfree(this_instance);
+    kfree(context);
     dm_mks_info("exiting destructor\n");
 }
 
@@ -94,8 +92,10 @@ dm_mks_dtr(struct dm_target *ti)
 static int
 dm_mks_map(struct dm_target *ti, struct bio *bio)
 {   
-    dm_mks_debug("entering mapper\n");
+    struct dm_mks_private *context = ti->private;
+    void *data;
 
+    dm_mks_debug("entering mapper\n");
     switch(bio_op(bio)) {
         case REQ_OP_READ:
             dm_mks_debug("read op\n");
@@ -106,6 +106,9 @@ dm_mks_map(struct dm_target *ti, struct bio *bio)
         default:
             dm_mks_debug("unknown op\n");
     }
+
+    data = bio_data(bio);
+    hex_dump(data, bio_cur_bytes(bio));
 
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread

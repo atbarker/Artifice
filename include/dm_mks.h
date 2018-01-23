@@ -1,15 +1,14 @@
 /**
  * Target file header for the matryoshka file system.
  * 
- * Author: 
+ * Author: Yash Gupta <ygupta@ucsc.edu>, 
  * Copyright: UC Santa Cruz, SSRC
- * 
- * License: 
  */
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/device-mapper.h>
+#include <linux/stddef.h>
 #include <linux/bio.h>
 #include <linux/errno.h>
 
@@ -17,32 +16,14 @@
 // Macros
 //
 // Metadata
-#define DM_MKS_NAME         "mks"
-#define DM_MKS_MAJOR_VER    0
-#define DM_MKS_MINOR_VER    0
-#define DM_MKS_PATCH_VER    0
+#define DM_MKS_NAME             "mks"
+#define DM_MKS_MAJOR_VER        0
+#define DM_MKS_MINOR_VER        0
+#define DM_MKS_PATCH_VER        0
 
-// Printing and debugging.
-#define dm_mks_info(fmt, ...)                                   \
-    do {                                                        \
-        printk(KERN_INFO "dm-mks-info: " fmt, ##__VA_ARGS__);   \
-    } while (0)
-
-#define dm_mks_debug(fmt, ...)                                  \
-    do {                                                        \
-        if (dm_mks_debug_mode) {                                \
-            printk(KERN_DEBUG "dm-mks-debug: [%s:%d] " fmt,     \
-            __func__, __LINE__,                                 \
-            ##__VA_ARGS__);                                     \
-        }                                                       \
-    } while (0)
-
-#define dm_mks_alert(fmt, ...)                              \
-    do {                                                    \
-        printk(KERN_ALERT "dm-mks-alert: [%s:%d] " fmt,     \
-        __func__, __LINE__,                                 \
-        ##__VA_ARGS__);                                     \
-    } while (0)
+// Sizes
+#define DM_MKS_PASSPHRASE_SZ    128
+#define DM_MKS_PASSIVE_DEV_SZ   128
 
 //
 // Enumerations
@@ -50,7 +31,7 @@
 // Target arguments
 enum dm_mks_args {
     DM_MKS_ARG_PASSPHRASE = 0,
-    DM_MKS_ARG_BLOCKDEV,
+    DM_MKS_ARG_PASSIVE_DEV,
     DM_MKS_ARG_MAX
 };
 
@@ -59,9 +40,10 @@ enum dm_mks_args {
 //
 // Private data per instance
 struct dm_mks_private {
-    // Program arguments
-    char *passphrase;
-    char *phys_block_dev;
+    char passphrase[DM_MKS_PASSPHRASE_SZ];
+    char passive_dev_name[DM_MKS_PASSIVE_DEV_SZ];
+
+    struct dm_dev *passive_dev;
 };
 
 //
