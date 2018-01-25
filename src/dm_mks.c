@@ -5,7 +5,7 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_mks.h>
-#include <utilities.h>
+#include <dm_mks_utilities.h>
 
 /**
  * Constructor function for this target. The constructor
@@ -25,28 +25,28 @@
  *  -ERROR:         ...
  */
 static int
-dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
-    struct dm_mks_private *context = NULL;
+    struct mks_private *context = NULL;
 
-    dm_mks_info("entering constructor\n");
-    dm_mks_debug("arg count: %d\n", argc);
+    mks_info("entering constructor\n");
+    mks_debug("arg count: %d\n", argc);
     if (argc != DM_MKS_ARG_MAX) {
-        dm_mks_alert("not enough arguments\n");
+        mks_alert("not enough arguments\n");
         return -EINVAL;
     }
 
     context = kmalloc(sizeof *context, GFP_KERNEL);
     if (!context) {
-        dm_mks_alert("kmalloc failure\n");
+        mks_alert("kmalloc failure\n");
     }
-    dm_mks_debug("context: %p\n", context);
+    mks_debug("context: %p\n", context);
 
     strcpy(context->passphrase, argv[DM_MKS_ARG_PASSPHRASE]);
     strcpy(context->passive_dev_name, argv[DM_MKS_ARG_PASSIVE_DEV]);
 
     ti->private = context;
-    dm_mks_info("exiting constructor\n");
+    mks_info("exiting constructor\n");
     return 0;
 }
 
@@ -59,13 +59,13 @@ dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
  * @param   ti      Target instance to be destroyed.
  */ 
 static void 
-dm_mks_dtr(struct dm_target *ti)
+mks_dtr(struct dm_target *ti)
 {
-    struct dm_mks_private *context = ti->private;
+    struct mks_private *context = ti->private;
 
-    dm_mks_info("entering destructor\n");
+    mks_info("entering destructor\n");
     kfree(context);
-    dm_mks_info("exiting destructor\n");
+    mks_info("exiting destructor\n");
 }
 
 /**
@@ -90,25 +90,30 @@ dm_mks_dtr(struct dm_target *ti)
  *                      be resubmitted.
  */
 static int
-dm_mks_map(struct dm_target *ti, struct bio *bio)
+mks_map(struct dm_target *ti, struct bio *bio)
 {   
-    struct dm_mks_private *context = ti->private;
+    struct mks_private *context = ti->private;
     void *data;
+    size_t data_len;
 
-    dm_mks_debug("entering mapper\n");
+    mks_debug("entering mapper\n");
     switch(bio_op(bio)) {
         case REQ_OP_READ:
-            dm_mks_debug("read op\n");
+            mks_debug("read op\n");
             break;
         case REQ_OP_WRITE:
-            dm_mks_debug("write op\n");
+            mks_debug("write op\n");
             break;
         default:
-            dm_mks_debug("unknown op\n");
+            mks_debug("unknown op\n");
     }
 
     data = bio_data(bio);
-    hex_dump(data, bio_cur_bytes(bio));
+    data_len = bio_cur_bytes(bio);
+    mks_debug("data: %p | data_len: %ld\n", data, data_len);
+
+    ((u8*)data)[0] = 10;
+    print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, bio_cur_bytes(bio), 1);
 
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
@@ -117,17 +122,17 @@ dm_mks_map(struct dm_target *ti, struct bio *bio)
      */ 
     bio_endio(bio);
     
-    dm_mks_debug("exiting mapper\n");
+    mks_debug("exiting mapper\n");
     return DM_MAPIO_SUBMITTED;
 }
 
-static struct target_type dm_mks_target = {
+static struct target_type mks_target = {
     .name = DM_MKS_NAME,
     .version = {DM_MKS_MAJOR_VER, DM_MKS_MINOR_VER, DM_MKS_PATCH_VER},
     .module = THIS_MODULE,
-    .ctr = dm_mks_ctr,
-    .dtr = dm_mks_dtr,
-    .map = dm_mks_map
+    .ctr = mks_ctr,
+    .dtr = mks_dtr,
+    .map = mks_map
 };
 
 /**
@@ -139,15 +144,15 @@ static struct target_type dm_mks_target = {
  * @return  <0  Target registration failed.
  */
 static __init int 
-dm_mks_init(void)
+mks_init(void)
 {
     int ret;
 
-    ret = dm_register_target(&dm_mks_target);
+    ret = dm_register_target(&mks_target);
     if (ret < 0) {
-        dm_mks_alert("Registration failed: %d\n", ret);
+        mks_alert("Registration failed: %d\n", ret);
     }
-    dm_mks_debug("Registered dm_mks\n");
+    mks_debug("Registered dm_mks\n");
 
     return ret;
 }
@@ -161,20 +166,20 @@ dm_mks_init(void)
  * tree.
  */
 static void
-dm_mks_exit(void)
+mks_exit(void)
 {
-    dm_unregister_target(&dm_mks_target);
-    dm_mks_debug("Unregistered dm_mks\n");
+    dm_unregister_target(&mks_target);
+    mks_debug("Unregistered dm_mks\n");
 }
 
-module_init(dm_mks_init);
-module_exit(dm_mks_exit);
+module_init(mks_init);
+module_exit(mks_exit);
 MODULE_AUTHOR("Austen Barker, Yash Gupta");
 MODULE_LICENSE("GPL");
 
 //
 // Module Parameters
 //
-// dm_mks_debug_mode
-module_param(dm_mks_debug_mode, int, 0644);
-MODULE_PARM_DESC(dm_mks_debug_mode, "Set to 1 to enable debug mode {affects performance}");
+// mks_debug_mode
+module_param(mks_debug_mode, int, 0644);
+MODULE_PARM_DESC(mks_debug_mode, "Set to 1 to enable debug mode {affects performance}");

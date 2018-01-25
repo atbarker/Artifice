@@ -5,46 +5,49 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <linux/stddef.h>
+#include <linux/bio.h>
+#include <linux/completion.h>
+#include <linux/mm_types.h>
+
+#ifndef _DM_MKS_UTILITIES_H_
+#define _DM_MKS_UTILITIES_H_
 
 //
 // Macros
 //
 // Printing and debugging.
-#define dm_mks_info(fmt, ...)                                   \
+#define mks_info(fmt, ...)                                      \
     do {                                                        \
         printk(KERN_INFO "dm-mks-info: " fmt, ##__VA_ARGS__);   \
     } while (0)
 
-#define dm_mks_debug(fmt, ...)                                  \
+#define mks_debug(fmt, ...)                                     \
     do {                                                        \
-        if (dm_mks_debug_mode) {                                \
+        if (mks_debug_mode) {                                   \
             printk(KERN_DEBUG "dm-mks-debug: [%s:%d] " fmt,     \
             __func__, __LINE__,                                 \
             ##__VA_ARGS__);                                     \
         }                                                       \
     } while (0)
 
-#define dm_mks_alert(fmt, ...)                              \
+#define mks_alert(fmt, ...)                                 \
     do {                                                    \
         printk(KERN_ALERT "dm-mks-alert: [%s:%d] " fmt,     \
         __func__, __LINE__,                                 \
         ##__VA_ARGS__);                                     \
     } while (0)
 
-/**
- * Perform a simple hexdump of data.
- * TODO: printk creates a new line. Needs buffering.
- * 
- * @param   data    Data to be examined.
- * @param   length  Length of the data.
- */
-static inline void
-hex_dump(u8 *data, u32 length)
-{
-    u32 i;
+//
+// Global variables
+//
+// Debug enable
+static int mks_debug_mode = 0;
 
-    dm_mks_debug("performing hexdump: %p\n", data);
-    for (i = 0; i < length; i++) {
-        printk(KERN_INFO "%2X ", data[i]);
-    }
-}
+//
+// Prototypes
+//
+void mks_blkdev_callback(struct bio *bio);
+void mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u32 size);
+void mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u32 size);
+
+#endif

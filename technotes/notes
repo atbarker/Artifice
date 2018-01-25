@@ -1,3 +1,7 @@
 Reading a disk:
 https://stackoverflow.com/questions/12720420/how-to-read-a-sector-using-a-bio-request-in-linux-kernel#17942540
 
+Hexdump in kernel:
+print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, bio_cur_bytes(bio), 1);
+--> Fields we care about are the 2nd last and 3rd last, which is the length and pointer respectively.
+

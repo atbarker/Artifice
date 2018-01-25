@@ -12,6 +12,9 @@
 #include <linux/bio.h>
 #include <linux/errno.h>
 
+#ifndef _DM_MKS_H_
+#define _DM_MKS_H_
+
 //
 // Macros
 //
@@ -29,7 +32,7 @@
 // Enumerations
 //
 // Target arguments
-enum dm_mks_args {
+enum mks_args {
     DM_MKS_ARG_PASSPHRASE = 0,
     DM_MKS_ARG_PASSIVE_DEV,
     DM_MKS_ARG_MAX
@@ -39,7 +42,7 @@ enum dm_mks_args {
 // Structures
 //
 // Private data per instance
-struct dm_mks_private {
+struct mks_private {
     char passphrase[DM_MKS_PASSPHRASE_SZ];
     char passive_dev_name[DM_MKS_PASSIVE_DEV_SZ];
 
@@ -47,14 +50,10 @@ struct dm_mks_private {
 };
 
 //
-// Global variables
-//
-// Debug enable
-static int dm_mks_debug_mode = 0;
-
-//
 // Prototypes
 //
-static int dm_mks_ctr(struct dm_target *ti, unsigned int argc, char **argv);
-static void dm_mks_dtr(struct dm_target *ti);
-static int dm_mks_map(struct dm_target *ti, struct bio *bio);
+static int mks_ctr(struct dm_target *ti, unsigned int argc, char **argv);
+static void mks_dtr(struct dm_target *ti);
+static int mks_map(struct dm_target *ti, struct bio *bio);
+
+#endif
