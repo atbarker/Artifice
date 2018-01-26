@@ -40,7 +40,7 @@ enum mks_args {
 };
 
 // Supported file systems
-enum mks_fs_supported {
+enum mks_fs {
     DM_MKS_FS_FAT32 = 0,
     DM_MKS_FS_MAX,
     DM_MKS_FS_NONE

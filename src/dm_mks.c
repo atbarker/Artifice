@@ -6,6 +6,7 @@
  */
 #include <dm_mks.h>
 #include <dm_mks_utilities.h>
+#include <dm_mks_lib.h>
 
 /**
  * Constructor function for this target. The constructor
@@ -164,7 +165,7 @@ static int
 mks_detect_fs(struct block_device *device)
 {
     const sector_t start_sector = 0;
-    const u32 read_length = 4096;
+    const u32 read_length = 1 << PAGE_SHIFT;
 
     struct page *page;
     void *data;
@@ -185,10 +186,15 @@ mks_detect_fs(struct block_device *device)
     }
     print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, read_length, 1);
 
-    // TODO: Tap into filesystem libraries to determine filesystem.
+    // Add filesystem support here as more else...if blocks.
+    if (mks_fat32_detect(data) == DM_MKS_TRUE) {
+        ret = DM_MKS_FS_FAT32;
+    } else {
+        ret = DM_MKS_FS_NONE;
+    }
 
-    mks_debug("returning from mks_detect_fs\n");
-    return DM_MKS_FS_FAT32;
+    mks_debug("returning from mks_detect_fs {%d}\n", ret);
+    return ret;
 }
 
 /** ----------------------------------------------------------- DO-NOT-CROSS ------------------------------------------------------------------- **/

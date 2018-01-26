@@ -57,5 +57,4 @@ static int mks_debug_mode = 0;
 int mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u32 size);
 int mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u32 size);
 
-
 #endif
