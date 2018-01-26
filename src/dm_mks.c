@@ -12,8 +12,12 @@
  * is called for each new instance of a device for this
  * target. To create a new device, 'dmsetup create' is used.
  * 
- * The function allocates required structures and sets the
- * private context variable for the target instance.
+ * The constructor is used to parse the program arguments
+ * and detect the file system in effect on the passive
+ * block device.
+ * 
+ * TODO: This function returns without clean up. Needs
+ * goto's.
  * 
  * @param   ti      Target instance for new device.
  * @param   argc    Argument count passed while creating device.
@@ -22,11 +26,13 @@
  * @return  0       New device instance successfully created.
  * @return  <0      Error.
  *  -EINVAL:        Not enough arguments.
+ *  -EIO:           Could not open passive device.
  *  -ERROR:         ...
  */
 static int
 mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
+    int ret;
     struct mks_private *context = NULL;
 
     mks_info("entering constructor\n");
@@ -37,15 +43,36 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     }
 
     context = kmalloc(sizeof *context, GFP_KERNEL);
-    if (!context) {
-        mks_alert("kmalloc failure\n");
+    if (IS_ERR(context)) {
+        ret = PTR_ERR(context);
+        mks_alert("kmalloc failure {%d}\n", ret);
     }
     mks_debug("context: %p\n", context);
+    ti->private = context;
 
     strcpy(context->passphrase, argv[DM_MKS_ARG_PASSPHRASE]);
     strcpy(context->passive_dev_name, argv[DM_MKS_ARG_PASSIVE_DEV]);
 
-    ti->private = context;
+    ret = dm_get_device(ti, context->passive_dev_name, dm_table_get_mode(ti->table), &context->passive_dev);
+    if (ret) {
+        mks_alert("dm_get_device failure {%d}\n", ret);
+        return ret;
+    }
+
+    ret = mks_detect_fs(context->passive_dev->bdev);
+    if (ret < 0) {
+        mks_alert("mks_detect_fs failure {%d}\n", ret);
+        return ret;
+    }
+    switch (ret) {
+        case DM_MKS_FS_FAT32:
+            mks_debug("detected FAT32\n");
+            break;
+        case DM_MKS_FS_NONE:
+            mks_debug("detected nothing\n");
+            break;
+    }
+
     mks_info("exiting constructor\n");
     return 0;
 }
@@ -93,9 +120,8 @@ static int
 mks_map(struct dm_target *ti, struct bio *bio)
 {   
     struct mks_private *context = ti->private;
-    void *data;
-    size_t data_len;
 
+    __mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
     switch(bio_op(bio)) {
         case REQ_OP_READ:
@@ -108,13 +134,6 @@ mks_map(struct dm_target *ti, struct bio *bio)
             mks_debug("unknown op\n");
     }
 
-    data = bio_data(bio);
-    data_len = bio_cur_bytes(bio);
-    mks_debug("data: %p | data_len: %ld\n", data, data_len);
-
-    ((u8*)data)[0] = 10;
-    print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, bio_cur_bytes(bio), 1);
-
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
      * belonging to it freezes. Even shutdown wont work as a kernel thread is
@@ -123,8 +142,56 @@ mks_map(struct dm_target *ti, struct bio *bio)
     bio_endio(bio);
     
     mks_debug("exiting mapper\n");
+    __mks_set_debug(DM_MKS_DEBUG_ENABLE);
+
     return DM_MAPIO_SUBMITTED;
 }
+
+/**
+ * A procedure to detect the existing file system on a block
+ * device or a block device partition.
+ * 
+ * This prodecure taps into library functions provided by
+ * supported filesystems to determine if it is supported.
+ * 
+ * @param   device      Block device to look at.
+ * 
+ * @return  enum
+ *  DM_MKS_FS_FAT32     Block Device is formatted as FAT32
+ *  DM_MKS_FS_NONE      Block Device does not have a supported filesystem.
+ */
+static int 
+mks_detect_fs(struct block_device *device)
+{
+    const sector_t start_sector = 0;
+    const u32 read_length = 4096;
+
+    struct page *page;
+    void *data;
+    int ret;
+
+    page = alloc_page(GFP_KERNEL);
+    if (IS_ERR(page)) {
+        ret = PTR_ERR(page);
+        mks_alert("alloc_page failure {%d}\n", ret);
+        return ret;
+    }
+    data = page_address(page);
+
+    ret = mks_read_blkdev(device, page, start_sector, read_length);
+    if (ret) {
+        mks_alert("mks_read_blkdev failure {%d}\n", ret);
+        return ret;
+    }
+    print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, read_length, 1);
+
+    // TODO: Tap into filesystem libraries to determine filesystem.
+
+    mks_debug("returning from mks_detect_fs\n");
+    return DM_MKS_FS_FAT32;
+}
+
+/** ----------------------------------------------------------- DO-NOT-CROSS ------------------------------------------------------------------- **/
 
 static struct target_type mks_target = {
     .name = DM_MKS_NAME,
@@ -183,3 +250,5 @@ MODULE_LICENSE("GPL");
 // mks_debug_mode
 module_param(mks_debug_mode, int, 0644);
 MODULE_PARM_DESC(mks_debug_mode, "Set to 1 to enable debug mode {affects performance}");
+
+/** -------------------------------------------------------------------------------------------------------------------------------------------- **/

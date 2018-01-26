@@ -16,6 +16,14 @@
 // Macros
 //
 // Printing and debugging.
+#define DM_MKS_DEBUG_ENABLE     1
+#define DM_MKS_DEBUG_DISABLE    0
+#define __mks_get_debug()       mks_debug_mode
+#define __mks_set_debug(mode)                                   \
+    {                                                           \
+        mks_debug_mode = mode;                                  \
+    }
+
 #define mks_info(fmt, ...)                                      \
     do {                                                        \
         printk(KERN_INFO "dm-mks-info: " fmt, ##__VA_ARGS__);   \
@@ -46,8 +54,8 @@ static int mks_debug_mode = 0;
 //
 // Prototypes
 //
-void mks_blkdev_callback(struct bio *bio);
-void mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u32 size);
-void mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u32 size);
+int mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u32 size);
+int mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u32 size);
+
 
 #endif
