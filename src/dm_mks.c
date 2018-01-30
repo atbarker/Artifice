@@ -173,6 +173,7 @@ mks_detect_fs(struct block_device *device)
     void *data;
     int ret;
 
+    //This is never freed TODO
     page = alloc_page(GFP_KERNEL);
     if (IS_ERR(page)) {
         ret = PTR_ERR(page);
