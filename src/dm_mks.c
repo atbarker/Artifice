@@ -51,6 +51,8 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     mks_debug("context: %p\n", context);
     ti->private = context;
 
+    //TODO: remove strcpy
+    //large enough string will overwrite kernel memory
     strcpy(context->passphrase, argv[DM_MKS_ARG_PASSPHRASE]);
     strcpy(context->passive_dev_name, argv[DM_MKS_ARG_PASSIVE_DEV]);
 
