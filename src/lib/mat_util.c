@@ -25,6 +25,7 @@ full_pread(int fd, void *buf, size_t count, off_t offset)
 	     bytes_remaining -= bytes_read, buf += bytes_read,
 	     	offset += bytes_read)
 	{
+		
 		bytes_read = pread(fd, buf, bytes_remaining, offset);
 		if (bytes_read <= 0) {
 			if (bytes_read == 0)

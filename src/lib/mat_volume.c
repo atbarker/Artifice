@@ -6,13 +6,19 @@
  * The Superblock that contains hashes of the other blocks is different, see design for details
  */
 
-#include <errno.h>
+#include <linux/errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
+
+#include <linux/gfp.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/slab.h>
+#include <linux/kmalloc.h>
 
 #include "mat_util.h"
 #include "mat_volume.h"
@@ -353,7 +359,8 @@ fat_map_fat(struct fat_volume *vol, int fd, int mount_flags)
 	prot = PROT_READ;
 	if (mount_flags & FAT_MOUNT_FLAG_READWRITE)
 		prot |= PROT_WRITE;
-
+	
+	//mmap in the kernel TODO
 	ptr = mmap(NULL, fat_aligned_size_bytes, prot, MAP_PRIVATE,
 		   fd, fat_aligned_offset);
 	
@@ -363,8 +370,8 @@ fat_map_fat(struct fat_volume *vol, int fd, int mount_flags)
 	uint32_t *p = vol->fat_map;
 	int i, j; 
 	int cluster_number = 0;
-	uint32_t *empty_clusters = malloc(fat_aligned_size_bytes);
-	uint8_t *cluster_contents = malloc(1);
+	uint32_t *empty_clusters = kmalloc(fat_aligned_size_bytes, GFP_KERNEL);
+	uint8_t *cluster_contents = kmalloc(1, GFP_KERNEL);
 
 	for (i = 0; i < 20; i++){
 		fprintf(stderr, "cluster: %d status: %" PRIu32 "\n", i, p[i]);
@@ -409,7 +416,7 @@ fat_mount(const char *volume, int mount_flags)
 
 	DEBUG("Mounting FAT volume \"%s\"", volume);
 
-	vol = calloc(1, sizeof(struct fat_volume));
+	vol = kmalloc(1*sizeof(struct fat_volume), GFP_KERNEL);
 	if (!vol)
 		goto out;
 
@@ -472,9 +479,10 @@ fat_unmount(struct fat_volume *vol)
 	DEBUG("Unmounting FAT volume");
 
 	ret = close(vol->fd);
+	//mmap, figure this out, does this work in kernel
 	munmap(vol->fat_map, (size_t)vol->sectors_per_fat << vol->sector_order);
 	//fat_destroy_file_tree(&vol->root);
-	free(vol);
+	kfree(vol);
 	return ret;
 }
 
