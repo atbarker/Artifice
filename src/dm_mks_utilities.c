@@ -67,7 +67,7 @@ mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u
         mks_alert("bio_alloc failure {%d}\n", ret);
         return ret;
     }
-    bio->bi_bdev = bdev;
+    bio->bi_disk = bdev->bd_disk;
     bio->bi_iter.bi_sector = sector;
     bio->bi_private = &event;
     bio->bi_end_io = mks_blkdev_callback;
@@ -113,7 +113,7 @@ mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u
         mks_alert("bio_alloc failure {%d}\n", ret);
         return ret;
     }
-    bio->bi_bdev = bdev;
+    bio->bi_disk = bdev->bd_disk;
     bio->bi_iter.bi_sector = sector;
     bio->bi_private = &event;
     bio->bi_end_io = mks_blkdev_callback;
