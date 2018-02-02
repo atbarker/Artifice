@@ -62,12 +62,12 @@ struct fat_volume{
 /*Extended BIOS parameter block for FAT32 */
 struct fat32_ebpb{
 
-	le32 sec_fat;               //sectors per fat
-	le16 drive_desc;            //drive description
-	le16 version;               //version
-	le32 root_start_clust;      //starting cluster for the root dir.
-	le16 fs_info_sec;           //info sector
-	le16 alt_boot_sec;          //alternate boot sector
+	__le32 sec_fat;               //sectors per fat
+	__le16 drive_desc;            //drive description
+	__le16 version;               //version
+	__le32 root_start_clust;      //starting cluster for the root dir.
+	__le16 fs_info_sec;           //info sector
+	__le16 alt_boot_sec;          //alternate boot sector
 	u8 reserved[12];
 
 } __attribute__((packed));
@@ -81,20 +81,20 @@ struct fat_boot_sector{
 	char oem_name[8];
 
 	//dos 2.0 parameter block (13 bytes)
-	le16 bytes_sec;             //bytes per sec
+	__le16 bytes_sec;             //bytes per sec
 	u8 sec_cluster;             //sectors per cluster
-	le16 res_sec;               //reserved sectors
+	__le16 res_sec;               //reserved sectors
 	u8 num_tables;		    //number of allocation tables
-	le16 mat_root_ent;          //maximum root entries
-	le16 total_sectors;         //total sectors on disk
+	__le16 mat_root_ent;          //maximum root entries
+	__le16 total_sectors;         //total sectors on disk
         u8 media_desc;              //media descriptor
-	le16 sec_fat;               //sectors per fat
+	__le16 sec_fat;               //sectors per fat
 
 	//dos 3.31 parameter block (12 bytes)
-	le16 sec_track;             //sectors on each track
-	le16 num_heads;             //number of heads
-	le32 hidden_sec;            //number of hidden sectors
-	le32 total_sec_32;          //total sectors (32 bit number)
+	__le16 sec_track;             //sectors on each track
+	__le16 num_heads;             //number of heads
+	__le32 hidden_sec;            //number of hidden sectors
+	__le32 total_sec_32;          //total sectors (32 bit number)
 
 	//bios parameter block (FAT32, no 16 or 12 support)
 	//TODO: clean this up
