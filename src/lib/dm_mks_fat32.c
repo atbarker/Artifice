@@ -9,9 +9,9 @@
  */
 #include <dm_mks_lib.h>
 #include <linux/kernel.h>
-#include <linux/kmalloc.h>
 #include <linux/errno.h>
-
+#include <linux/types.h>
+#include <linux/slab.h>
 
 //This is hell incarnate, all the information about a FAT volume
 struct fat_volume{
@@ -57,7 +57,7 @@ struct fat_volume{
 	char volume_label[11+1];    //volume label
 	char fs_type[8 + 1];        //FS type
 
-} __attribute__((packed));
+};
 
 /*Extended BIOS parameter block for FAT32 */
 struct fat32_ebpb{
@@ -70,6 +70,15 @@ struct fat32_ebpb{
 	__le16 alt_boot_sec;          //alternate boot sector
 	u8 reserved[12];
 
+} __attribute__((packed));
+
+struct nonfat32_ebpb{
+	u8 physical_drive_num;
+	u8 reserved;
+	u8 extended_boot_sig;
+	__le32 volume_id;
+	char volume_label[11];
+	char fs_type[8];
 } __attribute__((packed));
 
 /*FAT32 boot sector, exactly how it appears on your disk*/
@@ -85,7 +94,7 @@ struct fat_boot_sector{
 	u8 sec_cluster;             //sectors per cluster
 	__le16 res_sec;               //reserved sectors
 	u8 num_tables;		    //number of allocation tables
-	__le16 mat_root_ent;          //maximum root entries
+	__le16 max_root_ent;          //maximum root entries
 	__le16 total_sectors;         //total sectors on disk
         u8 media_desc;              //media descriptor
 	__le16 sec_fat;               //sectors per fat
@@ -107,6 +116,13 @@ struct fat_boot_sector{
 	} ebpb;
 } __attribute__((packed));
 
+
+//Kill this
+inline unsigned long bsr(unsigned long n){
+	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
+	return n;
+}
+
 /**
  * Detect presence of a FAT32 filesystem. This is done by
  * sifting through the binary data and looking for FAT32
@@ -126,18 +142,122 @@ mks_fat32_detect(const void *data)
     return DM_MKS_TRUE;
 }
 
-extern struct fs_data * mks_fat32_parse(){
+//what is le16 to cpu
+int fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
+	vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
+	vol->sector_order = bsr(vol->bytes_sector);
 
+	vol->sec_cluster = boot_sec->sec_cluster;
+	vol->sec_cluster_order = bsr(vol->sec_cluster);
+	vol->cluster_order = vol->sector_order + vol->sec_cluster_order;
+	vol->reserved = le16_to_cpu(boot_sec->res_sec);
+	vol->tables = boot_sec->num_tables;
+	vol->root_entries = le16_to_cpu(boot_sec->max_root_ent);
+	vol->total_sec = le16_to_cpu(boot_sec->total_sectors);
+	vol->media_desc = boot_sec->media_desc;
+	vol->sec_fat = le16_to_cpu(boot_sec->sec_fat);
+	return 0;
+}
+
+int fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
+	vol->sec_track = le16_to_cpu(boot_sec->sec_track);
+	vol->num_heads = le16_to_cpu(boot_sec->num_heads);
+	vol->hidden_sec = le32_to_cpu(boot_sec->hidden_sec);
+	if( vol->total_sec == 0){
+		vol->total_sec = le32_to_cpu(boot_sec->total_sec_32);
+	}
+	return 0;
+}
+
+int fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb){
+	vol->phys_driv_num = ebpb->physical_drive_num;
+	vol->ext_boot_sig = ebpb->extended_boot_sig;
+	vol->vol_id = le32_to_cpu(ebpb->volume_id);
+	memcpy(vol->volume_label, ebpb->volume_label, sizeof(ebpb->volume_label));
+	memcpy(vol->fs_type, ebpb->fs_type, sizeof(ebpb->fs_type));
+	//debug here
+	return 0;
+}
+
+int fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb){
+	
+	if (le32_to_cpu(ebpb->sec_fat) != 0){
+		vol->sec_fat = le32_to_cpu(ebpb->sec_fat);
+		if((((size_t)vol->sec_fat << vol->sector_order) >> vol->sector_order) != (size_t)vol->sec_fat){
+		return -1;
+
+		}
+
+	}
+	vol->driv_desc = le16_to_cpu(ebpb->drive_desc);
+	vol->version = le16_to_cpu(ebpb->version);
+	vol->root_dir_start = le32_to_cpu(ebpb->root_start_clust);
+	vol->fs_info_sec = le16_to_cpu(ebpb->fs_info_sec);
+	vol->alt_boot_sec = le16_to_cpu(ebpb->alt_boot_sec);
+	return 0;
+}
+
+int read_boot_sector(struct fat_volume *vol, const void *data){
+
+	u8 buf[512];
+	const struct fat_boot_sector *boot_sec = kmalloc(512, GFP_KERNEL);
+	int ret;
+	u32 num_data_sectors;
+
+	//copy first 512 bytes into the fat_boot_sector
+	memcpy(boot_sec, data, 512);
+
+	memcpy(vol->oem_name, boot_sec->oem_name, sizeof(boot_sec->oem_name));
+
+	//TODO remove trailing spaces from vol->oem_name
+	
+	//ret = fat_read_dos_2_0_bpb(vol, boot_sec);
+
+	//ret = fat_read_dos_3_31_bpb(vol, boot_sec);
+
+	//if(vol->type == 32){
+		//ret = fat_read_fat32_ebpb(vol);
+	//}
+
+
+	return 0;
+}
+
+int fat_map(struct fat_volume *vol, const void *data){
+	
+	return 0;
+}
+
+struct fs_data * mks_fat32_parse(const void *data){
+
+	struct fat_volume *vol = NULL;
+	struct fs_data *parameters = NULL;
+	int ret;
+	//allocate stuff;
+	vol = kmalloc(sizeof(struct fat_volume), GFP_KERNEL);
+	parameters = kmalloc(sizeof(struct fs_data), GFP_KERNEL);
+	
+	//read the boot sector
+	ret = read_boot_sector(vol, data);
+
+	ret = fat_map(vol, data);
+
+	//set the data start offset
+	vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + 
+				      (vol->root_entries >> (vol->sector_order - 5))) 
+					<< vol->sector_order;
+	return parameters;
 }
 
 extern int fat_unmount(struct fat_volume *vol){
 
+	return 0;
 }
 
 extern u32 fat_next_cluster(const struct fat_volume *vol, u32 cluster){
-
+	return 0;
 }
 
 int fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
-
+	return 0;
 }

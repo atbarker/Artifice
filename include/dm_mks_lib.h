@@ -26,12 +26,12 @@ struct fs_data{
         u16 bytes_sec; //bytes per sector, usually 512
 	u8 sec_block; //sectors per block
 	u32 bytes_block; //number of bytes per block
-}
+};
 //
 // Filesystem support
 //
 mks_boolean_t mks_fat32_detect(const void *data);
-mks_boolean_t mks_ext4_detect(const void *data);
-mks_boolean_t mks_ntfs_detect(const void *data);
+//mks_boolean_t mks_ext4_detect(const void *data);
+//mks_boolean_t mks_ntfs_detect(const void *data);
 
 #endif
