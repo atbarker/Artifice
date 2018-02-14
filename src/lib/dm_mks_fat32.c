@@ -143,33 +143,56 @@ mks_fat32_detect(const void *data)
 }
 
 //what is le16 to cpu
-int fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
+static int fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
 	vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
 	vol->sector_order = bsr(vol->bytes_sector);
-
+	if(!is_power_of_2(vol->bytes_sector) || vol->sector_order < 5 || vol->sector_order > 12){
+		//error out of this function
+		goto out_invalid;
+	}
 	vol->sec_cluster = boot_sec->sec_cluster;
 	vol->sec_cluster_order = bsr(vol->sec_cluster);
+	if (!is_power_of_2(vol->sec_cluster) || vol->sec_cluster_order > 7){
+		//error out
+		goto out_invalid;
+	}
 	vol->cluster_order = vol->sector_order + vol->sec_cluster_order;
+
 	vol->reserved = le16_to_cpu(boot_sec->res_sec);
+
 	vol->tables = boot_sec->num_tables;
+	if(vol->tables != 1 && vol->tables != 2){
+		//error out, number of tables
+		goto out_invalid;
+	}	
+
 	vol->root_entries = le16_to_cpu(boot_sec->max_root_ent);
+	if(vol->root_entries == 0){
+		//then this is a FAT32 volume
+	}else{
+		
+	}
 	vol->total_sec = le16_to_cpu(boot_sec->total_sectors);
 	vol->media_desc = boot_sec->media_desc;
 	vol->sec_fat = le16_to_cpu(boot_sec->sec_fat);
 	return 0;
+out_invalid:
+	return -1;
 }
 
-int fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
+static int fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
 	vol->sec_track = le16_to_cpu(boot_sec->sec_track);
 	vol->num_heads = le16_to_cpu(boot_sec->num_heads);
 	vol->hidden_sec = le32_to_cpu(boot_sec->hidden_sec);
 	if( vol->total_sec == 0){
 		vol->total_sec = le32_to_cpu(boot_sec->total_sec_32);
+	}else {
+		//16 bit sectors
 	}
 	return 0;
 }
 
-int fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb){
+static int fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb){
 	vol->phys_driv_num = ebpb->physical_drive_num;
 	vol->ext_boot_sig = ebpb->extended_boot_sig;
 	vol->vol_id = le32_to_cpu(ebpb->volume_id);
@@ -179,27 +202,44 @@ int fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *e
 	return 0;
 }
 
-int fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb){
+static int fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb){
 	
 	if (le32_to_cpu(ebpb->sec_fat) != 0){
 		vol->sec_fat = le32_to_cpu(ebpb->sec_fat);
 		if((((size_t)vol->sec_fat << vol->sector_order) >> vol->sector_order) != (size_t)vol->sec_fat){
-		return -1;
-
+			//error out
+			goto out_invalid;
 		}
 
 	}
 	vol->driv_desc = le16_to_cpu(ebpb->drive_desc);
 	vol->version = le16_to_cpu(ebpb->version);
+	if(vol->version != 0){
+		//error
+		goto out_invalid;
+	}
 	vol->root_dir_start = le32_to_cpu(ebpb->root_start_clust);
+	if(vol->root_dir_start == 0){
+		//invalid position for starting cluster
+		goto out_invalid;
+	}
 	vol->fs_info_sec = le16_to_cpu(ebpb->fs_info_sec);
 	vol->alt_boot_sec = le16_to_cpu(ebpb->alt_boot_sec);
+	if(vol->fs_info_sec == 0xffff){
+		vol->fs_info_sec = 0;
+	}
+	if(vol->fs_info_sec != 0 && vol->sector_order < 9){
+		goto out_invalid;
+	}
 	return 0;
+out_invalid:
+	return -1;
+
 }
 
 int read_boot_sector(struct fat_volume *vol, const void *data){
 
-	u8 buf[512];
+	//u8 buf[512];
 	const struct fat_boot_sector *boot_sec = kmalloc(512, GFP_KERNEL);
 	int ret;
 	u32 num_data_sectors;
@@ -211,20 +251,66 @@ int read_boot_sector(struct fat_volume *vol, const void *data){
 
 	//TODO remove trailing spaces from vol->oem_name
 	
-	//ret = fat_read_dos_2_0_bpb(vol, boot_sec);
+	ret = fat_read_dos_2_0_bpb(vol, boot_sec);
+	if(ret){
+		return ret;
+	}
+	ret = fat_read_dos_3_31_bpb(vol, boot_sec);
+	if(ret){
+		return ret;
+	}
 
-	//ret = fat_read_dos_3_31_bpb(vol, boot_sec);
+        ret = fat_read_fat32_ebpb(vol, &boot_sec->ebpb.fat32.fat32_ebpb);
+	if(ret){
+		return ret;
+	}
+	ret = fat_read_nonfat32_ebpb(vol, &boot_sec->ebpb.nonfat32_ebpb);
 
-	//if(vol->type == 32){
-		//ret = fat_read_fat32_ebpb(vol);
-	//}
-
-
+	num_data_sectors = vol->total_sec - vol->reserved - ((vol->root_entries << 5) >> vol->sector_order);
+	vol->num_data_clusters = num_data_sectors >> vol->sec_cluster_order;
 	return 0;
 }
 
-int fat_map(struct fat_volume *vol, const void *data){
+static int fat_map(struct fat_volume *vol, void *data){
+	//long page_size;
+	size_t fat_size_bytes;
+	size_t fat_aligned_size_bytes;
+	off_t fat_offset;
+	off_t fat_aligned_offset;
+
+	//figure out how to get this in the kernel
+	/*page_size = sysconf(_SC_PAGESIZE);*/
+	fat_offset = (off_t)vol->reserved << vol->sector_order;
+
+	//do this instead
+	//fat_aligned_offset = fat_offset & ~(page_size -1);
+	fat_aligned_offset = fat_offset;
 	
+	fat_size_bytes = (size_t)vol->sec_fat << vol->sector_order;
+	fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
+	if(fat_aligned_size_bytes > 4096){
+		//will have to read some more
+	}
+	
+	//check the aligned size for errors
+	
+	//This won't work figure out how to do this with the data object
+	//prot = PROT_READ;
+	//ptr = mmap(NULL, fat_aligned_size_bytes, prot, MAP_PRIVATE, fd, fat_aligned_offset);
+	vol->fat_map = data + (fat_offset - fat_aligned_offset);
+
+	//should work
+	uint32_t *p = vol->fat_map;
+	int i;
+	int cluster_number = 0;
+	uint32_t *empty_clusters = kmalloc(fat_aligned_size_bytes, GFP_KERNEL);
+	//uint8_t *cluster_contents = kmalloc(1, GFP_KERNEL);
+	for (i=0; i<vol->num_data_clusters; i++){
+		if(p[i] == 0){
+			empty_clusters[cluster_number] = i;
+		}
+	}
+	vol->empty_clusters = empty_clusters;
 	return 0;
 }
 
