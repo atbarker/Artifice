@@ -47,14 +47,13 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     if (IS_ERR(context)) {
         ret = PTR_ERR(context);
         mks_alert("kmalloc failure {%d}\n", ret);
+        return ret;
     }
     mks_debug("context: %p\n", context);
     ti->private = context;
 
-    //TODO: remove strcpy
-    //large enough string will overwrite kernel memory
-    strcpy(context->passphrase, argv[DM_MKS_ARG_PASSPHRASE]);
-    strcpy(context->passive_dev_name, argv[DM_MKS_ARG_PASSIVE_DEV]);
+    strncpy(context->passphrase, argv[DM_MKS_ARG_PASSPHRASE], DM_MKS_PASSPHRASE_SZ);
+    strncpy(context->passive_dev_name, argv[DM_MKS_ARG_PASSIVE_DEV], DM_MKS_PASSIVE_DEV_SZ);
 
     ret = dm_get_device(ti, context->passive_dev_name, dm_table_get_mode(ti->table), &context->passive_dev);
     if (ret) {
@@ -139,7 +138,7 @@ mks_map(struct dm_target *ti, struct bio *bio)
 
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
-     * belonging to it freezes. Even shutdown wont work as a kernel thread is
+     * belonging to it freezes. Even shutdown won't work as a kernel thread is
      * engaged.
      */ 
     bio_endio(bio);
@@ -173,7 +172,6 @@ mks_detect_fs(struct block_device *device)
     void *data;
     int ret;
 
-    //This is never freed TODO
     page = alloc_page(GFP_KERNEL);
     if (IS_ERR(page)) {
         ret = PTR_ERR(page);
@@ -189,12 +187,13 @@ mks_detect_fs(struct block_device *device)
     }
     print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, read_length, 1);
 
-    // Add filesystem support here as more else...if blocks.
+    /* Add filesystem support here as more else...if blocks */
     if (mks_fat32_detect(data) == DM_MKS_TRUE) {
         ret = DM_MKS_FS_FAT32;
     } else {
         ret = DM_MKS_FS_NONE;
     }
+    __free_page(page);
 
     mks_debug("returning from mks_detect_fs {%d}\n", ret);
     return ret;
@@ -221,7 +220,7 @@ static struct target_type mks_target = {
  */
 static __init int 
 mks_init(void)
-{
+{   
     int ret;
 
     ret = dm_register_target(&mks_target);

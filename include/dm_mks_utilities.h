@@ -8,6 +8,7 @@
 #include <linux/bio.h>
 #include <linux/completion.h>
 #include <linux/mm_types.h>
+#include <linux/version.h>
 
 #ifndef _DM_MKS_UTILITIES_H_
 #define _DM_MKS_UTILITIES_H_

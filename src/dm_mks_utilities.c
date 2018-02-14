@@ -67,7 +67,13 @@ mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u
         mks_alert("bio_alloc failure {%d}\n", ret);
         return ret;
     }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
     bio->bi_disk = bdev->bd_disk;
+#else
+    bio->bi_bdev = bdev;
+#endif
+
     bio->bi_iter.bi_sector = sector;
     bio->bi_private = &event;
     bio->bi_end_io = mks_blkdev_callback;
@@ -113,7 +119,13 @@ mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u
         mks_alert("bio_alloc failure {%d}\n", ret);
         return ret;
     }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
     bio->bi_disk = bdev->bd_disk;
+#else
+    bio->bi_bdev = bdev;
+#endif
+
     bio->bi_iter.bi_sector = sector;
     bio->bi_private = &event;
     bio->bi_end_io = mks_blkdev_callback;
