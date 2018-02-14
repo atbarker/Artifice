@@ -240,7 +240,7 @@ out_invalid:
 int read_boot_sector(struct fat_volume *vol, const void *data){
 
 	//u8 buf[512];
-	const struct fat_boot_sector *boot_sec = kmalloc(512, GFP_KERNEL);
+	struct fat_boot_sector *boot_sec = kmalloc(512, GFP_KERNEL);
 	int ret;
 	u32 num_data_sectors;
 
@@ -279,6 +279,7 @@ static int fat_map(struct fat_volume *vol, void *data){
 	off_t fat_aligned_offset;
 
 	//figure out how to get this in the kernel
+	//not really sure if it would matter with the device mapper
 	/*page_size = sysconf(_SC_PAGESIZE);*/
 	fat_offset = (off_t)vol->reserved << vol->sector_order;
 
@@ -294,16 +295,13 @@ static int fat_map(struct fat_volume *vol, void *data){
 	
 	//check the aligned size for errors
 	
-	//This won't work figure out how to do this with the data object
-	//prot = PROT_READ;
-	//ptr = mmap(NULL, fat_aligned_size_bytes, prot, MAP_PRIVATE, fd, fat_aligned_offset);
-	vol->fat_map = data + (fat_offset - fat_aligned_offset);
+	vol->fat_map = data + fat_aligned_offset;
 
-	//should work
-	uint32_t *p = vol->fat_map;
+	//
+	u32 *p = vol->fat_map;
 	int i;
 	int cluster_number = 0;
-	uint32_t *empty_clusters = kmalloc(fat_aligned_size_bytes, GFP_KERNEL);
+	u32 *empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
 	//uint8_t *cluster_contents = kmalloc(1, GFP_KERNEL);
 	for (i=0; i<vol->num_data_clusters; i++){
 		if(p[i] == 0){
@@ -314,7 +312,7 @@ static int fat_map(struct fat_volume *vol, void *data){
 	return 0;
 }
 
-struct fs_data * mks_fat32_parse(const void *data){
+struct fs_data * mks_fat32_parse(void *data){
 
 	struct fat_volume *vol = NULL;
 	struct fs_data *parameters = NULL;
