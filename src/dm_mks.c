@@ -160,6 +160,8 @@ mks_map(struct dm_target *ti, struct bio *bio)
  * 
  * @return  enum
  *  DM_MKS_FS_FAT32     Block Device is formatted as FAT32
+ *  DM_MKS_FS_EXT       Block Device is formatted as EXT(should be ext2 for now)
+ *  DM_MKS_FS_NTFS      Block Device is formatted as NTFS
  *  DM_MKS_FS_NONE      Block Device does not have a supported filesystem.
  */
 static int 

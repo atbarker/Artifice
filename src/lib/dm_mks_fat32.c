@@ -8,6 +8,7 @@
  * Copyright:
  */
 #include <dm_mks_lib.h>
+#include <dm_mks_utilities.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/types.h>
@@ -121,25 +122,6 @@ struct fat_boot_sector{
 inline unsigned long bsr(unsigned long n){
 	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
 	return n;
-}
-
-/**
- * Detect presence of a FAT32 filesystem. This is done by
- * sifting through the binary data and looking for FAT32
- * headers.
- * 
- * @param   data    The data to look into.
- * 
- * @return  mks_boolean
- *  DM_MKS_TRUE     data is formatted as FAT32.
- *  DM_MKS_FALSE    data is not formatted as FAT32.
- */
-
-mks_boolean_t
-mks_fat32_detect(const void *data)
-{
-    
-    return DM_MKS_TRUE;
 }
 
 //what is le16 to cpu
@@ -335,11 +317,6 @@ struct fs_data * mks_fat32_parse(void *data){
 					<< vol->sector_order;
 	return parameters;
 }
-/*
-extern int fat_unmount(struct fat_volume *vol){
-
-	return 0;
-}*/
 
 extern u32 fat_next_cluster(const struct fat_volume *vol, u32 cluster){
 	return 0;
@@ -348,3 +325,29 @@ extern u32 fat_next_cluster(const struct fat_volume *vol, u32 cluster){
 int fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
 	return 0;
 }
+
+/**
+ * Detect presence of a FAT32 filesystem. This is done by
+ * sifting through the binary data and looking for FAT32
+ * headers.
+ * 
+ * @param   data    The data to look into.
+ * 
+ * @return  mks_boolean
+ *  DM_MKS_TRUE     data is formatted as FAT32.
+ *  DM_MKS_FALSE    data is not formatted as FAT32.
+ */
+
+mks_boolean_t
+mks_fat32_detect(const void *data)
+{
+
+    if(mks_fat32_parse((void *)data)){
+	mks_debug("This is indeed FAT32");    
+    	return DM_MKS_TRUE;
+    }
+    mks_debug("Not FAT32");
+    return DM_MKS_FALSE;
+}
+
+
