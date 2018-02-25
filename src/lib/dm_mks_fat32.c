@@ -277,6 +277,10 @@ static int fat_map(struct fat_volume *vol, void *data){
 	size_t fat_aligned_size_bytes;
 	off_t fat_offset;
 	off_t fat_aligned_offset;
+	u32 *p;
+	u32 *empty_clusters;
+	int i;
+	int cluster_number;
 
 	//figure out how to get this in the kernel
 	//not really sure if it would matter with the device mapper
@@ -298,10 +302,9 @@ static int fat_map(struct fat_volume *vol, void *data){
 	vol->fat_map = data + fat_aligned_offset;
 
 	//
-	u32 *p = vol->fat_map;
-	int i;
-	int cluster_number = 0;
-	u32 *empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
+	p = (int*)vol->fat_map;
+	cluster_number = 0;
+	empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
 	//uint8_t *cluster_contents = kmalloc(1, GFP_KERNEL);
 	for (i=0; i<vol->num_data_clusters; i++){
 		if(p[i] == 0){
@@ -332,11 +335,11 @@ struct fs_data * mks_fat32_parse(void *data){
 					<< vol->sector_order;
 	return parameters;
 }
-
+/*
 extern int fat_unmount(struct fat_volume *vol){
 
 	return 0;
-}
+}*/
 
 extern u32 fat_next_cluster(const struct fat_volume *vol, u32 cluster){
 	return 0;
