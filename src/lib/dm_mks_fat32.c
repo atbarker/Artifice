@@ -118,13 +118,13 @@ struct fat_boot_sector{
 } __attribute__((packed));
 
 
-//Kill this
+//TODO: Kill this, find something better than this
 inline unsigned long bsr(unsigned long n){
 	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
 	return n;
 }
 
-//what is le16 to cpu
+
 static int fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
 	vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
 	vol->sector_order = bsr(vol->bytes_sector);
@@ -249,6 +249,7 @@ int read_boot_sector(struct fat_volume *vol, const void *data){
 	ret = fat_read_nonfat32_ebpb(vol, &boot_sec->ebpb.nonfat32_ebpb);
 
 	num_data_sectors = vol->total_sec - vol->reserved - ((vol->root_entries << 5) >> vol->sector_order);
+	mks_debug("Number of data sectors: %u\n", num_data_sectors);
 	vol->num_data_clusters = num_data_sectors >> vol->sec_cluster_order;
 	return 0;
 }
@@ -264,6 +265,8 @@ static int fat_map(struct fat_volume *vol, void *data){
 	int i;
 	int cluster_number;
 
+	//void *fat_data;
+
 	//figure out how to get this in the kernel
 	//not really sure if it would matter with the device mapper
 	/*page_size = sysconf(_SC_PAGESIZE);*/
@@ -275,8 +278,12 @@ static int fat_map(struct fat_volume *vol, void *data){
 	
 	fat_size_bytes = (size_t)vol->sec_fat << vol->sector_order;
 	fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
-	if(fat_aligned_size_bytes > 4096){
-		//will have to read some more
+
+	mks_debug("FAT aligned size in bytes: %zu \n", fat_size_bytes);
+
+	if(fat_aligned_size_bytes > (4096+fat_aligned_offset)){
+		mks_debug("Have to read more data to map the FAT\n");
+		//mks_read_blkdev();
 	}
 	
 	//check the aligned size for errors
@@ -315,6 +322,9 @@ struct fs_data * mks_fat32_parse(void *data){
 	vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + 
 				      (vol->root_entries >> (vol->sector_order - 5))) 
 					<< vol->sector_order;
+
+	parameters->num_blocks = vol->num_data_clusters;
+
 	return parameters;
 }
 
@@ -339,11 +349,12 @@ int fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
  */
 
 mks_boolean_t
-mks_fat32_detect(const void *data)
+mks_fat32_detect(const void *data, struct fs_data *fs)
 {
-
-    if(mks_fat32_parse((void *)data)){
-	mks_debug("This is indeed FAT32");    
+    fs = mks_fat32_parse((void *)data);
+    if(fs){
+	mks_debug("This is indeed FAT32");
+	//mks_debug("Number of data clusters, %u\n", fs->num_blocks);   
     	return DM_MKS_TRUE;
     }
     mks_debug("Not FAT32");

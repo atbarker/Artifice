@@ -22,6 +22,10 @@ debug:
 	@sudo insmod dm_mks.ko mks_debug_mode=1
 	@echo 0 1024 mks pass /dev/sdb1 | sudo dmsetup create matryoshka
 
+debug1:
+	@sudo insmod dm_mks.ko mks_debug_mode=1
+	@echo 0 1024 mks pass /dev/sde1 | sudo dmsetup create matryoshka
+
 debug_end:
 	@sudo dmsetup remove matryoshka
 	@sudo rmmod dm_mks
