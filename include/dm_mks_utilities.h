@@ -55,7 +55,10 @@ static int mks_debug_mode = 1;
 //
 // Prototypes
 //
-inline unsigned long bsr(unsigned long n);
+//TODO: Kill this, find something better than this
+static inline unsigned long bsr(unsigned long n){
+	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
+	return n;}
 int mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u32 size);
 int mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u32 size);
 

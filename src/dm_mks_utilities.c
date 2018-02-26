@@ -22,12 +22,6 @@ mks_blkdev_callback(struct bio *bio)
     complete(event);
 }
 
-//TODO: Kill this, find something better than this
-inline unsigned long bsr(unsigned long n){
-	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
-	return n;
-}
-
 /**
  * A utility function to conveniently read sectors from a 
  * specified block device. It masks away the asynchronous 
