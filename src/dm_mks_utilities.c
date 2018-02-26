@@ -1,7 +1,7 @@
 /**
  * Basic utility system for miscellaneous functions.
  * 
- * Author: Yash Gupta <ygupta@ucsc.edu>
+ * Author: Yash Gupta <ygupta@ucsc.edu> Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_mks_utilities.h>
@@ -20,6 +20,12 @@ mks_blkdev_callback(struct bio *bio)
 
     mks_debug("completed event: %p\n", event);
     complete(event);
+}
+
+//TODO: Kill this, find something better than this
+inline unsigned long bsr(unsigned long n){
+	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
+	return n;
 }
 
 /**

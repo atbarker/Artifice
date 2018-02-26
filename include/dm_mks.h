@@ -1,7 +1,7 @@
 /**
  * Target file header for the matryoshka file system.
  * 
- * Author: Yash Gupta <ygupta@ucsc.edu>, 
+ * Author: Yash Gupta <ygupta@ucsc.edu>, Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <linux/module.h>

@@ -4,8 +4,8 @@
  *
  * It only supports FAT32, no FAT16 or FAT12.
  * 
- * Author:
- * Copyright:
+ * Author: Austen Barker <atbarker@ucsc.edu>
+ * Copyright: UC Santa Cruz SSRC
  */
 #include <dm_mks_lib.h>
 #include <dm_mks_utilities.h>
@@ -116,13 +116,6 @@ struct fat_boot_sector{
 		struct nonfat32_ebpb nonfat32_ebpb;
 	} ebpb;
 } __attribute__((packed));
-
-
-//TODO: Kill this, find something better than this
-inline unsigned long bsr(unsigned long n){
-	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
-	return n;
-}
 
 
 static int fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){

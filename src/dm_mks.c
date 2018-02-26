@@ -1,7 +1,7 @@
 /**
  * Target file source for the matryoshka file system.
  * 
- * Author: Yash Gupta <ygupta@ucsc.edu>, 
+ * Author: Austen Barker <atbarker@ucsc.edu>, Yash Gupta <ygupta@ucsc.edu> 
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_mks.h>

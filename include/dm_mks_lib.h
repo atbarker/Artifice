@@ -3,8 +3,8 @@
  * Matryoshka. All filesystem support make their API
  * public through this header.
  * 
- * Author:
- * Copyright:
+ * Author: Austen Barker, Yash Gupta
+ * Copyright: UC Santa Cruz SSRC
  */
 #include <linux/string.h>
 #include <linux/bio.h>
