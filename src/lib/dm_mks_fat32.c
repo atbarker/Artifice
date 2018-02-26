@@ -289,15 +289,13 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device){
 
 	start_sector = (sector_t)(fat_aligned_offset/512);
 	
-	if(fat_aligned_offset > 4096){
+	if(fat_aligned_offset + fat_aligned_size_bytes > 4096){
 		mks_debug("Read more data to map the FAT\n");
-		page = alloc_page(GFP_KERNEL);
+		page = alloc_pages(GFP_KERNEL, (unsigned int)bsr(page_number));
                 fat_data = page_address(page);
-		status = mks_read_blkdev(device, page, start_sector, page_size);
+		status = mks_read_blkdev(device, page, start_sector, fat_aligned_size_bytes);
 		mks_debug("FAT read successfully.\n");	
 	}
-	
-	//check the aligned size for errors
 	
 	vol->fat_map = data + fat_aligned_offset;
 
