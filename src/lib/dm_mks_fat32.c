@@ -15,7 +15,7 @@
 #include <linux/slab.h>
 
 //This is hell incarnate, all the information about a FAT volume
-struct fat_volume{
+struct fat_volume {
 
 	void *fat_map;              //FAT mapped into memory
 	u32 *empty_clusters;        //list of empty clusters (blocks)
@@ -61,7 +61,7 @@ struct fat_volume{
 };
 
 /*Extended BIOS parameter block for FAT32 */
-struct fat32_ebpb{
+struct fat32_ebpb {
 
 	__le32 sec_fat;               //sectors per fat
 	__le16 drive_desc;            //drive description
@@ -73,7 +73,7 @@ struct fat32_ebpb{
 
 } __attribute__((packed));
 
-struct nonfat32_ebpb{
+struct nonfat32_ebpb {
 	u8 physical_drive_num;
 	u8 reserved;
 	u8 extended_boot_sig;
@@ -83,7 +83,7 @@ struct nonfat32_ebpb{
 } __attribute__((packed));
 
 /*FAT32 boot sector, exactly how it appears on your disk*/
-struct fat_boot_sector{
+struct fat_boot_sector {
         
 	u8 jump_insn[3];            //bootloader jump inst. (3 bytes)
 
@@ -117,8 +117,14 @@ struct fat_boot_sector{
 	} ebpb;
 } __attribute__((packed));
 
-
-static int fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
+/**
+ *Reads in boot parameter block as seen in DOS 2.0.
+ *
+ *
+ */
+static int 
+fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
+{
 	vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
 	vol->sector_order = bsr(vol->bytes_sector);
 	if(!is_power_of_2(vol->bytes_sector) || vol->sector_order < 5 || vol->sector_order > 12){
@@ -155,8 +161,18 @@ out_invalid:
 	return -1;
 }
 
+/**
+ * Reads in Boot parameter block as appearing in DOS 3.31 and onward.
+ *
+ *@params
+ *    struct fat_volume, place to put the data
+ *    struct fat_boot_sector, the boot sector copy
+ *@return
+ *    status int
+ */
 static int 
-fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
+fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
+{
 	vol->sec_track = le16_to_cpu(boot_sec->sec_track);
 	vol->num_heads = le16_to_cpu(boot_sec->num_heads);
 	vol->hidden_sec = le32_to_cpu(boot_sec->hidden_sec);
@@ -168,8 +184,14 @@ fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot
 	return 0;
 }
 
+/**
+ *Non fat32 extended boot parameter block helper
+ *
+ */
+
 static int 
-fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb){
+fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
+{
 	vol->phys_driv_num = ebpb->physical_drive_num;
 	vol->ext_boot_sig = ebpb->extended_boot_sig;
 	vol->vol_id = le32_to_cpu(ebpb->volume_id);
@@ -179,9 +201,14 @@ fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
 	return 0;
 }
 
+/**
+ *FAT32 extended boot parameter block helper.
+ *
+ */
+
 static int 
-fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb){
-	
+fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb)
+{	
 	if (le32_to_cpu(ebpb->sec_fat) != 0){
 		vol->sec_fat = le32_to_cpu(ebpb->sec_fat);
 		if((((size_t)vol->sec_fat << vol->sector_order) >> vol->sector_order) != (size_t)vol->sec_fat){
@@ -215,9 +242,21 @@ out_invalid:
 
 }
 
-static int 
-read_boot_sector(struct fat_volume *vol, const void *data){
+/**
+ *Reads in parameters from the FAT superblock.
+ *If this fails the file system is not FAT or
+ *is corrupted.
+ *
+ *@params
+ *	struct fat_volume, FAT volume summary
+ *	void *data, first 4096 bytes in device
+ *@return
+ *	status int
+ */
 
+static int 
+read_boot_sector(struct fat_volume *vol, const void *data)
+{
 	//u8 buf[512];
 	struct fat_boot_sector *boot_sec = kmalloc(512, GFP_KERNEL);
 	int ret;
@@ -229,6 +268,7 @@ read_boot_sector(struct fat_volume *vol, const void *data){
 	memcpy(vol->oem_name, boot_sec->oem_name, sizeof(boot_sec->oem_name));
 
 	//TODO remove trailing spaces from vol->oem_name
+	//to be honest I don't really need it.
 	
 	ret = fat_read_dos_2_0_bpb(vol, boot_sec);
 	if(ret){
@@ -251,9 +291,23 @@ read_boot_sector(struct fat_volume *vol, const void *data){
 	return 0;
 }
 
+/**
+ *Calculates the aligned FAT offset and size.
+ *Maps the FAT to memory and finds unallocated clusters.
+ *
+ *@params
+ *    struct fat_volume, summary of the fat device
+ *    void *data, superblock contents
+ *    struct block_device, block device being read from
+ *
+ *@return int status
+ *    return ==0 success
+ *    return !=0 fail
+ */
+
 static int 
-fat_map(struct fat_volume *vol, void *data, struct block_device *device){
-	
+fat_map(struct fat_volume *vol, void *data, struct block_device *device)
+{	
 	size_t fat_size_bytes;
 	size_t fat_aligned_size_bytes;
 	off_t fat_offset;
@@ -292,7 +346,6 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device){
 	
 	vol->fat_map = data + fat_aligned_offset;
 
-	//
 	p = (int*)vol->fat_map;
 	cluster_number = 0;
 	empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
@@ -306,9 +359,22 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device){
 	return 0;
 }
 
-struct fs_data * 
-mks_fat32_parse(void *data, struct block_device *device){
+/**
+ *Parses a FAT32 (or DOS compatible) file system.
+ *Returns a struct containing a map of the free space on the disk
+ *and basic metadata.
+ *
+ *@params
+ *    void *data, first 4096 bytes in the block device
+ *    struct block_device *device, block device we are reading from
+ *
+ *@return
+ *    struct fs_data *, contains generalized data about the fs.
+ */
 
+struct fs_data * 
+mks_fat32_parse(void *data, struct block_device *device)
+{
 	struct fat_volume *vol = NULL;
 	struct fs_data *parameters = NULL;
 	int ret;
@@ -345,16 +411,6 @@ mks_fat32_parse(void *data, struct block_device *device){
 	return parameters;
 }
 
-struct page * 
-fat_next_cluster(const struct fat_volume *vol, u32 cluster){
-	return 0;
-}
-
-int 
-fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
-	return 0;
-}
-
 /**
  * Detect presence of a FAT32 filesystem. This is done by
  * sifting through the binary data and looking for FAT32
@@ -367,7 +423,8 @@ fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
  *  DM_MKS_FALSE    data is not formatted as FAT32.
  */
 
-mks_boolean_t mks_fat32_detect(const void *data, struct fs_data *fs, struct block_device *device)
+mks_boolean_t 
+mks_fat32_detect(const void *data, struct fs_data *fs, struct block_device *device)
 {
     fs = mks_fat32_parse((void *)data, device);
     if(fs){
