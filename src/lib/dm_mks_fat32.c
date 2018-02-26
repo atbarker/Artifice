@@ -260,7 +260,7 @@ read_boot_sector(struct fat_volume *vol, const void *data){
 
 static int 
 fat_map(struct fat_volume *vol, void *data, struct block_device *device){
-	//long page_size;
+	
 	size_t fat_size_bytes;
 	size_t fat_aligned_size_bytes;
 	off_t fat_offset;
@@ -268,32 +268,33 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device){
 	u32 *p;
 	u32 *empty_clusters;
 	int i;
+	int status;
 	int cluster_number;
-	//void *fat_data;
-	//struct page *page;
+	sector_t start_sector;
+	void *fat_data;
+	struct page *page;
+	u32 page_size;
+	u32 page_number;
 
-	//figure out how to get this in the kernel
-	//not really sure if it would matter with the device mapper
-	/*page_size = sysconf(_SC_PAGESIZE);*/
+	page_size = 1 << PAGE_SHIFT;
 	fat_offset = (off_t)vol->reserved << vol->sector_order;
-
-	//do this instead
-	//fat_aligned_offset = fat_offset & ~(page_size -1);
-	fat_aligned_offset = fat_offset;
-	
+	fat_aligned_offset = fat_offset & ~(page_size -1);
 	fat_size_bytes = (size_t)vol->sec_fat << vol->sector_order;
 	fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
+	page_number = fat_aligned_size_bytes/512;
 
-	mks_debug("FAT aligned size in bytes: %zu \n", fat_size_bytes);
+	mks_debug("FAT aligned size in bytes: %zu \n", fat_aligned_size_bytes);
+	mks_debug("FAT aligned offset: %d \n", (int)fat_aligned_offset);
+	mks_debug("FAT size in pages: %u \n", page_number);
+
+	start_sector = (sector_t)(fat_aligned_offset/512);
 	
-
-	if(fat_aligned_size_bytes > (4096+fat_aligned_offset)){
-		mks_debug("Have to read more data to map the FAT\n");
-		/*
+	if(fat_aligned_offset > 4096){
+		mks_debug("Read more data to map the FAT\n");
 		page = alloc_page(GFP_KERNEL);
-                data = page_address(page);
-		mks_read_blkdev(device, page, start_sector, fat_size_bytes);
-		*/
+                fat_data = page_address(page);
+		status = mks_read_blkdev(device, page, start_sector, page_size);
+		mks_debug("FAT read successfully.\n");	
 	}
 	
 	//check the aligned size for errors
@@ -320,27 +321,35 @@ mks_fat32_parse(void *data, struct block_device *device){
 	struct fat_volume *vol = NULL;
 	struct fs_data *parameters = NULL;
 	int ret;
+
 	//allocate stuff;
 	vol = kmalloc(sizeof(struct fat_volume), GFP_KERNEL);
 	parameters = kmalloc(sizeof(struct fs_data), GFP_KERNEL);
 	
 	//read the boot sector
 	ret = read_boot_sector(vol, data);
+	if(ret){
+		mks_debug("Failed to read boot sector");
+		return NULL;
+	}
 
-	//ret = fat_map(vol, data, device);
+	ret = fat_map(vol, data, device);
+	if(ret){
+		mks_debug("Failed to map FAT");
+		return NULL;
+	}
 
-	//this needs work
 	//set the data start offset
-	/*vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + 
+	vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + 
 				      (vol->root_entries >> (vol->sector_order - 5))) 
 					<< vol->sector_order;
-	*/
+
 	parameters->num_blocks = vol->num_data_clusters;
 	parameters->bytes_sec = vol->bytes_sector;
 	parameters->sec_block = vol->sec_cluster;
 	parameters->bytes_block = vol->bytes_sector * vol->sec_cluster;
-	//parameters->data_start_off = (u32)vol->data_start_off;
-	//parameters->empty_block_offsets = vol->empty_clusters;
+	parameters->data_start_off = (u32)vol->data_start_off;
+	parameters->empty_block_offsets = vol->empty_clusters;
 
 	return parameters;
 }
