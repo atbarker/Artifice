@@ -173,7 +173,7 @@ mks_detect_fs(struct block_device *device)
     struct page *page;
     void *data;
     int ret;
-    struct fs_data *fs;
+    struct fs_data *fs = NULL;
 
     page = alloc_page(GFP_KERNEL);
     if (IS_ERR(page)) {
@@ -190,6 +190,7 @@ mks_detect_fs(struct block_device *device)
     }
     //print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, read_length, 1);
 
+    //TODO: fix null pointer error with FAT32
     /* Add filesystem support here as more else...if blocks */
     if (mks_fat32_detect(data, fs) == DM_MKS_TRUE) {
         ret = DM_MKS_FS_FAT32;

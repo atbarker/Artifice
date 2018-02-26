@@ -68,7 +68,7 @@ mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u
         return ret;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 2)
     bio->bi_disk = bdev->bd_disk;
 #else
     bio->bi_bdev = bdev;

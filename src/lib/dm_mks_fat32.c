@@ -162,7 +162,8 @@ out_invalid:
 	return -1;
 }
 
-static int fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
+static int 
+fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec){
 	vol->sec_track = le16_to_cpu(boot_sec->sec_track);
 	vol->num_heads = le16_to_cpu(boot_sec->num_heads);
 	vol->hidden_sec = le32_to_cpu(boot_sec->hidden_sec);
@@ -174,7 +175,8 @@ static int fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_s
 	return 0;
 }
 
-static int fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb){
+static int 
+fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb){
 	vol->phys_driv_num = ebpb->physical_drive_num;
 	vol->ext_boot_sig = ebpb->extended_boot_sig;
 	vol->vol_id = le32_to_cpu(ebpb->volume_id);
@@ -184,7 +186,8 @@ static int fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_
 	return 0;
 }
 
-static int fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb){
+static int 
+fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb){
 	
 	if (le32_to_cpu(ebpb->sec_fat) != 0){
 		vol->sec_fat = le32_to_cpu(ebpb->sec_fat);
@@ -219,7 +222,8 @@ out_invalid:
 
 }
 
-int read_boot_sector(struct fat_volume *vol, const void *data){
+static int 
+read_boot_sector(struct fat_volume *vol, const void *data){
 
 	//u8 buf[512];
 	struct fat_boot_sector *boot_sec = kmalloc(512, GFP_KERNEL);
@@ -254,7 +258,8 @@ int read_boot_sector(struct fat_volume *vol, const void *data){
 	return 0;
 }
 
-static int fat_map(struct fat_volume *vol, void *data){
+static int 
+fat_map(struct fat_volume *vol, void *data){
 	//long page_size;
 	size_t fat_size_bytes;
 	size_t fat_aligned_size_bytes;
@@ -264,8 +269,8 @@ static int fat_map(struct fat_volume *vol, void *data){
 	u32 *empty_clusters;
 	int i;
 	int cluster_number;
-
 	//void *fat_data;
+	//struct page *page;
 
 	//figure out how to get this in the kernel
 	//not really sure if it would matter with the device mapper
@@ -280,10 +285,15 @@ static int fat_map(struct fat_volume *vol, void *data){
 	fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
 
 	mks_debug("FAT aligned size in bytes: %zu \n", fat_size_bytes);
+	
 
 	if(fat_aligned_size_bytes > (4096+fat_aligned_offset)){
 		mks_debug("Have to read more data to map the FAT\n");
-		//mks_read_blkdev();
+		/*
+		page = alloc_page(GFP_KERNEL);
+                data = page_address(page);
+		mks_read_blkdev(device, page, start_sector, fat_size_bytes);
+		*/
 	}
 	
 	//check the aligned size for errors
@@ -304,7 +314,8 @@ static int fat_map(struct fat_volume *vol, void *data){
 	return 0;
 }
 
-struct fs_data * mks_fat32_parse(void *data){
+struct fs_data * 
+mks_fat32_parse(void *data){
 
 	struct fat_volume *vol = NULL;
 	struct fs_data *parameters = NULL;
@@ -316,23 +327,31 @@ struct fs_data * mks_fat32_parse(void *data){
 	//read the boot sector
 	ret = read_boot_sector(vol, data);
 
-	ret = fat_map(vol, data);
+	//ret = fat_map(vol, data);
 
+	//this needs work
 	//set the data start offset
-	vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + 
+	/*vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + 
 				      (vol->root_entries >> (vol->sector_order - 5))) 
 					<< vol->sector_order;
-
+	*/
 	parameters->num_blocks = vol->num_data_clusters;
+	parameters->bytes_sec = vol->bytes_sector;
+	parameters->sec_block = vol->sec_cluster;
+	parameters->bytes_block = vol->bytes_sector * vol->sec_cluster;
+	//parameters->data_start_off = (u32)vol->data_start_off;
+	//parameters->empty_block_offsets = vol->empty_clusters;
 
 	return parameters;
 }
 
-extern u32 fat_next_cluster(const struct fat_volume *vol, u32 cluster){
+struct page * 
+fat_next_cluster(const struct fat_volume *vol, u32 cluster){
 	return 0;
 }
 
-int fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
+int 
+fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
 	return 0;
 }
 

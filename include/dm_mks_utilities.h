@@ -50,7 +50,7 @@
 // Global variables
 //
 // Debug enable
-static int mks_debug_mode = 0;
+static int mks_debug_mode = 1;
 
 //
 // Prototypes
