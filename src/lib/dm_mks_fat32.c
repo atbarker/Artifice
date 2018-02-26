@@ -259,7 +259,7 @@ read_boot_sector(struct fat_volume *vol, const void *data){
 }
 
 static int 
-fat_map(struct fat_volume *vol, void *data){
+fat_map(struct fat_volume *vol, void *data, struct block_device *device){
 	//long page_size;
 	size_t fat_size_bytes;
 	size_t fat_aligned_size_bytes;
@@ -315,7 +315,7 @@ fat_map(struct fat_volume *vol, void *data){
 }
 
 struct fs_data * 
-mks_fat32_parse(void *data){
+mks_fat32_parse(void *data, struct block_device *device){
 
 	struct fat_volume *vol = NULL;
 	struct fs_data *parameters = NULL;
@@ -327,7 +327,7 @@ mks_fat32_parse(void *data){
 	//read the boot sector
 	ret = read_boot_sector(vol, data);
 
-	//ret = fat_map(vol, data);
+	//ret = fat_map(vol, data, device);
 
 	//this needs work
 	//set the data start offset
@@ -367,10 +367,9 @@ fat_is_valid_cluster_offset(const struct fat_volume *vol, u32 cluster){
  *  DM_MKS_FALSE    data is not formatted as FAT32.
  */
 
-mks_boolean_t
-mks_fat32_detect(const void *data, struct fs_data *fs)
+mks_boolean_t mks_fat32_detect(const void *data, struct fs_data *fs, struct block_device *device)
 {
-    fs = mks_fat32_parse((void *)data);
+    fs = mks_fat32_parse((void *)data, device);
     if(fs){
 	mks_debug("This is indeed FAT32");
 	//mks_debug("Number of data clusters, %u\n", fs->num_blocks);   

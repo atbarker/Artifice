@@ -7,6 +7,7 @@
  * Copyright:
  */
 #include <linux/string.h>
+#include <linux/bio.h>
 
 #ifndef _DM_MKS_LIB_H_
 #define _DM_MKS_LIB_H_
@@ -31,7 +32,7 @@ struct fs_data{
 //
 // Filesystem support
 //
-mks_boolean_t mks_fat32_detect(const void *data, struct fs_data *fs);
+mks_boolean_t mks_fat32_detect(const void *data, struct fs_data *fs, struct block_device *device);
 //mks_boolean_t mks_ext4_detect(const void *data);
 //mks_boolean_t mks_ntfs_detect(const void *data);
 

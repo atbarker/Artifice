@@ -192,7 +192,7 @@ mks_detect_fs(struct block_device *device)
 
     //TODO: fix null pointer error with FAT32
     /* Add filesystem support here as more else...if blocks */
-    if (mks_fat32_detect(data, fs) == DM_MKS_TRUE) {
+    if (mks_fat32_detect(data, fs, device) == DM_MKS_TRUE) {
         ret = DM_MKS_FS_FAT32;
 	//mks_debug("number of blocks: %u\n", fs->num_blocks);
     } else {
