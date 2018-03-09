@@ -10,8 +10,8 @@
 #include <linux/mm_types.h>
 #include <linux/version.h>
 
-#ifndef _DM_MKS_UTILITIES_H_
-#define _DM_MKS_UTILITIES_H_
+#ifndef _DM_MKS_UTILITIES_H
+#define _DM_MKS_UTILITIES_H
 
 //
 // Macros
@@ -52,14 +52,30 @@
 // Debug enable
 static int mks_debug_mode = 1;
 
+// 
+// Enumerations
+//
+// Matryoshka I/O flags
+enum mks_io_flags {
+    MKS_IO_READ = 0,
+    MKS_IO_WRITE
+};
+
+//
+// Structures
+//
+// Matryoshka I/O
+struct mks_io {
+    struct block_device *bdev;  // Block Device to issue I/O on.
+    struct page *io_page;       // Kernel Page(s) used for transfer.
+    sector_t io_sector;         // Disk sector used for transfer.
+    u32 io_size;                // Size of I/O transfer.
+};
+
 //
 // Prototypes
 //
-//TODO: Kill this, find something better than this
-static inline unsigned long bsr(unsigned long n){
-	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
-	return n;}
-int mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u32 size);
-int mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u32 size);
+unsigned long bsr(unsigned long n);
+int mks_blkdev_io(struct mks_io *io_request, enum mks_io_flags flag);
 
 #endif

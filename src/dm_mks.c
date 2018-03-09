@@ -175,6 +175,12 @@ mks_detect_fs(struct block_device *device)
     int ret;
     struct fs_data *fs = NULL;
 
+    struct mks_io io = {
+        .bdev = device,
+        .io_sector = start_sector,
+        .io_size = read_length  
+    };
+
     page = alloc_page(GFP_KERNEL);
     if (IS_ERR(page)) {
         ret = PTR_ERR(page);
@@ -183,9 +189,10 @@ mks_detect_fs(struct block_device *device)
     }
     data = page_address(page);
 
-    ret = mks_read_blkdev(device, page, start_sector, read_length);
+    io.io_page = page;
+    ret = mks_blkdev_io(&io, MKS_IO_READ);
     if (ret) {
-        mks_alert("mks_read_blkdev failure {%d}\n", ret);
+        mks_alert("mks_blkdev_io failure {%d}\n", ret);
         return ret;
     }
     //print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, read_length, 1);
@@ -194,7 +201,6 @@ mks_detect_fs(struct block_device *device)
     /* Add filesystem support here as more else...if blocks */
     if (mks_fat32_detect(data, fs, device) == DM_MKS_TRUE) {
         ret = DM_MKS_FS_FAT32;
-	//mks_debug("number of blocks: %u\n", fs->num_blocks);
     } else {
         ret = DM_MKS_FS_NONE;
     }

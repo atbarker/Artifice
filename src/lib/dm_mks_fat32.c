@@ -17,46 +17,46 @@
 //This is hell incarnate, all the information about a FAT volume
 struct fat_volume {
 
-	void *fat_map;              //FAT mapped into memory
-	u32 *empty_clusters;        //list of empty clusters (blocks)
-	u32 num_data_clusters;      //Number of data cluster on the disk
-	off_t data_start_off;       //byte offset for the second cluster
-	size_t num_alloc_files;     //number of allocated files
-	size_t max_allocated_files; //number of allocatable files
-	char oem_name[8+1];         //boot sector information
+	void *fat_map;              // FAT mapped into memory.
+	u32 *empty_clusters;        // list of empty clusters (blocks).
+	u32 num_data_clusters;      // Number of data cluster on the disk.
+	off_t data_start_off;       // byte offset for the second cluster.
+	size_t num_alloc_files;     // number of allocated files.
+	size_t max_allocated_files; // number of allocatable files.
+	char oem_name[8+1];         // boot sector information.
 
 	//data from the DOS 2.0 parameter block
-	u16 bytes_sector;           //bytes in a sector
-	u16 sector_order;           //sector order
-	u8 sec_cluster;             //sectors in cluster
-	u8 sec_cluster_order;       //sector cluster order
-	u16 cluster_order;          //cluster order
-	u16 reserved;               //reserved sectors
-	u8 tables;                  //number of fat tables
-	u16 root_entries;           //max root entries
-	u8 media_desc;              //media description
+	u16 bytes_sector;           // bytes in a sector.
+	u16 sector_order;           // sector order.
+	u8 sec_cluster;             // sectors in cluster.
+	u8 sec_cluster_order;       // sector cluster order.
+	u16 cluster_order;          // cluster order.
+	u16 reserved;               // reserved sectors.
+	u8 tables;                  // number of fat tables.
+	u16 root_entries;           // max root entries.
+	u8 media_desc;              // media description.
 	
-	u32 total_sec;              //total number of sectors
-	u32 sec_fat;                //sectors per FAT
+	u32 total_sec;              // total number of sectors.
+	u32 sec_fat;                // sectors per FAT.
 
 	//Data from DOS 3.0 block
-	u16 sec_track;              //sectors per track
-	u16 num_heads;              //number of heads
-	u32 hidden_sec;             //number of hidden sectors
+	u16 sec_track;              // sectors per track.
+	u16 num_heads;              // number of heads.
+	u32 hidden_sec;             // number of hidden sectors.
 
 	//FAT32 extended;
-	u16 driv_desc;              //drive description
-	u16 version;                //drive version
-	u32 root_dir_start;         //start of the root directory
-	u16 fs_info_sec;            //info sector offset
-	u16 alt_boot_sec;           //alternate boot sector
+	u16 driv_desc;              // drive description.
+	u16 version;                // drive version.
+	u32 root_dir_start;         // start of the root directory.
+	u16 fs_info_sec;            // info sector offset.
+	u16 alt_boot_sec;           // alternate boot sector.
 
 	//nonFAT32 extended
-	u8 phys_driv_num;           //physical drive number
-	u8 ext_boot_sig;            //boot signature
-	u32 vol_id;                 //volume id
-	char volume_label[11+1];    //volume label
-	char fs_type[8 + 1];        //FS type
+	u8 phys_driv_num;           // physical drive number.
+	u8 ext_boot_sig;            // boot signature.
+	u32 vol_id;                 // volume id.
+	char volume_label[11+1];    // volume label.
+	char fs_type[8 + 1];        // FS type.
 
 };
 
@@ -427,9 +427,9 @@ mks_boolean_t
 mks_fat32_detect(const void *data, struct fs_data *fs, struct block_device *device)
 {
     fs = mks_fat32_parse((void *)data, device);
-    if(fs){
-	mks_debug("This is indeed FAT32");
-	//mks_debug("Number of data clusters, %u\n", fs->num_blocks);   
+    if(fs) {
+		mks_debug("This is indeed FAT32");
+		//mks_debug("Number of data clusters, %u\n", fs->num_blocks);   
     	return DM_MKS_TRUE;
     }
     mks_debug("Not FAT32");

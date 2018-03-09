@@ -23,30 +23,21 @@ mks_blkdev_callback(struct bio *bio)
 }
 
 /**
- * A utility function to conveniently read sectors from a 
+ * A utility function to conveniently perform I/O from a 
  * specified block device. It masks away the asynchronous 
  * nature of the kernel to provide pseudo-synchronous 
  * kernel block IO.
  * 
- * TODO: Merge read/write into one function and add a
- * parameter to specify which OP. 
+ * @param   io_request  Matryoshka I/O request structure.
+ * @param   flag        Flag to specify read or write.
  * 
- * TODO: Build a structure to hold details to reduce 
- * parameter footprint.
- * 
- * @param   bdev    Block device to read from.
- * @param   dest    The page to write data from block device into.
- * @param   sector  Sector to start reading block device from.
- * @param   size    Size of the read from block device.
- * 
- * @return  0       Successfully read the sector.
+ * @return  0       Successfully performed the I/O.
  * @return  <0      Error.
  */
 int
-mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u32 size)
+mks_blkdev_io(struct mks_io *io_request, enum mks_io_flags flag)
 {
     const int page_offset = 0;
-
     int ret;
     struct bio *bio = NULL;
     struct completion event;
@@ -68,73 +59,45 @@ mks_read_blkdev(struct block_device *bdev, struct page *dest, sector_t sector, u
         return ret;
     }
 
+    switch (flag) {
+        case MKS_IO_READ:
+            bio->bi_opf |= REQ_OP_READ;
+            break;
+        case MKS_IO_WRITE:
+            bio->bi_opf |= REQ_OP_WRITE;
+            break;
+        default:
+            goto invalid_flag;
+    }
+    bio->bi_opf |= REQ_SYNC;
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 2)
-    bio->bi_disk = bdev->bd_disk;
+    bio->bi_disk = io_request->bdev->bd_disk;
 #else
-    bio->bi_bdev = bdev;
+    bio->bi_bdev = io_request->bdev;
 #endif
 
-    bio->bi_iter.bi_sector = sector;
+    bio->bi_iter.bi_sector = io_request->io_sector;
     bio->bi_private = &event;
     bio->bi_end_io = mks_blkdev_callback;
-    bio_add_page(bio, dest, size, page_offset);
-
-    bio->bi_opf |= REQ_OP_READ;
-    bio->bi_opf |= REQ_SYNC;
+    bio_add_page(bio, io_request->io_page, io_request->io_size, page_offset);
+    
     submit_bio(bio);
-
     wait_for_completion(&event);
+
     return 0;
+
+invalid_flag:
+    bio_endio(bio);
+    return -EINVAL;
 }
 
 /**
- * Just like the read function, this function is used to
- * provide the illusion of synchronous write IO to a 
- * block device.
- * 
- * For more documentation, please look at the inverse
- * function: mks_read_blkdev.
- * 
- * @param   bdev    Block device to write to.
- * @param   src     The page used to write data into the block device.
- * @param   sector  Sector to start writing block device from.
- * @param   size    Size of the write to block device.
- * 
- * @return  0       Successfully wrote the sector.
- * @return  <0      Error.
+ * Perform a reverse bit scan for an unsigned long.
  */
-int 
-mks_write_blkdev(struct block_device *bdev, struct page *src, sector_t sector, u32 size)
+inline unsigned long
+bsr(unsigned long n)
 {
-    const int page_offset = 0;
-
-    int ret;
-    struct bio *bio = NULL;
-    struct completion event;
-
-    init_completion(&event);
-    bio = bio_alloc(GFP_NOIO, 1);
-    if (IS_ERR(bio)) {
-        ret = PTR_ERR(bio);
-        mks_alert("bio_alloc failure {%d}\n", ret);
-        return ret;
-    }
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
-    bio->bi_disk = bdev->bd_disk;
-#else
-    bio->bi_bdev = bdev;
-#endif
-
-    bio->bi_iter.bi_sector = sector;
-    bio->bi_private = &event;
-    bio->bi_end_io = mks_blkdev_callback;
-    bio_add_page(bio, src, size, page_offset);
-
-    bio->bi_opf |= REQ_OP_WRITE;
-    bio->bi_opf |= REQ_SYNC;
-    submit_bio(bio);
-
-    wait_for_completion(&event);
-    return 0;
+	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
+	return n;
 }

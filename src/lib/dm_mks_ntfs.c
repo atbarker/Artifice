@@ -21,5 +21,5 @@
 mks_boolean_t
 mks_ntfs_detect(const void *data)
 {
-    return DM_MKS_TRUE;
+    return DM_MKS_FALSE;
 }

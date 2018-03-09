@@ -4,6 +4,7 @@
  * Author: Yash Gupta <ygupta@ucsc.edu>, Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
+#include <dm_mks_lib.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -13,8 +14,8 @@
 #include <linux/errno.h>
 #include <linux/mm_types.h>
 
-#ifndef _DM_MKS_H_
-#define _DM_MKS_H_
+#ifndef _DM_MKS_H
+#define _DM_MKS_H
 
 //
 // Macros
@@ -60,6 +61,9 @@ struct mks_private {
     // Device mapper representation for the
     // passive device.
     struct dm_dev *passive_dev;
+
+    // File system context.
+    struct mks_fs_context *fs_context;
 };
 
 //
