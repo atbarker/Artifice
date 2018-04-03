@@ -72,6 +72,27 @@ struct mks_io {
     u32 io_size;                // Size of I/O transfer.
 };
 
+//magical super block
+struct mks_super{
+    unsigned char hash[32];
+    u64 mks_size;
+    u8 ecc_scheme;
+    u8 secret_split_type;
+    u32 mks_map_start;
+}__attribute__((packed));
+
+//entry into a matryoshka map tuple
+struct mks_map_tuple{
+    u32 block_num;
+    u16 hash;
+}__attribute__((packed));
+
+//Matryoshka Map entry
+struct mks_map_entry{
+    struct mks_map_tuples *tuples;
+    unsigned char datablock_checksum[16];
+}__attribute__((packed));
+
 //
 // Prototypes
 //

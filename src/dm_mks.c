@@ -140,7 +140,8 @@ mks_map(struct dm_target *ti, struct bio *bio)
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
      * engaged.
-     */ 
+     */
+    //we should just have a simple map on the disk. 
     bio_endio(bio);
     
     mks_debug("exiting mapper\n");
