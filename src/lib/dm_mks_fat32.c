@@ -320,6 +320,8 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	sector_t start_sector;
 	void *fat_data;
 	struct page *page;
+	struct mks_io fatio;
+	enum mks_io_flags flags;
 	u32 page_size;
 	u32 page_number;
 
@@ -340,7 +342,12 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 		mks_debug("Read more data to map the FAT\n");
 		page = alloc_pages(GFP_KERNEL, (unsigned int)bsr(page_number));
                 fat_data = page_address(page);
-		status = mks_read_blkdev(device, page, start_sector, fat_aligned_size_bytes);
+		fatio.bdev = device;
+                fatio.io_page = page;
+		fatio.io_sector = start_sector;
+		fatio.io_size = fat_aligned_size_bytes;
+		flags = MKS_IO_READ;
+		status = mks_blkdev_io(&fatio, flags);
 		mks_debug("FAT read successfully.\n");	
 	}
 	
