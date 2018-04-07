@@ -24,6 +24,7 @@ struct fat_volume {
 	size_t num_alloc_files;     // number of allocated files.
 	size_t max_allocated_files; // number of allocatable files.
 	char oem_name[8+1];         // boot sector information.
+        u32 num_empty_clusters;
 
 	//data from the DOS 2.0 parameter block
 	u16 bytes_sector;           // bytes in a sector.
@@ -360,9 +361,11 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	for (i=0; i<vol->num_data_clusters; i++){
 		if(p[i] == 0){
 			empty_clusters[cluster_number] = i;
+                        cluster_number++;
 		}
 	}
 	vol->empty_clusters = empty_clusters;
+        vol->num_empty_clusters = cluster_number;
 	return 0;
 }
 
@@ -414,6 +417,7 @@ mks_fat32_parse(void *data, struct block_device *device)
 	parameters->bytes_block = vol->bytes_sector * vol->sec_cluster;
 	parameters->data_start_off = (u32)vol->data_start_off;
 	parameters->empty_block_offsets = vol->empty_clusters;
+        parameters->num_empty_blocks = vol->num_empty_clusters;
 
 	return parameters;
 }
@@ -438,6 +442,7 @@ mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_devic
         fs->total_blocks = fat->num_blocks;
         fs->sectors_per_block = fat->sec_block;
         fs->block_list = fat->empty_block_offsets;
+        fs->list_len = fat->num_empty_blocks;
 	mks_debug("This is indeed FAT32");
 	mks_debug("Number of data clusters, %u\n", fat->num_blocks);   
     	return DM_MKS_TRUE;

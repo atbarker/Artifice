@@ -55,6 +55,7 @@ struct fs_data {
 	u8	sec_block;            	//sectors per block
 	u32 bytes_block;          	//number of bytes per block
 	u32 num_blocks;           	//number of blocks
+        u32 num_empty_blocks;
 };
 
 //
