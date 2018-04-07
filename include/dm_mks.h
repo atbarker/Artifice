@@ -75,6 +75,6 @@ static void mks_dtr(struct dm_target *ti);
 static int mks_map(struct dm_target *ti, struct bio *bio);
 
 // Matryoshka helpers
-static int mks_detect_fs(struct block_device *device);
+static int mks_detect_fs(struct block_device *device, struct mks_private *context);
 
 #endif

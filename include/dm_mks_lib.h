@@ -41,9 +41,10 @@ struct mks_fs_context {
 		u32	*block_list;
 		u32	list_len;
 	} free_blocks;
-
-	u16	sectors_per_block;
-	u64	total_blocks;
+        u32     *block_list;
+        u32     list_len;
+	u8	sectors_per_block;
+	u32	total_blocks;
 };
 
 // TODO: Obselete (Move FAT32 specific data into fat32 library)
@@ -59,7 +60,7 @@ struct fs_data {
 //
 // Filesystem support
 //
-mks_boolean_t mks_fat32_detect(const void *data, struct fs_data *fs, struct block_device *device);
+mks_boolean_t mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_device *device);
 mks_boolean_t mks_ext4_detect(const void *data);
 mks_boolean_t mks_ntfs_detect(const void *data);
 

@@ -61,7 +61,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         return ret;
     }
 
-    ret = mks_detect_fs(context->passive_dev->bdev);
+    ret = mks_detect_fs(context->passive_dev->bdev, context);
     if (ret < 0) {
         mks_alert("mks_detect_fs failure {%d}\n", ret);
         return ret;
@@ -84,7 +84,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
  * is called when a device instance for this target is
  * destroyed. It frees up the space used up for this 
  * instance.
- * 
+ *
  * @param   ti      Target instance to be destroyed.
  */ 
 static void 
@@ -123,7 +123,7 @@ mks_map(struct dm_target *ti, struct bio *bio)
 {   
     struct mks_private *context = ti->private;
 
-    __mks_set_debug(DM_MKS_DEBUG_DISABLE);
+    //__mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
     switch(bio_op(bio)) {
         case REQ_OP_READ:
@@ -141,7 +141,8 @@ mks_map(struct dm_target *ti, struct bio *bio)
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
      * engaged.
      */
-    //we should just have a simple map on the disk. 
+    //we should just have a simple map on the disk.
+    mks_debug("Writing to disk, so much fun\n"); 
     bio_endio(bio);
     
     mks_debug("exiting mapper\n");
@@ -166,7 +167,7 @@ mks_map(struct dm_target *ti, struct bio *bio)
  *  DM_MKS_FS_NONE      Block Device does not have a supported filesystem.
  */
 static int 
-mks_detect_fs(struct block_device *device)
+mks_detect_fs(struct block_device *device, struct mks_private *context)
 {
     const sector_t start_sector = 0;
     const u32 read_length = 1 << PAGE_SHIFT;
@@ -174,7 +175,8 @@ mks_detect_fs(struct block_device *device)
     struct page *page;
     void *data;
     int ret;
-    struct fs_data *fs = NULL;
+    int i;
+    struct mks_fs_context *fs = context->fs_context;
 
     struct mks_io io = {
         .bdev = device,
@@ -197,11 +199,16 @@ mks_detect_fs(struct block_device *device)
         return ret;
     }
     //print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 5, 16, data, read_length, 1);
-
+ 
+    fs = kmalloc(sizeof *fs, GFP_KERNEL);
     //TODO: fix null pointer error with FAT32
     /* Add filesystem support here as more else...if blocks */
     if (mks_fat32_detect(data, fs, device) == DM_MKS_TRUE) {
         ret = DM_MKS_FS_FAT32;
+        mks_debug("Number of blocks %p\n", fs->block_list);
+        for(i = 0; i < 50; i++){
+            mks_debug("Block %d = %d \n", i, fs->block_list[i]);
+        }
     } else {
         ret = DM_MKS_FS_NONE;
     }

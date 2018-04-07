@@ -379,7 +379,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
  *    struct fs_data *, contains generalized data about the fs.
  */
 
-struct fs_data * 
+static struct fs_data * 
 mks_fat32_parse(void *data, struct block_device *device)
 {
 	struct fat_volume *vol = NULL;
@@ -431,12 +431,15 @@ mks_fat32_parse(void *data, struct block_device *device)
  */
 
 mks_boolean_t 
-mks_fat32_detect(const void *data, struct fs_data *fs, struct block_device *device)
+mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_device *device)
 {
-    fs = mks_fat32_parse((void *)data, device);
+    struct fs_data *fat = mks_fat32_parse((void *)data, device);
     if(fs) {
-		mks_debug("This is indeed FAT32");
-		//mks_debug("Number of data clusters, %u\n", fs->num_blocks);   
+        fs->total_blocks = fat->num_blocks;
+        fs->sectors_per_block = fat->sec_block;
+        fs->block_list = fat->empty_block_offsets;
+	mks_debug("This is indeed FAT32");
+	mks_debug("Number of data clusters, %u\n", fat->num_blocks);   
     	return DM_MKS_TRUE;
     }
     mks_debug("Not FAT32");
