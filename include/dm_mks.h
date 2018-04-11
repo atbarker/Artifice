@@ -23,7 +23,7 @@
 // Metadata
 #define DM_MKS_NAME             "mks"
 #define DM_MKS_MAJOR_VER        0
-#define DM_MKS_MINOR_VER        0
+#define DM_MKS_MINOR_VER        1
 #define DM_MKS_PATCH_VER        0
 
 // Sizes
