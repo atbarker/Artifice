@@ -74,6 +74,9 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             mks_debug("detected nothing\n");
             break;
     }
+    //handle the superblock, hash password and locate first copy
+ 
+    //find location for the matryoshka map using the superblock then map that into memory for use(kept in context)
 
     mks_info("exiting constructor\n");
     return 0;
@@ -209,6 +212,10 @@ mks_detect_fs(struct block_device *device, struct mks_private *context)
         for(i = 0; i < 50; i++){
             mks_debug("Block %d = %d \n", i, fs->block_list[i]);
         }
+        
+        //io.size = 4096;
+        //io.sector = (fs->block_list[0]-1)*fs->sectors_per_block;
+        //ret = mks_blkdev_io(&io, MKS_IO_READ);
     } else {
         ret = DM_MKS_FS_NONE;
     }
