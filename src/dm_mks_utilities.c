@@ -137,6 +137,10 @@ int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned c
     return 0;
 }
 
+int write_new_map(u32 entries, struct mks_private *context){
+    return 0;
+}
+
 struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 ecc_scheme, u8 secret_split_type, u32 mks_map_start){
     struct mks_super *super;
     super = kmalloc(sizeof(struct mks_super), GFP_KERNEL);
@@ -146,6 +150,16 @@ struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 e
     super->secret_split_type = secret_split_type;
     super->mks_map_start = mks_map_start;
     return super;
+}
+
+//write the superblock to the disk in a set number of locations
+int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_private *context){
+    return 0;
+}
+
+//retrieve the superblock from hashes of the passphrase
+struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, struct mks_private *context){
+    return NULL;
 }
 
 //takes in the matryoshak map and the free list of blocks, then returns a physical block tuple based on logical block number
