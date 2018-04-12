@@ -37,6 +37,7 @@
 enum mks_args {
     DM_MKS_ARG_PASSPHRASE = 0,
     DM_MKS_ARG_PASSIVE_DEV,
+    DM_MKS_ARG_NEW,
     DM_MKS_ARG_MAX
 };
 

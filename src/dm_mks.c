@@ -40,7 +40,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     mks_info("entering constructor\n");
     mks_debug("arg count: %d\n", argc);
-    if (argc != DM_MKS_ARG_MAX) {
+    if (argc != DM_MKS_ARG_MAX - 1) {
         mks_alert("not enough arguments\n");
         return -EINVAL;
     }
@@ -56,6 +56,8 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     strncpy(context->passphrase, argv[DM_MKS_ARG_PASSPHRASE], DM_MKS_PASSPHRASE_SZ);
     strncpy(context->passive_dev_name, argv[DM_MKS_ARG_PASSIVE_DEV], DM_MKS_PASSIVE_DEV_SZ);
+
+    mks_debug("argc: %d\n", argc);
 
     ret = dm_get_device(ti, context->passive_dev_name, dm_table_get_mode(ti->table), &context->passive_dev);
     if (ret) {
@@ -81,10 +83,15 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //handle the superblock, hash password and locate first copy
     ret = passphrase_hash((unsigned char *)context->passphrase, (unsigned int)DM_MKS_PASSPHRASE_SZ, digest);
 
-
-    //get the superblock
-    super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
- 
+    //write the superblock copies to the disk or search for the superblock
+    if(argc == DM_MKS_ARG_MAX){
+        //super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
+    }else{
+        if(super == NULL){
+		mks_alert("Could not find superblock with passphrase\n");
+		return -1;
+	}
+    }
     //find location for the matryoshka map using the superblock then map that into memory for use(kept in context)
 
 
