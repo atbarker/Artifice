@@ -112,25 +112,46 @@ static struct sdesc *init_sdesc(struct crypto_shash *alg){
 
 int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest){
     struct crypto_shash *alg;
-    char *hash_alg_name = "sha1-padlock-nano";
+    char *hash_alg_name = "sha256";
     int ret;
     struct sdesc *sdesc;
 
     alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
     if(IS_ERR(alg)){
+        mks_alert("Issue creating hash algorithm\n");
         return -1;
     }
     
     sdesc = init_sdesc(alg);
     if(IS_ERR(sdesc)){
+        mks_alert("Could not generate hash description\n");
         return -1;
     }
 
     ret = crypto_shash_digest(&sdesc->shash, passphrase, pass_len, digest);
+    if(ret != 0){
+        mks_alert("Error Computing hash\n");
+    }
     kfree(sdesc);
     crypto_free_shash(alg);
     return 0;
 }
+
+struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 ecc_scheme, u8 secret_split_type, u32 mks_map_start){
+    struct mks_super *super;
+    super = kmalloc(sizeof(struct mks_super), GFP_KERNEL);
+    memcpy(super->hash, (void*)digest ,32);
+    super->mks_size = mks_size;
+    super->ecc_scheme = ecc_scheme;
+    super->secret_split_type = secret_split_type;
+    super->mks_map_start = mks_map_start;
+    return super;
+}
+
+//takes in the matryoshak map and the free list of blocks, then returns a physical block tuple based on logical block number
+/*int find_physical_block(){
+    return 0;
+}*/
 
 
 /**

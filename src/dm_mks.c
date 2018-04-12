@@ -35,6 +35,8 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
     int ret;
     struct mks_private *context = NULL;
+    unsigned char *digest;
+    struct mks_super *super;
 
     mks_info("entering constructor\n");
     mks_debug("arg count: %d\n", argc);
@@ -74,9 +76,17 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             mks_debug("detected nothing\n");
             break;
     }
+
+    digest = kmalloc(sizeof(DM_MKS_PASSPHRASE_SZ), GFP_KERNEL);
     //handle the superblock, hash password and locate first copy
+    ret = passphrase_hash((unsigned char *)context->passphrase, (unsigned int)DM_MKS_PASSPHRASE_SZ, digest);
+
+
+    //get the superblock
+    super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
  
     //find location for the matryoshka map using the superblock then map that into memory for use(kept in context)
+
 
     mks_info("exiting constructor\n");
     return 0;
