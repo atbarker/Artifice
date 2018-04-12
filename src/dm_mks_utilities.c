@@ -5,6 +5,7 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_mks_utilities.h>
+#include <dm_mks_lib.h>
 #include <linux/errno.h>
 #include <linux/crypto.h>
 #include <crypto/hash.h>
@@ -137,7 +138,13 @@ int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned c
     return 0;
 }
 
-int write_new_map(u32 entries, struct mks_private *context){
+//should execute whilst we are generating a new superblock such that the superblock can include the location
+int write_new_map(u32 entries, struct mks_fs_context *context){
+    int i;
+    //use the number of entries, block size, and entrie sizes to calculate the number of blocks needed, these will then be formated
+    for(i = 0; i < 5; i++){
+
+    }
     return 0;
 }
 
@@ -153,12 +160,33 @@ struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 e
 }
 
 //write the superblock to the disk in a set number of locations
-int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_private *context){
+int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_fs_context *context){
+    u32 location[duplicates];
+    int i;
+    //compute the hash 8 times and populate  the requisite array, use modulo to determine block offsets
+    //this is nondeterministic, must find a more reliable way to do it over the search space
+    //slightly different superblock for each copy on the disk
+
+    //write duplicate number of times to those locations on the disk
+    for(i = 0; i < duplicates; i++){
+
+    }
     return 0;
 }
 
 //retrieve the superblock from hashes of the passphrase
-struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, struct mks_private *context){
+struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, struct mks_fs_context *context){
+    int i;
+    //compute the first hash and check the location on the disk, if the prefix matches the specific hash then we are good.
+
+    //check locations
+    for(i = 0; i < duplicates; i++){
+	//put something here to repair the superblock when it is written to the disk
+	//if we know that the block is here we can break out of the loop and return.
+        if(1){
+            break;
+	}
+    }
     return NULL;
 }
 

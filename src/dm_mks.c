@@ -36,7 +36,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     int ret;
     struct mks_private *context = NULL;
     unsigned char *digest;
-    struct mks_super *super;
+    struct mks_super *super = NULL;
 
     mks_info("entering constructor\n");
     mks_debug("arg count: %d\n", argc);
@@ -85,7 +85,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     //write the superblock copies to the disk or search for the superblock
     if(argc == DM_MKS_ARG_MAX){
-        //super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
+        super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
     }else{
         if(super == NULL){
 		mks_alert("Could not find superblock with passphrase\n");
