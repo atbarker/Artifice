@@ -6,6 +6,8 @@
  */
 #include <dm_mks_utilities.h>
 #include <linux/errno.h>
+#include <linux/crypto.h>
+#include <crypto/hash.h>
 
 /**
  * Used as a callback function to signify the completion 
@@ -91,6 +93,45 @@ invalid_flag:
     bio_endio(bio);
     return -EINVAL;
 }
+
+struct sdesc{
+    struct shash_desc shash;
+    char ctx[];
+};
+
+//generate a hash of the passphrase for locating or generating the superblock
+static struct sdesc *init_sdesc(struct crypto_shash *alg){
+    struct sdesc *sdesc;
+    int size;
+    size = sizeof(struct shash_desc) + crypto_shash_descsize(alg);
+    sdesc = kmalloc(size, GFP_KERNEL);
+    sdesc->shash.tfm = alg;
+    sdesc->shash.flags = 0x0;
+    return sdesc;
+}
+
+int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest){
+    struct crypto_shash *alg;
+    char *hash_alg_name = "sha1-padlock-nano";
+    int ret;
+    struct sdesc *sdesc;
+
+    alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
+    if(IS_ERR(alg)){
+        return -1;
+    }
+    
+    sdesc = init_sdesc(alg);
+    if(IS_ERR(sdesc)){
+        return -1;
+    }
+
+    ret = crypto_shash_digest(&sdesc->shash, passphrase, pass_len, digest);
+    kfree(sdesc);
+    crypto_free_shash(alg);
+    return 0;
+}
+
 
 /**
  * Perform a reverse bit scan for an unsigned long.

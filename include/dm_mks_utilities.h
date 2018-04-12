@@ -98,5 +98,6 @@ struct mks_map_entry{
 //
 unsigned long bsr(unsigned long n);
 int mks_blkdev_io(struct mks_io *io_request, enum mks_io_flags flag);
+int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest);
 
 #endif
