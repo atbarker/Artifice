@@ -191,6 +191,7 @@ int write_new_superblock(struct mks_super *super, int duplicates, unsigned char 
             mks_alert("Error when writing superblock copy {%d}\n", i);
             return ret;
         }
+        mks_alert("Superblock written {%d}\n", i);
         //io.io_sector = ;
     }
     __free_page(page);

@@ -35,7 +35,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
     int ret;
     struct mks_private *context = NULL;
-    unsigned char *digest;
+    unsigned char *digest = NULL;
     struct mks_super *super = NULL;
 
     mks_info("entering constructor\n");
@@ -82,11 +82,16 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     digest = kmalloc(sizeof(DM_MKS_PASSPHRASE_SZ), GFP_KERNEL);
     //handle the superblock, hash password and locate first copy
     ret = passphrase_hash((unsigned char *)context->passphrase, (unsigned int)DM_MKS_PASSPHRASE_SZ, digest);
+    mks_debug("Generated digest\n");
 
     //write the superblock copies to the disk or search for the superblock
-    if(argc == DM_MKS_ARG_MAX){
-        super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
+    if(1){
+        //mks_debug("Fun %d\n", context->fs_context->block_list[1]);
+        mks_debug("digest %p\n", digest);
+        super = generate_superblock(digest, 4, 0, 0, 0);
+        mks_debug("Generated Superblock\n");
         write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
+        mks_debug("Superblock written\n");
     }else{
         super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
         if(super == NULL){
