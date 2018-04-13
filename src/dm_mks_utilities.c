@@ -175,19 +175,50 @@ int write_new_superblock(struct mks_super *super, int duplicates, unsigned char 
 }
 
 //retrieve the superblock from hashes of the passphrase
-struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, struct mks_fs_context *context){
+struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, struct mks_fs_context *context, struct block_device *device){
     int i;
+    const u32 read_length = 1 << PAGE_SHIFT;
+    struct page *page;
+    struct mks_super *super = kmalloc(sizeof(struct mks_super), GFP_KERNEL);
+    void *data;
+    int ret;
+    struct mks_io io = {
+        .bdev = device,
+        .io_sector = (context->block_list[0]-1)*context->sectors_per_block,
+        .io_size = read_length  
+    };
+
+    page = alloc_page(GFP_KERNEL);
+    if (IS_ERR(page)) {
+        ret = PTR_ERR(page);
+        mks_alert("alloc_page failure {%d}\n", ret);
+        return ret;
+    }
+    data = page_address(page);
+    io.io_page = page;
     //compute the first hash and check the location on the disk, if the prefix matches the specific hash then we are good.
 
     //check locations
     for(i = 0; i < duplicates; i++){
 	//put something here to repair the superblock when it is written to the disk
 	//if we know that the block is here we can break out of the loop and return.
-        if(1){
+        ret = mks_blkdev_io(&io, MKS_IO_READ);
+        if (ret) {
+            mks_alert("mks_blkdev_io failure, Could not read superblock {%d}\n", ret);
+            return NULL;
+        }
+        memcpy(super, data, sizeof(struct mks_super));
+        if(super->hash){
+            mks_debug("Superblock copy {%d} not present, trying next one.\n", i);
             break;
-	}
+	    }
     }
-    return NULL;
+    if(i == duplicates){
+        mks_alert("superblock not found, either overwritten or no instance ever existed.\n");
+        return NULL;
+    }
+    __free_page(page);
+    return super;
 }
 
 //takes in the matryoshak map and the free list of blocks, then returns a physical block tuple based on logical block number

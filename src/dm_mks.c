@@ -87,10 +87,11 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     if(argc == DM_MKS_ARG_MAX){
         super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
     }else{
+        super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
         if(super == NULL){
-		mks_alert("Could not find superblock with passphrase\n");
-		return -1;
-	}
+		    mks_alert("Could not find superblock with passphrase\n");
+		    return -1;
+	    }
     }
     //find location for the matryoshka map using the superblock then map that into memory for use(kept in context)
 
