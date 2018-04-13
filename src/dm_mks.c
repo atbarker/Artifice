@@ -79,18 +79,32 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             break;
     }
 
+    //Generate the hash of our password.
     digest = kmalloc(sizeof(DM_MKS_PASSPHRASE_SZ), GFP_KERNEL);
-    //handle the superblock, hash password and locate first copy
     ret = passphrase_hash((unsigned char *)context->passphrase, (unsigned int)DM_MKS_PASSPHRASE_SZ, digest);
-    mks_debug("Digest %d\n", digest[0]);
+
+    //generate superblock locations
 
     //write the superblock copies to the disk or search for the superblock
     if(argc == DM_MKS_ARG_MAX){
+	
+	//Determine locations and space needed for the matryoshka map
+	
+	//Generate the superblock
         //super = generate_superblock(digest, 4, 0, 0, 0);
+	
+	//Write the superblock
         //write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
-        //mks_debug("Superblock written\n");
+	
+	//write the new matryoshka map
+	
+        //mks_debug("Matryoshka Formatting Complete.\n");
     }else{
+	//retrieve the superblock
         //super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
+	
+	//Perform an integrity check on where the superblocks are
+	
         /*if(super == NULL){
 		    mks_alert("Could not find superblock with passphrase\n");
 		    return -1;
@@ -98,7 +112,9 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             mks_debug("Found superblock\n");
 	}*/
     }
-    //find location for the matryoshka map using the superblock then map that into memory for use(kept in context)
+
+    //Copy the Matryoshka Map into memory, to be flushed to disk periodically
+    //Make sure it is all there
 
 
     mks_info("exiting constructor\n");
@@ -167,8 +183,15 @@ mks_map(struct dm_target *ti, struct bio *bio)
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
      * engaged.
      */
-    //we should just have a simple map on the disk.
-    mks_debug("Writing to disk, so much fun\n"); 
+
+    //Get the logical sector for the BIO
+    
+    //Return a set of block locations from the map
+    
+    //read or write the blocks, reconstructing or dismantling as needed
+    
+    //Return what was requested by the BIO
+    
     bio_endio(bio);
     
     mks_debug("exiting mapper\n");
