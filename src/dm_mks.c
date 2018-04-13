@@ -87,9 +87,11 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //write the superblock copies to the disk or search for the superblock
     if(1){
         //mks_debug("Fun %d\n", context->fs_context->block_list[1]);
-        mks_debug("digest %p\n", digest);
         super = generate_superblock(digest, 4, 0, 0, 0);
         mks_debug("Generated Superblock\n");
+        mks_debug("Super %p\n", super);
+        mks_debug("context %p\n", context->fs_context);
+        mks_debug("block device %p\n", context->passive_dev->bdev);
         write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
         mks_debug("Superblock written\n");
     }else{
@@ -203,7 +205,7 @@ mks_detect_fs(struct block_device *device, struct mks_private *context)
     void *data;
     int ret;
     int i;
-    struct mks_fs_context *fs = context->fs_context;
+    struct mks_fs_context *fs;
 
     struct mks_io io = {
         .bdev = device,
@@ -243,6 +245,7 @@ mks_detect_fs(struct block_device *device, struct mks_private *context)
     } else {
         ret = DM_MKS_FS_NONE;
     }
+    context->fs_context = fs;
     __free_page(page);
 
     mks_debug("returning from mks_detect_fs {%d}\n", ret);

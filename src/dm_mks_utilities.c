@@ -170,6 +170,7 @@ int write_new_superblock(struct mks_super *super, int duplicates, unsigned char 
     struct mks_io io = {
         .bdev = device,
         .io_sector = (context->block_list[0]-1)*context->sectors_per_block,
+        //.io_sector = 40,
         .io_size = read_length  
     };
     page = alloc_page(GFP_KERNEL);
@@ -180,9 +181,11 @@ int write_new_superblock(struct mks_super *super, int duplicates, unsigned char 
     }
     data = page_address(page);
     io.io_page = page;
+    mks_debug("context block %p\n", context->block_list);
     //compute the hash 8 times and populate  the requisite array, use modulo to determine block offsets
     //this is nondeterministic, must find a more reliable way to do it over the search space
     //slightly different superblock for each copy on the disk
+    mks_debug("superblock %p\n", super);
     memcpy(data, super, sizeof(struct mks_super));
     //write duplicate number of times to those locations on the disk
     for(i = 0; i < duplicates; i++){
