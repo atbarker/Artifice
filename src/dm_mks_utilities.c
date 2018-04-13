@@ -160,17 +160,40 @@ struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 e
 }
 
 //write the superblock to the disk in a set number of locations
-int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_fs_context *context){
-    u32 location[duplicates];
+int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_fs_context *context, struct block_device *device){
+    //u32 location[duplicates];
     int i;
+    struct page *page;
+    const u32 read_length = 1 << PAGE_SHIFT;
+    void *data;
+    int ret;
+    struct mks_io io = {
+        .bdev = device,
+        .io_sector = (context->block_list[0]-1)*context->sectors_per_block,
+        .io_size = read_length  
+    };
+    page = alloc_page(GFP_KERNEL);
+    if (IS_ERR(page)) {
+        ret = PTR_ERR(page);
+        mks_alert("alloc_page failure {%d}\n", ret);
+        return ret;
+    }
+    data = page_address(page);
+    io.io_page = page;
     //compute the hash 8 times and populate  the requisite array, use modulo to determine block offsets
     //this is nondeterministic, must find a more reliable way to do it over the search space
     //slightly different superblock for each copy on the disk
-
+    memcpy(data, super, sizeof(struct mks_super));
     //write duplicate number of times to those locations on the disk
     for(i = 0; i < duplicates; i++){
-
+        ret = mks_blkdev_io(&io, MKS_IO_WRITE);
+        if(ret){
+            mks_alert("Error when writing superblock copy {%d}\n", i);
+            return ret;
+        }
+        //io.io_sector = ;
     }
+    __free_page(page);
     return 0;
 }
 
@@ -192,7 +215,7 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
     if (IS_ERR(page)) {
         ret = PTR_ERR(page);
         mks_alert("alloc_page failure {%d}\n", ret);
-        return ret;
+        return NULL;
     }
     data = page_address(page);
     io.io_page = page;

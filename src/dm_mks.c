@@ -86,6 +86,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //write the superblock copies to the disk or search for the superblock
     if(argc == DM_MKS_ARG_MAX){
         super = generate_superblock(digest, 4, 0, 0, context->fs_context->block_list[1]);
+        write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
     }else{
         super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
         if(super == NULL){

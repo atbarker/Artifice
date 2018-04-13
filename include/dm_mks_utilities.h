@@ -74,6 +74,7 @@ struct mks_io {
 };
 
 //magical super block
+//need to add an array to store the superblock copies, most likely hard coded.
 struct mks_super{
     unsigned char hash[32];
     u64 mks_size;
@@ -102,7 +103,7 @@ int mks_blkdev_io(struct mks_io *io_request, enum mks_io_flags flag);
 int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest);
 int write_new_map(u32 entries, struct mks_fs_context *context);
 struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 ecc_scheme, u8 secret_split_type, u32 mks_map_start);
-int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_fs_context *context);
+int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_fs_context *context, struct block_device *device);
 struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, struct mks_fs_context *context, struct block_device *device);
 
 #endif
