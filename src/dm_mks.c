@@ -82,24 +82,21 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     digest = kmalloc(sizeof(DM_MKS_PASSPHRASE_SZ), GFP_KERNEL);
     //handle the superblock, hash password and locate first copy
     ret = passphrase_hash((unsigned char *)context->passphrase, (unsigned int)DM_MKS_PASSPHRASE_SZ, digest);
-    mks_debug("Generated digest\n");
+    mks_debug("Digest %d\n", digest[0]);
 
     //write the superblock copies to the disk or search for the superblock
-    if(1){
-        //mks_debug("Fun %d\n", context->fs_context->block_list[1]);
-        super = generate_superblock(digest, 4, 0, 0, 0);
-        mks_debug("Generated Superblock\n");
-        mks_debug("Super %p\n", super);
-        mks_debug("context %p\n", context->fs_context);
-        mks_debug("block device %p\n", context->passive_dev->bdev);
-        write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
-        mks_debug("Superblock written\n");
+    if(argc == DM_MKS_ARG_MAX){
+        //super = generate_superblock(digest, 4, 0, 0, 0);
+        //write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
+        //mks_debug("Superblock written\n");
     }else{
-        super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
-        if(super == NULL){
+        //super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
+        /*if(super == NULL){
 		    mks_alert("Could not find superblock with passphrase\n");
 		    return -1;
-	    }
+	}else{
+            mks_debug("Found superblock\n");
+	}*/
     }
     //find location for the matryoshka map using the superblock then map that into memory for use(kept in context)
 
@@ -234,10 +231,10 @@ mks_detect_fs(struct block_device *device, struct mks_private *context)
     /* Add filesystem support here as more else...if blocks */
     if (mks_fat32_detect(data, fs, device) == DM_MKS_TRUE) {
         ret = DM_MKS_FS_FAT32;
-        mks_debug("Number of blocks %p\n", fs->block_list);
+        /*mks_debug("Number of blocks %p\n", fs->block_list);
         for(i = 0; i < 50; i++){
             mks_debug("Block %d = %d \n", i, fs->block_list[i]);
-        }
+        }*/
         
         //io.size = 4096;
         //io.sector = (fs->block_list[0]-1)*fs->sectors_per_block;

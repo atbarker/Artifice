@@ -235,10 +235,13 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
             return NULL;
         }
         memcpy(super, data, sizeof(struct mks_super));
+        mks_debug("Superblock %p\n", super);
+        mks_debug("Hash %d\n", super->hash[0]);
         if(super->hash){
-            mks_debug("Superblock copy {%d} not present, trying next one.\n", i);
+            mks_debug("Superblock copy {%d} found\n", i);
             break;
-	    }
+	}
+        mks_debug("Superblock copy {%d} not found\n", i);
     }
     if(i == duplicates){
         mks_alert("superblock not found, either overwritten or no instance ever existed.\n");

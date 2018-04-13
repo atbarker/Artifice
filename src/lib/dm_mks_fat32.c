@@ -123,7 +123,7 @@ struct fat_boot_sector {
  *
  *
  */
-static int 
+int 
 fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
 {
 	vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
@@ -171,7 +171,7 @@ out_invalid:
  *@return
  *    status int
  */
-static int 
+int 
 fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
 {
 	vol->sec_track = le16_to_cpu(boot_sec->sec_track);
@@ -190,7 +190,7 @@ fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot
  *
  */
 
-static int 
+int 
 fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
 {
 	vol->phys_driv_num = ebpb->physical_drive_num;
@@ -207,7 +207,7 @@ fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
  *
  */
 
-static int 
+int 
 fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb)
 {	
 	if (le32_to_cpu(ebpb->sec_fat) != 0){
@@ -255,7 +255,7 @@ out_invalid:
  *	status int
  */
 
-static int 
+int 
 read_boot_sector(struct fat_volume *vol, const void *data)
 {
 	//u8 buf[512];
@@ -306,7 +306,7 @@ read_boot_sector(struct fat_volume *vol, const void *data)
  *    return !=0 fail
  */
 
-static int 
+int 
 fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 {	
 	size_t fat_size_bytes;
@@ -320,7 +320,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	int cluster_number;
 	sector_t start_sector;
 	void *fat_data;
-	struct page *page;
+	struct page *page = NULL;
 	struct mks_io fatio;
 	enum mks_io_flags flags;
 	u32 page_size;
@@ -336,8 +336,10 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	mks_debug("FAT aligned size in bytes: %zu \n", fat_aligned_size_bytes);
 	mks_debug("FAT aligned offset: %d \n", (int)fat_aligned_offset);
 	mks_debug("FAT size in pages: %u \n", page_number);
+        //mks_debug("Reserved %u\n", vol->reserved);
 
-	start_sector = (sector_t)(fat_aligned_offset/512);
+	//start_sector = (sector_t)(fat_aligned_offset/512);
+        start_sector = 0;
 	
 	if(fat_aligned_offset + fat_aligned_size_bytes > 4096){
 		mks_debug("Read more data to map the FAT\n");
@@ -345,22 +347,27 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
                 fat_data = page_address(page);
 		fatio.bdev = device;
                 fatio.io_page = page;
-		fatio.io_sector = start_sector;
+		fatio.io_sector = fat_aligned_offset/512;
 		fatio.io_size = fat_aligned_size_bytes;
 		flags = MKS_IO_READ;
 		status = mks_blkdev_io(&fatio, flags);
 		mks_debug("FAT read successfully.\n");	
 	}
 	
-	vol->fat_map = data + fat_aligned_offset;
+	vol->fat_map = data;
 
-	p = (int*)vol->fat_map;
+	p = (int*)data;
+        mks_debug("p: %p\n", p);
 	cluster_number = 0;
 	empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
+        memset((void*)empty_clusters, 0, fat_size_bytes);
 	//uint8_t *cluster_contents = kmalloc(1, GFP_KERNEL);
-	for (i=0; i<vol->num_data_clusters; i++){
+	for (i=0; i<100; i++){
+                mks_debug("block %d: %d\n",i, p[i]);
 		if(p[i] == 0){
+                        //mks_debug("block {%d} is empty", i);
 			empty_clusters[cluster_number] = i;
+                        //mks_debug("empty block %d\n", empty_clusters[cluster_number]);
                         cluster_number++;
 		}
 	}
@@ -382,7 +389,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
  *    struct fs_data *, contains generalized data about the fs.
  */
 
-static struct fs_data * 
+struct fs_data * 
 mks_fat32_parse(void *data, struct block_device *device)
 {
 	struct fat_volume *vol = NULL;
