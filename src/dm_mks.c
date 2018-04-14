@@ -91,26 +91,26 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	//Determine locations and space needed for the matryoshka map
 	
 	//Generate the superblock
-        //super = generate_superblock(digest, 4, 0, 0, 0);
+        super = generate_superblock(digest, 4, 0, 0, 0);
 	
 	//Write the superblock
-        //write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
+        write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
 	
 	//write the new matryoshka map
 	
-        //mks_debug("Matryoshka Formatting Complete.\n");
+        mks_debug("Matryoshka Formatting Complete.\n");
     }else{
 	//retrieve the superblock
-        //super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
+        super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
 	
 	//Perform an integrity check on where the superblocks are
 	
-        /*if(super == NULL){
+        if(super == NULL){
 		    mks_alert("Could not find superblock with passphrase\n");
 		    return -1;
 	}else{
             mks_debug("Found superblock\n");
-	}*/
+	}
     }
 
     //Copy the Matryoshka Map into memory, to be flushed to disk periodically

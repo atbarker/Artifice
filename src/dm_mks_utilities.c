@@ -169,7 +169,7 @@ int write_new_superblock(struct mks_super *super, int duplicates, unsigned char 
     int ret;
     struct mks_io io = {
         .bdev = device,
-        .io_sector = (context->block_list[0]-1)*context->sectors_per_block,
+        .io_sector = (context->block_list[0]*context->sectors_per_block) + context->data_start_off,
         //.io_sector = 40,
         .io_size = read_length  
     };
@@ -211,7 +211,7 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
     int ret;
     struct mks_io io = {
         .bdev = device,
-        .io_sector = (context->block_list[0]-1)*context->sectors_per_block,
+        .io_sector = (context->block_list[0]*context->sectors_per_block)+ context->data_start_off,
         .io_size = read_length  
     };
 
@@ -237,7 +237,7 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
         memcpy(super, data, sizeof(struct mks_super));
         mks_debug("Superblock %p\n", super);
         mks_debug("Hash %d\n", super->hash[0]);
-        if(super->hash){
+        if(super->hash[0] == digest[0]){
             mks_debug("Superblock copy {%d} found\n", i);
             break;
 	}

@@ -418,6 +418,7 @@ mks_fat32_parse(void *data, struct block_device *device)
 				      (vol->root_entries >> (vol->sector_order - 5))) 
 					<< vol->sector_order;
 
+        vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved);
 	parameters->num_blocks = vol->num_data_clusters;
 	parameters->bytes_sec = vol->bytes_sector;
 	parameters->sec_block = vol->sec_cluster;
@@ -450,7 +451,9 @@ mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_devic
         fs->sectors_per_block = fat->sec_block;
         fs->block_list = fat->empty_block_offsets;
         fs->list_len = fat->num_empty_blocks;
+        fs->data_start_off = fat->data_start_off; //data start in clusters
 	mks_debug("This is indeed FAT32");
+        mks_debug("Data offset %d\n", fat->data_start_off);
 	mks_debug("Number of data clusters, %u\n", fat->num_blocks);   
     	return DM_MKS_TRUE;
     }
