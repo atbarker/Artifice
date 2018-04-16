@@ -148,6 +148,12 @@ int write_new_map(u32 entries, struct mks_fs_context *context){
     return 0;
 }
 
+//retrieve the matryoshka map from disk and save into memory in order to speed up some stuff.
+int retrieve_map(struct fs_context *context, struct block_device *device){
+    
+    return 0;
+}
+
 struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 ecc_scheme, u8 secret_split_type, u32 mks_map_start){
     struct mks_super *super;
     super = kmalloc(sizeof(struct mks_super), GFP_KERNEL);
@@ -249,6 +255,16 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
     }
     __free_page(page);
     return super;
+}
+
+//rewrite new copies of the superblock to bring us up to spec
+int superblock_repair(struct fs_context *context, struct block_device *device){
+    return 0;
+}
+
+//run repair cycle on the matryoshka map
+int map_repair(struct fs_context *context, struct block_device *device){
+    return 0;
 }
 
 //takes in the matryoshak map and the free list of blocks, then returns a physical block tuple based on logical block number
