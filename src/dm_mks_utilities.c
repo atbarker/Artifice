@@ -139,21 +139,37 @@ int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned c
 }
 
 //should execute whilst we are generating a new superblock such that the superblock can include the location
-int write_new_map(u32 entries, struct mks_fs_context *context){
+int write_new_map(u32 entries, struct mks_fs_context *context, ){
+    //figure out how many blocks are needed to write the map
+    //determine locations for the matryoshka map blocks
+    //mark those in the bitmap and record in each block data structure
+
     int i;
     //use the number of entries, block size, and entrie sizes to calculate the number of blocks needed, these will then be formated
-    for(i = 0; i < 5; i++){
+    //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
+    for(i = 0; i < entries; i++){
 
     }
+
+    //write the blocks to specific locations on disk
+    //done
+    //map doesn't need to be stored and can be regenerated during the repair process
     return 0;
 }
 
 //retrieve the matryoshka map from disk and save into memory in order to speed up some stuff.
 int retrieve_map(struct fs_context *context, struct block_device *device){
-    
+    //calculate how many blocks are needed to store the map
+    int i = 0; 
+    //execute a for loop over every logical block number
+    for(i = 0; i<block_number; i++){
+
+    }
     return 0;
 }
 
+//get a pointer to a new superblock
+//TODO: add a field for a tuple of the other superblock block offsets
 struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 ecc_scheme, u8 secret_split_type, u32 mks_map_start){
     struct mks_super *super;
     super = kmalloc(sizeof(struct mks_super), GFP_KERNEL);
@@ -268,9 +284,9 @@ int map_repair(struct fs_context *context, struct block_device *device){
 }
 
 //takes in the matryoshak map and the free list of blocks, then returns a physical block tuple based on logical block number
-/*int find_physical_block(){
+int find_physical_block(struct fs_context *context, struct block_device *device){
     return 0;
-}*/
+}
 
 
 /**
