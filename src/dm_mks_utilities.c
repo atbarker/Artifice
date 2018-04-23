@@ -8,6 +8,7 @@
 #include <dm_mks_lib.h>
 #include <linux/errno.h>
 #include <linux/crypto.h>
+#include <linux/random.h>
 #include <crypto/hash.h>
 
 #define BYTE_OFFSET(b) ((b) / 8)
@@ -30,6 +31,17 @@ void clear_bitmap(u8 *bits, int n){
 int get_bitmap(u8 *bits, int n){
     int bit = bits[BYTE_OFFSET(n)] & (1 << BIT_OFFSET(n));
     return bit;
+}
+
+
+/*
+ *Returns a random offset
+ *Used for spreading out blocks in the matryoshka disk
+ */
+int random_offset(u32 upper_limit){
+    u32 i;
+    get_random_bytes(&i, sizeof(i));
+    return i % upper_limit;
 }
 
 /**
@@ -171,11 +183,13 @@ int write_new_map(u32 entries, struct mks_fs_context *context){
     int tuple_size = 5;
     int entries_per_block;
     int blocks;
+    int random;
     //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
     entry_size = 32 + tuple_size*(32+16) + 256;
     entries_per_block = (context->sectors_per_block * 512) / entry_size;
     blocks = entries / entries_per_block;
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
+    random = random_offset(100);
     for(i = 0; i < entries; i++){
 
     }
