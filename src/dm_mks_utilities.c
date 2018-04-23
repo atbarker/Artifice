@@ -191,7 +191,7 @@ int write_new_map(u32 entries, struct mks_fs_context *context){
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
     random = random_offset(100);
     for(i = 0; i < entries; i++){
-
+         //mks_blkdev_io();
     }
 
     //write the blocks to specific locations on disk
