@@ -47,6 +47,7 @@ struct mks_fs_context {
 	u8	sectors_per_block;
 	u32	total_blocks;
         u32     data_start_off;
+	u8      blocks_in_tuple;
 };
 
 // TODO: Obselete (Move FAT32 specific data into fat32 library)

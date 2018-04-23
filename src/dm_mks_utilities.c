@@ -167,7 +167,14 @@ int write_new_map(u32 entries, struct mks_fs_context *context){
     //mark those in the bitmap and record in each block data structure
 
     int i;
-    //use the number of entries, block size, and entry sizes to calculate the number of blocks needed, these will then be formated
+    int entry_size;
+    int tuple_size = 5;
+    int entries_per_block;
+    int blocks;
+    //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
+    entry_size = 32 + tuple_size*(32+16) + 256;
+    entries_per_block = (context->sectors_per_block * 512) / entry_size;
+    blocks = entries / entries_per_block;
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
     for(i = 0; i < entries; i++){
 
