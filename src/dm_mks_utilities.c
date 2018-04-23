@@ -10,6 +10,28 @@
 #include <linux/crypto.h>
 #include <crypto/hash.h>
 
+#define BYTE_OFFSET(b) ((b) / 8)
+#define BIT_OFFSET(b) ((b) % 8)
+
+/**
+ *Set of functions for interfacing with a basic bitmap.
+ *Takes in our array of bits and the bit index one wishes to manipulate
+ *
+ *
+ */
+void set_bitmap(u8 *bits, int n){
+    bits[BYTE_OFFSET(n)] |= (1 << BIT_OFFSET(n));
+}
+
+void clear_bitmap(u8 *bits, int n){
+    bits[BYTE_OFFSET(n)] &= ~(1 << BIT_OFFSET(n));
+}
+
+int get_bitmap(u8 *bits, int n){
+    int bit = bits[BYTE_OFFSET(n)] & (1 << BIT_OFFSET(n));
+    return bit;
+}
+
 /**
  * Used as a callback function to signify the completion 
  * of an IO transfer to a block device.
@@ -139,13 +161,13 @@ int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned c
 }
 
 //should execute whilst we are generating a new superblock such that the superblock can include the location
-int write_new_map(u32 entries, struct mks_fs_context *context, ){
+int write_new_map(u32 entries, struct mks_fs_context *context){
     //figure out how many blocks are needed to write the map
     //determine locations for the matryoshka map blocks
     //mark those in the bitmap and record in each block data structure
 
     int i;
-    //use the number of entries, block size, and entrie sizes to calculate the number of blocks needed, these will then be formated
+    //use the number of entries, block size, and entry sizes to calculate the number of blocks needed, these will then be formated
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
     for(i = 0; i < entries; i++){
 
@@ -158,9 +180,10 @@ int write_new_map(u32 entries, struct mks_fs_context *context, ){
 }
 
 //retrieve the matryoshka map from disk and save into memory in order to speed up some stuff.
-int retrieve_map(struct fs_context *context, struct block_device *device){
+int retrieve_map(struct mks_fs_context *context, struct block_device *device){
     //calculate how many blocks are needed to store the map
-    int i = 0; 
+    int i = 0;
+    int block_number = 0; 
     //execute a for loop over every logical block number
     for(i = 0; i<block_number; i++){
 
@@ -274,17 +297,17 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
 }
 
 //rewrite new copies of the superblock to bring us up to spec
-int superblock_repair(struct fs_context *context, struct block_device *device){
+int superblock_repair(struct mks_fs_context *context, struct block_device *device){
     return 0;
 }
 
 //run repair cycle on the matryoshka map
-int map_repair(struct fs_context *context, struct block_device *device){
+int map_repair(struct mks_fs_context *context, struct block_device *device){
     return 0;
 }
 
 //takes in the matryoshak map and the free list of blocks, then returns a physical block tuple based on logical block number
-int find_physical_block(struct fs_context *context, struct block_device *device){
+int find_physical_block(struct mks_fs_context *context, struct block_device *device){
     return 0;
 }
 

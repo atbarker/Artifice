@@ -43,6 +43,7 @@ struct mks_fs_context {
 	} free_blocks;
         u32     *block_list;
         u32     list_len;
+	u8      mat_block_bitmap;
 	u8	sectors_per_block;
 	u32	total_blocks;
         u32     data_start_off;
