@@ -241,7 +241,7 @@ gfshare_ctx_enc_getshare( gfshare_ctx* ctx,
 }
 
 /* Encrypt from an input file pointer to output file pointers */
-unsigned int
+/*unsigned int
 gfshare_ctx_enc_stream( gfshare_ctx* ctx,
                         FILE *inputfile,
                         FILE **outputfiles)
@@ -267,7 +267,7 @@ gfshare_ctx_enc_stream( gfshare_ctx* ctx,
     }
   }
   return 0;
-}
+}*/
 
 /* ----------------------------------------------------[ Recombination ]---- */
 
@@ -330,7 +330,7 @@ gfshare_ctx_dec_extract( gfshare_ctx* ctx,
 }
 
 /* Decrypt from a set of output file pointers to an input file pointer */
-unsigned int
+/*unsigned int
 gfshare_ctx_dec_stream( gfshare_ctx* ctx,
                         unsigned int filecount,
                         FILE **inputfiles,
@@ -362,4 +362,4 @@ gfshare_ctx_dec_stream( gfshare_ctx* ctx,
     }
   }
   return 0;
-}
+}*/
