@@ -1,4 +1,4 @@
-/**
+/*
  * Target file source for the matryoshka file system.
  * 
  * Author: Austen Barker <atbarker@ucsc.edu>, Yash Gupta <ygupta@ucsc.edu> 
@@ -7,6 +7,7 @@
 #include <dm_mks.h>
 #include <dm_mks_utilities.h>
 #include <dm_mks_lib.h>
+#include <libgfshare.h>
 
 /**
  * Constructor function for this target. The constructor
