@@ -13,6 +13,7 @@
 #include <linux/bio.h>
 #include <linux/errno.h>
 #include <linux/mm_types.h>
+#include <linux/rslib.h>
 
 #ifndef _DM_MKS_H
 #define _DM_MKS_H

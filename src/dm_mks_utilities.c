@@ -9,6 +9,7 @@
 #include <linux/errno.h>
 #include <linux/crypto.h>
 #include <linux/random.h>
+#include <linux/rslib.h>
 #include <crypto/hash.h>
 
 #define BYTE_OFFSET(b) ((b) / 8)
@@ -173,31 +174,77 @@ int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned c
 }
 
 //should execute whilst we are generating a new superblock such that the superblock can include the location
-int write_new_map(u32 entries, struct mks_fs_context *context){
+//returns offset of the first block written to the disk
+int write_new_map(u32 entries, struct mks_fs_context *context, struct block_device *device){
     //figure out how many blocks are needed to write the map
     //determine locations for the matryoshka map blocks
     //mark those in the bitmap and record in each block data structure
 
-    int i;
-    int entry_size;
-    int tuple_size = 5;
-    int entries_per_block;
-    int blocks;
-    int random;
+    int i, j, k;
+    int tuple_size = 8;
+    u32 entry_size = 32 + tuple_size*(32+16) + 256;
+    u32 entries_per_block = (context->sectors_per_block * 512) / entry_size;
+    u32 blocks = entries / entries_per_block;
+    u32 map_offsets[blocks];
+    int block_offset;
+    int ret;
+    void *data;
+    const u32 read_length = 1 << PAGE_SHIFT;
+    struct page *page;
+    struct mks_io io = {
+        .bdev = device,
+        .io_size = read_length
+    };
+    struct mks_map_entry *map_block;
+
+    page = alloc_page(GFP_KERNEL);
+
+    data = page_address(page);
+    io.io_page = page;
+    block_offset = random_offset(100);
+    for(i = 0; i < blocks; i++){
+        while(get_bitmap(context->allocation, block_offset) != 0){
+            block_offset = block_offset + random_offset(100);
+            if(block_offset > context->list_len){
+                block_offset = random_offset(100);
+            }
+        }
+        map_offsets[i] = block_offset;
+        set_bitmap(context->allocation, block_offset);
+        block_offset = block_offset + random_offset(100);
+    } 
+    
     //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
-    entry_size = 32 + tuple_size*(32+16) + 256;
-    entries_per_block = (context->sectors_per_block * 512) / entry_size;
-    blocks = entries / entries_per_block;
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
-    random = random_offset(100);
-    for(i = 0; i < entries; i++){
-         //mks_blkdev_io();
+    map_block = kmalloc(entries_per_block * sizeof(struct mks_map_entry), GFP_KERNEL);
+    block_offset = random_offset(100);
+    for(i = 0; i < blocks; i++){
+        for(j = 0; j < entries_per_block; j++){
+            //find locations for each block
+            for(k = 0; k < tuple_size; k++){
+                while(get_bitmap(context->allocation, block_offset) != 0){
+                    block_offset = block_offset + random_offset(100);
+                    if(block_offset > context->list_len){
+                        block_offset = random_offset(100);
+                    }
+                }
+                map_block[j].tuples[k].block_num = block_offset;
+                set_bitmap(context->allocation, block_offset);
+                //write the checksum for each individual data block
+            }
+        }
+        io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
+        memcpy(data, map_block, entries_per_block * sizeof(struct mks_map_entry));
+        ret = mks_blkdev_io(&io, MKS_IO_WRITE);
+        if(ret){
+            mks_alert("Error when writing superblock copy {%d}\n", i);
+            return ret;
+        }
     }
 
     //write the blocks to specific locations on disk
     //done
-    //map doesn't need to be stored and can be regenerated during the repair process
-    return 0;
+    return map_offsets[0];
 }
 
 //retrieve the matryoshka map from disk and save into memory in order to speed up some stuff.
@@ -236,7 +283,6 @@ int write_new_superblock(struct mks_super *super, int duplicates, unsigned char 
     struct mks_io io = {
         .bdev = device,
         .io_sector = (context->block_list[0]*context->sectors_per_block) + context->data_start_off,
-        //.io_sector = 40,
         .io_size = read_length  
     };
     page = alloc_page(GFP_KERNEL);
@@ -261,7 +307,7 @@ int write_new_superblock(struct mks_super *super, int duplicates, unsigned char 
             return ret;
         }
         mks_alert("Superblock written {%d}\n", i);
-        //io.io_sector = ;
+        set_bitmap(context->allocation, 0);
     }
     __free_page(page);
     return 0;

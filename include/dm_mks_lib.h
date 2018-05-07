@@ -26,28 +26,13 @@ typedef enum mks_boolean {
 //
 // File system information required.
 struct mks_fs_context {
-	struct {
-		/*
-		 * Since the width of our array is 32 bits, we cannot
-		 * hold a block number larger than ~4 billion. We also
-		 * do not expect the total number of free blocks to ever
-		 * exceed ~4 billion.
-		 * 
-		 * NOTE: In case we want to support disks > 16TB, we will
-		 * need to add an array which is 64 bits wide. This can be
-		 * done with a union.
-		 */
-
-		u32	*block_list;
-		u32	list_len;
-	} free_blocks;
-        u32     *block_list;
-        u32     list_len;
-	u8      mat_block_bitmap;
-	u8	sectors_per_block;
-	u32	total_blocks;
-        u32     data_start_off;
+    u32     *block_list;
+    u32     list_len;
+	u8	    sectors_per_block;
+	u32	    total_blocks;
+    u32     data_start_off;
 	u8      blocks_in_tuple;
+    u8      *allocation;
 };
 
 // TODO: Obselete (Move FAT32 specific data into fat32 library)

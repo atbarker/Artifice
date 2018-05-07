@@ -80,6 +80,8 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             break;
     }
 
+    context->fs_context->allocation = kmalloc((ti->len / context->fs_context->sectors_per_block), GFP_KERNEL);
+
     //Generate the hash of our password.
     digest = kmalloc(sizeof(DM_MKS_PASSPHRASE_SZ), GFP_KERNEL);
     ret = passphrase_hash((unsigned char *)context->passphrase, (unsigned int)DM_MKS_PASSPHRASE_SZ, digest);
@@ -109,9 +111,9 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         if(super == NULL){
 		    mks_alert("Could not find superblock with passphrase\n");
 		    return -1;
-	}else{
+	    }else{
             mks_debug("Found superblock\n");
-	}
+	    }
     }
 
     //Copy the Matryoshka Map into memory, to be flushed to disk periodically

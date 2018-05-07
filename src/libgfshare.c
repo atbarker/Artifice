@@ -27,6 +27,7 @@
 #include "libgfshare.h"
 #include "libgfshare_tables.h"
 #include <linux/slab.h>
+#include "dm_mks_utilities.h"
 //#include <errno.h>
 //#include <stdlib.h>
 #include <linux/string.h>
@@ -50,9 +51,9 @@ void
 gfshare_fill_rand_using_random(unsigned char *buffer,
         unsigned int count)
 {
-  unsigned int i;
+  /*unsigned int i;
   for( i = 0; i < count; ++i )
-    buffer[i] = (random() & 0xff00) >> 8; /* apparently the bottom 8 aren't
+    buffer[i] = (random() & 0xff00) >> 8;*/ /* apparently the bottom 8 aren't
                                            * very random but the middles ones
                                            * are
                                            */
@@ -94,6 +95,8 @@ gfshare_file_getlen( FILE* f )
 
 /* ------------------------------------------------------[ Preparation ]---- */
 
+
+//TODO: fix random
 void
 gfshare_generate_sharenrs( unsigned char *sharenrs,
                            unsigned int sharecount )
@@ -328,38 +331,3 @@ gfshare_ctx_dec_extract( gfshare_ctx* ctx,
     }
   }
 }
-
-/* Decrypt from a set of output file pointers to an input file pointer */
-/*unsigned int
-gfshare_ctx_dec_stream( gfshare_ctx* ctx,
-                        unsigned int filecount,
-                        FILE **inputfiles,
-                        FILE *outfile)
-{
-  unsigned char* buffer = malloc( ctx->buffersize );
-  if( buffer == NULL ) {
-    perror( "malloc" );
-    return 1;
-  }
-
-  while( !feof(inputfiles[0]) ) {
-    unsigned int bytes_read = fread( buffer, 1, ctx->buffersize, inputfiles[0] );
-    unsigned int bytes_written;
-    gfshare_ctx_dec_giveshare( ctx, 0, buffer );
-    for( int i = 1; i < filecount; ++i ) {
-      unsigned int bytes_read_2 = fread( buffer, 1, ctx->buffersize, inputfiles[i] );
-      if( bytes_read != bytes_read_2 ) {
-        fprintf( stderr, "Mismatch during file read.\n");
-        return 1;
-      }
-      gfshare_ctx_dec_giveshare( ctx, i, buffer );
-    }
-    gfshare_ctx_dec_extract( ctx, buffer );
-    bytes_written = fwrite( buffer, 1, bytes_read, outfile );
-    if( bytes_written != bytes_read ) {
-      fprintf( stderr, "Mismatch during file write.\n");
-      return 1;
-    }
-  }
-  return 0;
-}*/

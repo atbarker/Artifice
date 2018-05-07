@@ -6,7 +6,7 @@ ccflags-y += -I$(src)/include/
 
 # Kernel module object name.
 obj-m := dm_mks.o
-dm_mks-y := src/dm_mks.o src/dm_mks_utilities.o src/lib/dm_mks_fat32.o src/libgfshare.o
+dm_mks-y := src/dm_mks.o src/dm_mks_utilities.o src/lib/dm_mks_fat32.o 
 
 default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
