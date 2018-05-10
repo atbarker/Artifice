@@ -225,7 +225,7 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
     
     //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
-    map_block = kmalloc(entries_per_block * sizeof(struct mks_map_entry), GFP_KERNEL);
+    map_block = kmalloc(entries * sizeof(struct mks_map_entry), GFP_KERNEL);
     block_offset = random_offset(100);
     for(i = 0; i < blocks; i++){
         for(j = 0; j < entries_per_block; j++){

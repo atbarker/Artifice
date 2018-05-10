@@ -10,7 +10,7 @@
 \usepackage[margin=1in]{geometry}
 \setlength{\parindent}{2em}
 \begin{document}
-\title{CMPS 223 Final: Matryoshka, a Steganographic File System}
+\title{Artifice, a Steganographic File System}
 \author{Austen Barker}
 \maketitle
 
@@ -137,28 +137,6 @@ The Matryoshka's hidden file system was built as an extension to a previously wr
 All hashes in the file system are computed using SHA-256. These hashes appear in both the hash table and as prefixes to data blocks. In this implementation the hashes are derived from the passphrase, block id, and unobfuscated contents of the data block. The hashes themselves are not obfuscated with the rest of the data block. This is done so that we can check if a block has been overwritten before devoting the resources to decrypting it.
 
 As of right now the following file system operations are supported by the FUSE driver but are not neccessarily fully operational.
-\begin{itemize}[noitemsep]
-\item init(): Constructor that initializes the file system when FUSE is called.
-\item destroy(): Destructor called when the file system is unmounted.
-\item getattr(): Called when any operation takes place on a directory.
-\item fgetattr(): Much like getattr() but called when a file in path is open.
-\item create(): Called whenever the open() Linux system call is invoked and the create flag is set.
-\item open(): Analogous to the Linux system call open() when the file already exists.
-\item release(): Doesn't really do anything since file descriptors are not managed by this file system.
-\item read(): Analogous to the read() system call.
-\item write(): Analogous to the write() system call.
-\item truncate(): Truncates a file.
-\item mkdir(): Creates a directory.
-\item opendir(): Opens a directory.
-\item releasedir(): Releases a directory.
-\item readdir(): Reads a directory.
-\item utimens(): Updates time of access for a file/directory entry.
-\item access(): Checks permissions to access a file. It doesn't work properly when using a physical device.
-\item rename(): Analogous to 'mv' and changes file metadata.
-\item unlink(): Called whenever a directory entry is removed.
-\item rmdir(): Removes an empty directory. No support for removing a non-empty directory.
-\item chmod(): Changes permissions on a file or directory. Not entirely functional on physical devices.
-\end{itemize}
 
 Any function that modifies or checks permissions for a file or directory will not work properly when the FUSE driver is called by a user as root permissions are needed to mount and interact with the device files (/dev/*).  Currently all the file system operations in the FUSE driver beyond mounting a Matryoshka volume suffer from catastrophic errors in their implementation.
 
