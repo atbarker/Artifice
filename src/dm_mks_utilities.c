@@ -183,8 +183,9 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
     int i, j, k;
     int tuple_size = 8;
     u32 entry_size = 32 + tuple_size*(32+16) + 256;
-    u32 entries_per_block = (context->sectors_per_block * 512) / entry_size;
-    u32 blocks = entries / entries_per_block;
+    u32 block_size = context->sectors_per_block * 512;
+    u32 entries_per_block = block_size / entry_size;
+    u32 blocks = (entries / entries_per_block) + 1;
     u32 map_offsets[blocks];
     int block_offset;
     int ret;
@@ -196,6 +197,14 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
         .io_size = read_length
     };
     struct mks_map_entry *map_block;
+
+    //ensure that we have 48 bits left over for map pointer and checksums
+    //32 bits for the pointer and 16 for the checksum (could be changed)
+    if(block_size - (entry_size * entries_per_block) < entry_size){
+        entries_per_block -= 1;
+        blocks = entries / entries_per_block;
+    }
+    
 
     page = alloc_page(GFP_KERNEL);
 
@@ -234,10 +243,13 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
             }
         }
         io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
+        if(i < blocks - 1){
+            memcpy(&map_block[entries_per_block], &map_offsets[i+1], sizeof(u32));
+        }
         memcpy(data, map_block, entries_per_block * sizeof(struct mks_map_entry));
         ret = mks_blkdev_io(&io, MKS_IO_WRITE);
         if(ret){
-            mks_alert("Error when writing superblock copy {%d}\n", i);
+            mks_alert("Error when writing map block {%d}\n", i);
             return ret;
         }
     }
@@ -248,15 +260,51 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
 }
 
 //retrieve the matryoshka map from disk and save into memory in order to speed up some stuff.
-int retrieve_map(struct mks_fs_context *context, struct block_device *device){
+struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, struct block_device *device, struct mks_super *super){
     //calculate how many blocks are needed to store the map
     int i = 0;
-    int block_number = 0; 
-    //execute a for loop over every logical block number
-    for(i = 0; i<block_number; i++){
+    int tuple_size = 8;
+    u32 entry_size = 32 + tuple_size*(32+16) + 256;
+    u32 block_size = context->sectors_per_block * 512;
+    u32 entries_per_block = block_size / entry_size;
+    u32 blocks = (entries / entries_per_block) + 1; 
+    //u32 map_offsets[blocks];
+    int ret;
+    void *data;
+    const u32 read_length = 1 << PAGE_SHIFT;
+    struct page *page;
+    u32 current_block = super->mks_map_start;
+    struct mks_io io = {
+        .bdev = device,
+        .io_size = read_length
+    };
+    struct mks_map_entry *map_blocks;
+    struct mks_map_entry *block;
 
+    if(block_size - (entry_size * entries_per_block) < entry_size){
+        entries_per_block -= 1;
+        blocks = entries / entries_per_block;
     }
-    return 0;
+
+    page = alloc_page(GFP_KERNEL);
+    data = page_address(page);
+    io.io_page = page;
+
+    map_blocks = kmalloc(entries * sizeof(struct mks_map_entry), GFP_KERNEL);
+    //execute a for loop over every logical block number
+    for(i = 0; i<blocks; i++){
+        io.io_sector = (current_block * context->sectors_per_block) + context->data_start_off;
+        ret = mks_blkdev_io(&io, MKS_IO_READ);
+        if(ret){
+            mks_alert("Error when reading map block {%d}\n", i);
+        }
+        memcpy(&map_blocks[i * entries_per_block], data, entries_per_block * sizeof(struct mks_map_entry));
+        block = data;
+        set_bitmap(context->allocation, current_block);
+        memcpy(&current_block, &block[entries_per_block], sizeof(u32));
+    }
+    __free_page(page);
+    return map_blocks;
 }
 
 //get a pointer to a new superblock
@@ -351,8 +399,9 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
         mks_debug("Hash %d\n", super->hash[0]);
         if(super->hash[0] == digest[0]){
             mks_debug("Superblock copy {%d} found\n", i);
+            set_bitmap(context->allocation, 0);
             break;
-	}
+	    }
         mks_debug("Superblock copy {%d} not found\n", i);
     }
     if(i == duplicates){

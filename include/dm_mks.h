@@ -67,6 +67,7 @@ struct mks_private {
     // File system context.
     struct mks_fs_context *fs_context;
     struct mks_super *super;
+    struct mks_map_entry *map;
 };
 
 //
