@@ -34,7 +34,6 @@ int get_bitmap(u8 *bits, int n){
     return bit;
 }
 
-
 /*
  *Returns a random offset
  *Used for spreading out blocks in the matryoshka disk
@@ -240,7 +239,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
                     block_offset = random_offset(100);
                 }
             }
-            map_block[j].tuples[k].block_num = block_offset;
+            map_block[j].tuples[k].block_num = context->block_list[block_offset];
             set_bitmap(context->allocation, block_offset);
             //write the checksum for each individual data block
         }

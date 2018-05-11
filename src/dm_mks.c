@@ -139,6 +139,10 @@ mks_dtr(struct dm_target *ti)
     mks_info("exiting destructor\n");
 }
 
+
+
+
+
 /**
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
@@ -164,6 +168,7 @@ static int
 mks_map(struct dm_target *ti, struct bio *bio)
 {   
     struct mks_private *context = ti->private;
+    struct mks_map_entry *map = context->map;
 
     //__mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
@@ -185,6 +190,10 @@ mks_map(struct dm_target *ti, struct bio *bio)
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
      * engaged.
      */
+
+    
+
+
     
     bio_endio(bio);
     
@@ -218,7 +227,7 @@ mks_detect_fs(struct block_device *device, struct mks_private *context)
     struct page *page;
     void *data;
     int ret;
-    int i;
+    //int i;
     struct mks_fs_context *fs;
 
     struct mks_io io = {
