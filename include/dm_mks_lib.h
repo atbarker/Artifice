@@ -26,13 +26,13 @@ typedef enum mks_boolean {
 //
 // File system information required.
 struct mks_fs_context {
-    u32     *block_list;
-    u32     list_len;
-	u8	    sectors_per_block;
-	u32	    total_blocks;
-    u32     data_start_off;
-	u8      blocks_in_tuple;
-    u8      *allocation;
+    u32     *block_list;        //list of empty blocks
+    u32     list_len;           //length of that list
+	u8	    sectors_per_block;  //sectors in a block
+	u32	    total_blocks;       //total number of blocks in the FS
+    u32     data_start_off;     //data start offset in the filesystem (bypass reserved blocks)
+	u8      blocks_in_tuple;    //blocks in a tuple
+    u8      *allocation;        //allocation bitmap
 };
 
 // TODO: Obselete (Move FAT32 specific data into fat32 library)
@@ -43,7 +43,7 @@ struct fs_data {
 	u8	sec_block;            	//sectors per block
 	u32 bytes_block;          	//number of bytes per block
 	u32 num_blocks;           	//number of blocks
-        u32 num_empty_blocks;
+    u32 num_empty_blocks;       //number of empty blocks
 };
 
 //

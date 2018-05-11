@@ -1,7 +1,7 @@
 /**
  * Basic utility system for miscellaneous functions.
  * 
- * Author: Yash Gupta <ygupta@ucsc.edu> Austen Barker <atbarker@ucsc.edu>
+ * Author: Yash Gupta <ygupta@ucsc.edu>, Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_mks_utilities.h>
@@ -175,7 +175,8 @@ int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned c
 
 //should execute whilst we are generating a new superblock such that the superblock can include the location
 //returns offset of the first block written to the disk
-int write_new_map(u32 entries, struct mks_fs_context *context, struct block_device *device){
+//TODO: CHange the context passed in here.
+struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context, struct block_device *device, u32 first_offset){
     //figure out how many blocks are needed to write the map
     //determine locations for the matryoshka map blocks
     //mark those in the bitmap and record in each block data structure
@@ -187,6 +188,7 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
     u32 entries_per_block = block_size / entry_size;
     u32 blocks = (entries / entries_per_block) + 1;
     u32 map_offsets[blocks];
+    int entry_size_32 = sizeof(struct mks_map_entry) / 4;
     int block_offset;
     int ret;
     void *data;
@@ -211,7 +213,8 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
     data = page_address(page);
     io.io_page = page;
     block_offset = random_offset(100);
-    for(i = 0; i < blocks; i++){
+    map_offsets[0] = first_offset;
+    for(i = 1; i < blocks; i++){
         while(get_bitmap(context->allocation, block_offset) != 0){
             block_offset = block_offset + random_offset(100);
             if(block_offset > context->list_len){
@@ -225,38 +228,40 @@ int write_new_map(u32 entries, struct mks_fs_context *context, struct block_devi
     
     //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
+    //fills out the bitmap
     map_block = kmalloc(entries * sizeof(struct mks_map_entry), GFP_KERNEL);
     block_offset = random_offset(100);
-    for(i = 0; i < blocks; i++){
-        for(j = 0; j < entries_per_block; j++){
-            //find locations for each block
-            for(k = 0; k < tuple_size; k++){
-                while(get_bitmap(context->allocation, block_offset) != 0){
-                    block_offset = block_offset + random_offset(100);
-                    if(block_offset > context->list_len){
-                        block_offset = random_offset(100);
-                    }
+    for(j = 0; j < entries; j++){
+        //find locations for each block
+        for(k = 0; k < tuple_size; k++){
+            while(get_bitmap(context->allocation, block_offset) != 0){
+                block_offset = block_offset + random_offset(100);
+                if(block_offset > context->list_len){
+                    block_offset = random_offset(100);
                 }
-                map_block[j].tuples[k].block_num = block_offset;
-                set_bitmap(context->allocation, block_offset);
-                //write the checksum for each individual data block
             }
-        }
-        io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
-        if(i < blocks - 1){
-            memcpy(&map_block[entries_per_block], &map_offsets[i+1], sizeof(u32));
-        }
-        memcpy(data, map_block, entries_per_block * sizeof(struct mks_map_entry));
-        ret = mks_blkdev_io(&io, MKS_IO_WRITE);
-        if(ret){
-            mks_alert("Error when writing map block {%d}\n", i);
-            return ret;
+            map_block[j].tuples[k].block_num = block_offset;
+            set_bitmap(context->allocation, block_offset);
+            //write the checksum for each individual data block
         }
     }
 
-    //write the blocks to specific locations on disk
-    //done
-    return map_offsets[0];
+    //rewrite to handle the blocks correctly
+    for(i = 0; i < blocks; i++){
+        io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
+        if(i < blocks - 1){
+            memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
+            memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
+        }else{
+            memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
+        }
+        ret = mks_blkdev_io(&io, MKS_IO_WRITE);
+        if(ret){
+            mks_alert("Error when writing map block {%d}\n", i);
+        }
+    }
+    __free_page(page);
+    return map_block;
 }
 
 //retrieve the matryoshka map from disk and save into memory in order to speed up some stuff.

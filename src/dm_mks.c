@@ -35,6 +35,7 @@ static int
 mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
     int ret;
+    int map_offset;
     struct mks_private *context = NULL;
     unsigned char *digest = NULL;
     struct mks_super *super = NULL;
@@ -90,34 +91,30 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     //write the superblock copies to the disk or search for the superblock
     if(argc == DM_MKS_ARG_MAX){
+	    map_offset = random_offset(1000);
+	    //Generate the superblock
+        super = generate_superblock(digest, ti->len / context->fs_context->sectors_per_block, 0, 0, map_offset);
 	
-	//Determine locations and space needed for the matryoshka map
-	
-	//Generate the superblock
-        super = generate_superblock(digest, 4, 0, 0, 0);
-	
-	//Write the superblock
+	    //Write the superblock
         write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
 	
-	//write the new matryoshka map
+	    //write the new matryoshka map
+        context->map = write_new_map(ti->len / context->fs_context->sectors_per_block, context->fs_context, context->passive_dev->bdev, map_offset);
 	
         mks_debug("Matryoshka Formatting Complete.\n");
     }else{
-	//retrieve the superblock
+	    //retrieve the superblock
         super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
 	
-	//Perform an integrity check on where the superblocks are
-	
+	    //Perform an integrity check on where the superblocks are
         if(super == NULL){
 		    mks_alert("Could not find superblock with passphrase\n");
 		    return -1;
 	    }else{
             mks_debug("Found superblock\n");
 	    }
+        context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
     }
-
-    //Copy the Matryoshka Map into memory, to be flushed to disk periodically
-    //Make sure it is all there
 
 
     mks_info("exiting constructor\n");
@@ -172,9 +169,11 @@ mks_map(struct dm_target *ti, struct bio *bio)
     mks_debug("entering mapper\n");
     switch(bio_op(bio)) {
         case REQ_OP_READ:
+            //read a block
             mks_debug("read op\n");
             break;
         case REQ_OP_WRITE:
+            //write a block
             mks_debug("write op\n");
             break;
         default:
@@ -186,14 +185,6 @@ mks_map(struct dm_target *ti, struct bio *bio)
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
      * engaged.
      */
-
-    //Get the logical sector for the BIO
-    
-    //Return a set of block locations from the map
-    
-    //read or write the blocks, reconstructing or dismantling as needed
-    
-    //Return what was requested by the BIO
     
     bio_endio(bio);
     

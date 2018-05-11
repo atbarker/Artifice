@@ -1,7 +1,7 @@
 /**
  * Basic utility system for miscellaneous functions.
  * 
- * Author: Yash Gupta <ygupta@ucsc.edu>
+ * Author: Austen Barker <atbarker@ucsc.edu>, Yash Gupta <ygupta@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <linux/stddef.h>
@@ -99,9 +99,10 @@ struct mks_map_entry{
 // Prototypes
 //
 unsigned long bsr(unsigned long n);
+int random_offset(u32 upper_limit);
 int mks_blkdev_io(struct mks_io *io_request, enum mks_io_flags flag);
 int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest);
-int write_new_map(u32 entries, struct mks_fs_context *context, struct block_device *device);
+struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context, struct block_device *device, u32 first_offset);
 struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, struct block_device *device, struct mks_super *super);
 struct mks_super * generate_superblock(unsigned char *digest, u64 mks_size, u8 ecc_scheme, u8 secret_split_type, u32 mks_map_start);
 int write_new_superblock(struct mks_super *super, int duplicates, unsigned char *digest, struct mks_fs_context *context, struct block_device *device);

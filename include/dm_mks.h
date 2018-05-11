@@ -63,7 +63,6 @@ struct mks_private {
     // Device mapper representation for the
     // passive device.
     struct dm_dev *passive_dev;
-
     // File system context.
     struct mks_fs_context *fs_context;
     struct mks_super *super;
