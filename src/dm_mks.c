@@ -99,7 +99,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
 	
 	    //write the new matryoshka map
-        context->map = write_new_map(ti->len / context->fs_context->sectors_per_block, context->fs_context, context->passive_dev->bdev, map_offset);
+        //context->map = write_new_map(ti->len / context->fs_context->sectors_per_block, context->fs_context, context->passive_dev->bdev, map_offset);
 	
         mks_debug("Matryoshka Formatting Complete.\n");
     }else{
@@ -113,7 +113,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	    }else{
             mks_debug("Found superblock\n");
 	    }
-        context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
+        //context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
     }
 
 
@@ -169,6 +169,8 @@ mks_map(struct dm_target *ti, struct bio *bio)
 {   
     struct mks_private *context = ti->private;
     struct mks_map_entry *map = context->map;
+    sector_t start_sector = bio->bi_iter.bi_sector;
+    u32 size = bio->bi_iter.bi_size;
 
     //__mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
@@ -184,6 +186,7 @@ mks_map(struct dm_target *ti, struct bio *bio)
         default:
             mks_debug("unknown op\n");
     }
+    mks_debug("Sector: %ld, length: %d\n", start_sector, size);
 
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread

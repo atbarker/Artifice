@@ -273,15 +273,18 @@ read_boot_sector(struct fat_volume *vol, const void *data)
 	
 	ret = fat_read_dos_2_0_bpb(vol, boot_sec);
 	if(ret){
+		mks_debug("failed to read dos 2.0 bpb\n");
 		return ret;
 	}
 	ret = fat_read_dos_3_31_bpb(vol, boot_sec);
 	if(ret){
+		mks_debug("failed to read dos3.31 bpb\n");
 		return ret;
 	}
 
         ret = fat_read_fat32_ebpb(vol, &boot_sec->ebpb.fat32.fat32_ebpb);
 	if(ret){
+		mks_debug("Failed to read fat32 ebpb");
 		return ret;
 	}
 	ret = fat_read_nonfat32_ebpb(vol, &boot_sec->ebpb.nonfat32_ebpb);
