@@ -102,7 +102,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         mks_debug("Superblock written\n");
 	
 	    //write the new matryoshka map
-        //context->map = write_new_map(ti->len / context->fs_context->sectors_per_block, context->fs_context, context->passive_dev->bdev, map_offset);
+        context->map = write_new_map(ti->len / context->fs_context->sectors_per_block, context->fs_context, context->passive_dev->bdev, map_offset);
 	
         mks_debug("Matryoshka Formatting Complete.\n");
     //}else{
