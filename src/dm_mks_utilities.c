@@ -21,6 +21,7 @@
  *
  *
  */
+//TODO: add bitmap length to these functions
 void set_bitmap(u8 *bits, int n){
     bits[BYTE_OFFSET(n)] |= (1 << BIT_OFFSET(n));
 }
@@ -230,21 +231,29 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
     //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
     //fills out the bitmap
+    //TODO: bug in this block
     map_block = kmalloc(entries * sizeof(struct mks_map_entry), GFP_KERNEL);
+    mks_debug("Allocated space for the map\n");
+    mks_debug("Number of entries in map: %d\n", entries);
     block_offset = random_offset(100);
+    mks_debug("Initial block offset: %d\n", block_offset);
     for(j = 0; j < entries; j++){
         //find locations for each block
         for(k = 0; k < tuple_size; k++){
             while(get_bitmap(context->allocation, block_offset) != 0){
-                block_offset = block_offset + random_offset(100);
+		mks_debug("block offset collision\n");
+                block_offset += random_offset(100);
                 if(block_offset > context->list_len){
                     block_offset = random_offset(100);
                 }
             }
+	    mks_debug("block offset: %d\n", block_offset);
             map_block[j].tuples[k].block_num = context->block_list[block_offset];
             set_bitmap(context->allocation, block_offset);
+	    block_offset += random_offset(100);
             //write the checksum for each individual data block
         }
+	mks_debug("Map block written\n");
     }
     mks_debug("map blocks formatted in memory\n");
 
