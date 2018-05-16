@@ -90,19 +90,22 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //generate superblock locations
 
     //write the superblock copies to the disk or search for the superblock
-    if(argc == DM_MKS_ARG_MAX){
+    //if(1){
+    //if(argc == DM_MKS_ARG_MAX){
 	    map_offset = random_offset(1000);
 	    //Generate the superblock
         super = generate_superblock(digest, ti->len / context->fs_context->sectors_per_block, 0, 0, map_offset);
 	
 	    //Write the superblock
         write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
+
+        mks_debug("Superblock written\n");
 	
 	    //write the new matryoshka map
         //context->map = write_new_map(ti->len / context->fs_context->sectors_per_block, context->fs_context, context->passive_dev->bdev, map_offset);
 	
         mks_debug("Matryoshka Formatting Complete.\n");
-    }else{
+    //}else{
 	    //retrieve the superblock
         super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
 	
@@ -114,7 +117,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             mks_debug("Found superblock\n");
 	    }
         //context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
-    }
+   // }
 
 
     mks_info("exiting constructor\n");

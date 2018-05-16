@@ -206,6 +206,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         blocks = entries / entries_per_block;
     }
     
+    mks_debug("Space ensured for pointer\n");
 
     page = alloc_page(GFP_KERNEL);
 
@@ -224,7 +225,8 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         set_bitmap(context->allocation, block_offset);
         block_offset = block_offset + random_offset(100);
     } 
-    
+    mks_debug("offsets generated\n");
+ 
     //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
     //fills out the bitmap
@@ -244,6 +246,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
             //write the checksum for each individual data block
         }
     }
+    mks_debug("map blocks formatted in memory\n");
 
     //rewrite to handle the blocks correctly
     for(i = 0; i < blocks; i++){
@@ -258,6 +261,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         if(ret){
             mks_alert("Error when writing map block {%d}\n", i);
         }
+        mks_debug("block written\n");
     }
     __free_page(page);
     return map_block;
