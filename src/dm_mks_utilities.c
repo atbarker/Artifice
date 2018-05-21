@@ -31,7 +31,7 @@ void clear_bitmap(u8 *bits, int n){
 }
 
 int get_bitmap(u8 *bits, int n){
-    int bit = bits[BYTE_OFFSET(n)] & (1 << BIT_OFFSET(n));
+    int bit = (bits[BYTE_OFFSET(n)] & (1 << BIT_OFFSET(n))) >> BIT_OFFSET(n);
     return bit;
 }
 
@@ -241,12 +241,14 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         //find locations for each block
         for(k = 0; k < tuple_size; k++){
             while(get_bitmap(context->allocation, block_offset) != 0){
+                mks_debug("bitmap result offset %d  %d \n", block_offset, get_bitmap(context->allocation, block_offset));
 		mks_debug("block offset collision\n");
-                block_offset += random_offset(100);
-                if(block_offset > context->list_len){
-                    block_offset = random_offset(100);
-                }
+                block_offset = block_offset + random_offset(100);
+                //if(block_offset > context->list_len){
+                //    block_offset = random_offset(10000);
+                //}
             }
+            mks_debug("list_length: %d\n", context->list_len);
 	    mks_debug("block offset: %d\n", block_offset);
             map_block[j].tuples[k].block_num = context->block_list[block_offset];
             set_bitmap(context->allocation, block_offset);
@@ -266,13 +268,13 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         }else{
             memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
         }
-        ret = mks_blkdev_io(&io, MKS_IO_WRITE);
-        if(ret){
-            mks_alert("Error when writing map block {%d}\n", i);
-        }
+        //ret = mks_blkdev_io(&io, MKS_IO_WRITE);
+        //if(ret){
+        //    mks_alert("Error when writing map block {%d}\n", i);
+        //}
         mks_debug("block written\n");
     }
-    __free_page(page);
+    //__free_page(page);
     return map_block;
 }
 
