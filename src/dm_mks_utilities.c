@@ -244,9 +244,9 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
                 mks_debug("bitmap result offset %d  %d \n", block_offset, get_bitmap(context->allocation, block_offset));
 		mks_debug("block offset collision\n");
                 block_offset = block_offset + random_offset(100);
-                //if(block_offset > context->list_len){
-                //    block_offset = random_offset(10000);
-                //}
+                if(block_offset > context->list_len){
+                    block_offset = random_offset(10000);
+                }
             }
             mks_debug("list_length: %d\n", context->list_len);
 	    mks_debug("block offset: %d\n", block_offset);
@@ -262,12 +262,12 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
     //rewrite to handle the blocks correctly
     for(i = 0; i < blocks; i++){
         io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
-        if(i < (blocks - 1)){
-            memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
-            memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
-        }else{
-            memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
-        }
+        //if(i < (blocks - 1)){
+        //    memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
+        //    memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
+        //}else{
+        //    memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
+        //}
         //ret = mks_blkdev_io(&io, MKS_IO_WRITE);
         //if(ret){
         //    mks_alert("Error when writing map block {%d}\n", i);
