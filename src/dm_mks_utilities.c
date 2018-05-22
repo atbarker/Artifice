@@ -209,7 +209,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
     
     mks_debug("Space ensured for pointer\n");
 
-    page = alloc_page(GFP_KERNEL);
+    page = alloc_pages(GFP_KERNEL, (unsigned int)bsr((entry_size * entries)/512));
 
     data = page_address(page);
     io.io_page = page;
@@ -262,7 +262,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
     //rewrite to handle the blocks correctly
     for(i = 0; i < blocks; i++){
         io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
-        if(i < blocks - 1){
+        if(i < (blocks - 1)){
             memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
             memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
         }else{
@@ -305,7 +305,7 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
         blocks = entries / entries_per_block;
     }
 
-    page = alloc_page(GFP_KERNEL);
+    page = alloc_pages(GFP_KERNEL, (unsigned int)bsr((entry_size * entries)/512));
     data = page_address(page);
     io.io_page = page;
 

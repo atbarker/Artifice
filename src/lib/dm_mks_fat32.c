@@ -365,7 +365,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
         memset((void*)empty_clusters, 0, fat_size_bytes);
 	//uint8_t *cluster_contents = kmalloc(1, GFP_KERNEL);
-	for (i=0; i<100; i++){
+	for (i=0; i < vol->num_data_clusters; i++){
                 mks_debug("block %d: %d\n",i, p[i]);
 		if(p[i] == 0){
                         //mks_debug("block {%d} is empty", i);
