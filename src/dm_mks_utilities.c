@@ -272,7 +272,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
             memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
         }else{
             mks_debug("last block\n");
-        //    memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
+            memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
         }
         //ret = mks_blkdev_io(&io, MKS_IO_WRITE);
         //if(ret){
@@ -289,7 +289,7 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
     //calculate how many blocks are needed to store the map
     int i = 0;
     int tuple_size = 8;
-    u32 entry_size = 32 + tuple_size*(32+16) + 256;
+    u32 entry_size = (32 + tuple_size*(32+16) + 256)/8;
     u32 block_size = context->sectors_per_block * 512;
     u32 entries_per_block = block_size / entry_size;
     u32 blocks = (entries / entries_per_block) + 1; 
@@ -308,7 +308,7 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
 
     if(block_size - (entry_size * entries_per_block) < entry_size){
         entries_per_block -= 1;
-        blocks = entries / entries_per_block;
+        blocks = (entries / entries_per_block) + 1;
     }
 
     page = alloc_pages(GFP_KERNEL, (unsigned int)bsr((entry_size * entries)/512));
