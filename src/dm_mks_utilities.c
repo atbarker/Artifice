@@ -268,7 +268,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
         if(i < (blocks - 1)){
               mks_debug("entry size %lu\n", entries_per_block * sizeof(struct mks_map_entry));
-        //    memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
+              memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
         //    memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
         }else{
         //    memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
