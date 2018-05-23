@@ -274,11 +274,11 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
             mks_debug("last block\n");
             memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct mks_map_entry));
         }
-        //ret = mks_blkdev_io(&io, MKS_IO_WRITE);
-        //if(ret){
-        //    mks_alert("Error when writing map block {%d}\n", i);
-        //}
-        //mks_debug("block written\n");
+        ret = mks_blkdev_io(&io, MKS_IO_WRITE);
+        if(ret){
+            mks_alert("Error when writing map block {%d}\n", i);
+        }
+        mks_debug("block written\n");
     }
     //__free_page(page);
     return map_block;
