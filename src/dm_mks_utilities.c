@@ -280,7 +280,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         }
         mks_debug("block written\n");
     }
-    //__free_page(page);
+    __free_page(page);
     return map_block;
 }
 
@@ -318,6 +318,7 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
     map_blocks = kmalloc(entries * sizeof(struct mks_map_entry), GFP_KERNEL);
     //execute a for loop over every logical block number
     for(i = 0; i<blocks; i++){
+        mks_debug("retrieving map block %d\n", i);
         io.io_sector = (current_block * context->sectors_per_block) + context->data_start_off;
         ret = mks_blkdev_io(&io, MKS_IO_READ);
         if(ret){
@@ -328,6 +329,7 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
         set_bitmap(context->allocation, current_block);
         memcpy(&current_block, &block[entries_per_block], sizeof(u32));
     }
+    mks_debug("Finished retrieving map");
     __free_page(page);
     return map_blocks;
 }

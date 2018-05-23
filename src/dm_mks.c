@@ -116,7 +116,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	    }else{
             mks_debug("Found superblock\n");
 	    }
-        //context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
+        context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
    // }
     mks_debug("length of artifice %lu", ti->len);
     mks_debug("sectors per block %d", context->fs_context->sectors_per_block);
