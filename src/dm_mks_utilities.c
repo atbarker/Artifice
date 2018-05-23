@@ -209,10 +209,10 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
     
     mks_debug("Space ensured for pointer\n");
 
-    page = alloc_pages(GFP_KERNEL, (unsigned int)bsr((entry_size * entries)/512));
-
+    page = alloc_page(GFP_KERNEL);
     data = page_address(page);
     io.io_page = page;
+
     block_offset = random_offset(100);
     map_offsets[0] = first_offset;
     for(i = 1; i < blocks; i++){
@@ -241,14 +241,14 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         //find locations for each block
         for(k = 0; k < tuple_size; k++){
             while(get_bitmap(context->allocation, block_offset) != 0){
-                mks_debug("bitmap result offset %d  %d \n", block_offset, get_bitmap(context->allocation, block_offset));
-		mks_debug("block offset collision\n");
+                //mks_debug("bitmap result offset %d  %d \n", block_offset, get_bitmap(context->allocation, block_offset));
+		//mks_debug("block offset collision\n");
                 block_offset = block_offset + random_offset(100);
                 if(block_offset > context->list_len){
-                    block_offset = random_offset(10000);
+                    block_offset = random_offset(100);
                 }
             }
-            mks_debug("list_length: %d\n", context->list_len);
+            //mks_debug("list_length: %d\n", context->list_len);
 	    mks_debug("block offset: %d\n", block_offset);
             map_block[j].tuples[k].block_num = context->block_list[block_offset];
             set_bitmap(context->allocation, block_offset);
@@ -258,10 +258,14 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
 	mks_debug("Map block written\n");
     }
     mks_debug("map blocks formatted in memory\n");
+    mks_debug("Entries: %d", entries);
+    mks_debug("Entry size: %d", entry_size);
+    mks_debug("Blocks: %d", blocks);
+    mks_debug("Entries per block: %d", entries_per_block);
 
     //rewrite to handle the blocks correctly
     for(i = 0; i < blocks; i++){
-        io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
+        //io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
         //if(i < (blocks - 1)){
         //    memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
         //    memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
@@ -272,7 +276,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
         //if(ret){
         //    mks_alert("Error when writing map block {%d}\n", i);
         //}
-        mks_debug("block written\n");
+        //mks_debug("block written\n");
     }
     //__free_page(page);
     return map_block;

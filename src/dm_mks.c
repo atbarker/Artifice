@@ -81,7 +81,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             break;
     }
 
-    context->fs_context->allocation = kmalloc((ti->len / context->fs_context->sectors_per_block), GFP_KERNEL);
+    context->fs_context->allocation = kmalloc((context->fs_context->list_len), GFP_KERNEL);
 
     //Generate the hash of our password.
     digest = kmalloc(sizeof(DM_MKS_PASSPHRASE_SZ), GFP_KERNEL);
@@ -118,7 +118,8 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	    }
         //context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
    // }
-
+    mks_debug("length of artifice %lu", ti->len);
+    mks_debug("sectors per block %d", context->fs_context->sectors_per_block);
 
     mks_info("exiting constructor\n");
     return 0;
