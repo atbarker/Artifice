@@ -183,7 +183,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
 
     int i, j, k;
     int tuple_size = 8;
-    u32 entry_size = 32 + tuple_size*(32+16) + 256;
+    u32 entry_size = (32 + tuple_size*(32+16) + 256)/8;
     u32 block_size = context->sectors_per_block * 512;
     u32 entries_per_block = block_size / entry_size;
     u32 blocks = (entries / entries_per_block) + 1;
@@ -260,13 +260,14 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
     mks_debug("map blocks formatted in memory\n");
     mks_debug("Entries: %d", entries);
     mks_debug("Entry size: %d", entry_size);
-    mks_debug("Blocks: %d", blocks);
+    //mks_debug("Blocks: %d", blocks);
     mks_debug("Entries per block: %d", entries_per_block);
 
     //rewrite to handle the blocks correctly
     for(i = 0; i < blocks; i++){
         io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
         if(i < (blocks - 1)){
+        mks_debug("entry size %lu\n", sizeof(struct mks_map_entry));
         //    memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
         //    memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
         }else{

@@ -91,8 +91,9 @@ struct mks_map_tuple{
 
 //Matryoshka Map entry
 struct mks_map_entry{
+    u32 block_num;
     struct mks_map_tuple tuples[8];
-    unsigned char datablock_checksum[16];
+    unsigned char datablock_checksum[32];
 }__attribute__((packed));
 
 //
