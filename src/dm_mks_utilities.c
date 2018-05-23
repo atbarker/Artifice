@@ -204,7 +204,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
     //32 bits for the pointer and 16 for the checksum (could be changed)
     if(block_size - (entry_size * entries_per_block) < entry_size){
         entries_per_block -= 1;
-        blocks = entries / entries_per_block;
+        blocks = (entries / entries_per_block) + 1;
     }
     
     mks_debug("Space ensured for pointer\n");
@@ -265,7 +265,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
 
     //rewrite to handle the blocks correctly
     for(i = 0; i < blocks; i++){
-        //io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
+        io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
         //if(i < (blocks - 1)){
         //    memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct mks_map_entry));
         //    memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
