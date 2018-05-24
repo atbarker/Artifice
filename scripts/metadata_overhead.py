@@ -31,7 +31,7 @@ class mks_config:
     blk_bits      = 12  (4 KB block)
     """
 
-    def __init__(self, shards=8, checksum_bits=16, hash_bits=128, mks_bits=32, disk_bits=40, blk_bits=12):
+    def __init__(self, shards=8, checksum_bits=0, hash_bits=128, mks_bits=32, disk_bits=40, blk_bits=12):
         self.shards = shards
         self.checksum_bits = checksum_bits
         self.hash_bits = hash_bits
