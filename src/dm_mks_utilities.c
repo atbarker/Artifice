@@ -305,6 +305,7 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
     };
     struct mks_map_entry *map_blocks;
     struct mks_map_entry *block;
+    int entry_size_32 = sizeof(struct mks_map_entry) / 4;
 
     if(block_size - (entry_size * entries_per_block) < entry_size){
         entries_per_block -= 1;
@@ -318,16 +319,18 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
     map_blocks = kmalloc(entries * sizeof(struct mks_map_entry), GFP_KERNEL);
     //execute a for loop over every logical block number
     for(i = 0; i<blocks; i++){
-        mks_debug("retrieving map block %d\n", i);
-        io.io_sector = (current_block * context->sectors_per_block) + context->data_start_off;
-        ret = mks_blkdev_io(&io, MKS_IO_READ);
-        if(ret){
-            mks_alert("Error when reading map block {%d}\n", i);
+        if(block == 0){
+            mks_debug("retrieving map block %d\n", i);
+            io.io_sector = (current_block * context->sectors_per_block) + context->data_start_off;
+            ret = mks_blkdev_io(&io, MKS_IO_READ);
+            if(ret){
+                mks_alert("Error when reading map block {%d}\n", i);
+            }
+            memcpy(&map_blocks[i * entries_per_block], data, entries_per_block * sizeof(struct mks_map_entry));
+            block = data;
+            set_bitmap(context->allocation, current_block);
+            memcpy(&current_block, data + (entry_size_32 * entries_per_block), sizeof(u32));
         }
-        memcpy(&map_blocks[i * entries_per_block], data, entries_per_block * sizeof(struct mks_map_entry));
-        block = data;
-        set_bitmap(context->allocation, current_block);
-        memcpy(&current_block, &block[entries_per_block], sizeof(u32));
     }
     mks_debug("Finished retrieving map");
     __free_page(page);
