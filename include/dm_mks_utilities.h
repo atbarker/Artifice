@@ -86,14 +86,14 @@ struct mks_super{
 //entry into a matryoshka map tuple
 struct mks_map_tuple{
     u32 block_num;
-    u16 checksum;
+//    u16 checksum;
 }__attribute__((packed));
 
 //Matryoshka Map entry
 struct mks_map_entry{
     u32 block_num;
     struct mks_map_tuple tuples[8];
-    unsigned char datablock_checksum[32];
+    unsigned char datablock_checksum[16];
 }__attribute__((packed));
 
 //

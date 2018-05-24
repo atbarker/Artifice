@@ -183,7 +183,7 @@ struct mks_map_entry* write_new_map(u32 entries, struct mks_fs_context *context,
 
     int i, j, k;
     int tuple_size = 8;
-    u32 entry_size = (32 + tuple_size*(32+16) + 256)/8;
+    u32 entry_size = (32 + tuple_size*(32) + 128)/8;
     u32 block_size = context->sectors_per_block * 512;
     u32 entries_per_block = block_size / entry_size;
     u32 blocks = (entries / entries_per_block) + 1;
@@ -289,7 +289,7 @@ struct mks_map_entry* retrieve_map(u32 entries, struct mks_fs_context *context, 
     //calculate how many blocks are needed to store the map
     int i = 0;
     int tuple_size = 8;
-    u32 entry_size = (32 + tuple_size*(32+16) + 256)/8;
+    u32 entry_size = (32 + tuple_size*(32) + 128)/8;
     u32 block_size = context->sectors_per_block * 512;
     u32 entries_per_block = block_size / entry_size;
     u32 blocks = (entries / entries_per_block) + 1; 
