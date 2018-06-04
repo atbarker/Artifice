@@ -116,7 +116,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	    }else{
             mks_debug("Found superblock\n");
 	    }
-        context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
+        //context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
    // }
     mks_debug("length of artifice %lu", ti->len);
     mks_debug("sectors per block %d", context->fs_context->sectors_per_block);
@@ -173,8 +173,12 @@ mks_map(struct dm_target *ti, struct bio *bio)
 {   
     struct mks_private *context = ti->private;
     struct mks_map_entry *map = context->map;
+    struct mks_fs_context *fs = context->fs_context;
     sector_t start_sector = bio->bi_iter.bi_sector;
     u32 size = bio->bi_iter.bi_size;
+    u32 start_block = (start_sector)/fs->sectors_per_block;
+    u32 new_block = map[start_block].tuples[0].block_num;
+    sector_t new_sector = (sector_t)((new_block*fs->sectors_per_block) + fs->data_start_off);
 
     //__mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
@@ -191,7 +195,11 @@ mks_map(struct dm_target *ti, struct bio *bio)
             mks_debug("unknown op\n");
     }
     mks_debug("Sector: %ld, length: %d\n", start_sector, size);
-
+    mks_debug("map %p\n", map);
+    mks_debug("new block %d\n", new_block);
+    mks_debug("start block %d\n", start_block);
+    mks_debug("new sector %ld\n", new_sector);
+    
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
