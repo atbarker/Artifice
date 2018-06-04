@@ -172,9 +172,13 @@ static int
 mks_map(struct dm_target *ti, struct bio *bio)
 {   
     struct mks_private *context = ti->private;
+    struct mks_fs_context *fs_context = context->fs_context;
     struct mks_map_entry *map = context->map;
     sector_t start_sector = bio->bi_iter.bi_sector;
     u32 size = bio->bi_iter.bi_size;
+    u32 start_block = (start_sector - fs_context->data_start_off)/ fs_context->sectors_per_block;
+    u32 new_block = map[start_block].tuples[0].block_num;
+    sector_t new_sector = 0;
 
     //__mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
@@ -191,7 +195,11 @@ mks_map(struct dm_target *ti, struct bio *bio)
             mks_debug("unknown op\n");
     }
     mks_debug("Sector: %ld, length: %d\n", start_sector, size);
+    mks_debug("new block %d\n", new_block);
 
+    new_sector = (sector_t)((new_block*fs_context->sectors_per_block) + fs_context->data_start_off);
+
+    mks_debug("new sector %ld\n", new_sector);
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
@@ -206,7 +214,7 @@ mks_map(struct dm_target *ti, struct bio *bio)
     
     mks_debug("exiting mapper\n");
     __mks_set_debug(DM_MKS_DEBUG_ENABLE);
-
+    //return DM_MAPIO_REMAPPED;
     return DM_MAPIO_SUBMITTED;
 }
 
