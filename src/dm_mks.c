@@ -116,7 +116,7 @@ mks_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	    }else{
             mks_debug("Found superblock\n");
 	    }
-        context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
+        //context->map = retrieve_map((u32)super->mks_size, context->fs_context, context->passive_dev->bdev, super);
    // }
     mks_debug("length of artifice %lu", ti->len);
     mks_debug("sectors per block %d", context->fs_context->sectors_per_block);
@@ -171,14 +171,22 @@ mks_dtr(struct dm_target *ti)
 static int
 mks_map(struct dm_target *ti, struct bio *bio)
 {   
+    int i, ret;
     struct mks_private *context = ti->private;
     struct mks_fs_context *fs_context = context->fs_context;
     struct mks_map_entry *map = context->map;
+    struct mks_fs_context *fs = context->fs_context;
     sector_t start_sector = bio->bi_iter.bi_sector;
     u32 size = bio->bi_iter.bi_size;
-    u32 start_block = (start_sector - fs_context->data_start_off)/ fs_context->sectors_per_block;
+    u32 start_block = (start_sector)/fs->sectors_per_block;
     u32 new_block = map[start_block].tuples[0].block_num;
-    sector_t new_sector = 0;
+    sector_t new_sector = (sector_t)((new_block*fs->sectors_per_block) + fs->data_start_off);
+    struct page *page;
+    const u32 read_length = 1 << PAGE_SHIFT;
+    struct mks_io io = {
+        .bdev = device,
+        .io_size = read_length
+    };
 
     //__mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
@@ -195,26 +203,37 @@ mks_map(struct dm_target *ti, struct bio *bio)
             mks_debug("unknown op\n");
     }
     mks_debug("Sector: %ld, length: %d\n", start_sector, size);
-    mks_debug("new block %d\n", new_block);
-
-    new_sector = (sector_t)((new_block*fs_context->sectors_per_block) + fs_context->data_start_off);
-
-    mks_debug("new sector %ld\n", new_sector);
+    //mks_debug("map %p\n", map);
+    //mks_debug("new block %d\n", new_block);
+    //mks_debug("start block %d\n", start_block);
+    //mks_debug("new sector %ld\n", new_sector);
+    
     /*
      * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
      * belonging to it freezes. Even shutdown won't work as a kernel thread is
      * engaged.
      */
-
+    /*
+    //for each block in the tuple
+    for(i = 0; i < 8; i++){
+        new_block = map[start_block].tuples[i].block_num;
+        new_sector = (sector_t)((new_block*fs->sectors_per_block) + fs->data_start_off);
+        io.sector = new_sector;
+        ret = mks_blkdev_io(&io, MKS_IO_READ);
+        if(ret){
+            mks_alert("Error when reading map block {%d}\n", i);
+        }
+    } */
     
-
-
-    
+    //insert code to reconstruct block here
+        
     bio_endio(bio);
     
     mks_debug("exiting mapper\n");
     __mks_set_debug(DM_MKS_DEBUG_ENABLE);
     //return DM_MAPIO_REMAPPED;
+
+    __free_page(page);
     return DM_MAPIO_SUBMITTED;
 }
 
