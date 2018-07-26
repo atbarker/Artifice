@@ -171,22 +171,22 @@ mks_dtr(struct dm_target *ti)
 static int
 mks_map(struct dm_target *ti, struct bio *bio)
 {   
-    int i, ret;
-    struct mks_private *context = ti->private;
-    struct mks_fs_context *fs_context = context->fs_context;
-    struct mks_map_entry *map = context->map;
-    struct mks_fs_context *fs = context->fs_context;
+    //int i, ret;
+    //struct mks_private *context = ti->private;
+    //struct mks_fs_context *fs_context = context->fs_context;
+    //struct mks_map_entry *map = context->map;
+    //struct mks_fs_context *fs = context->fs_context;
     sector_t start_sector = bio->bi_iter.bi_sector;
     u32 size = bio->bi_iter.bi_size;
-    u32 start_block = (start_sector)/fs->sectors_per_block;
-    u32 new_block = map[start_block].tuples[0].block_num;
-    sector_t new_sector = (sector_t)((new_block*fs->sectors_per_block) + fs->data_start_off);
-    struct page *page;
-    const u32 read_length = 1 << PAGE_SHIFT;
-    struct mks_io io = {
-        .bdev = device,
+    //u32 start_block = (start_sector)/fs->sectors_per_block;
+    //u32 new_block = map[start_block].tuples[0].block_num;
+    //sector_t new_sector = (sector_t)((new_block*fs->sectors_per_block) + fs->data_start_off);
+    //struct page *page;
+    //const u32 read_length = 1 << PAGE_SHIFT;
+    /*struct mks_io io = {
+        .bdev = context->passive_dev->bdev,
         .io_size = read_length
-    };
+    };*/
 
     //__mks_set_debug(DM_MKS_DEBUG_DISABLE);
     mks_debug("entering mapper\n");
@@ -233,7 +233,7 @@ mks_map(struct dm_target *ti, struct bio *bio)
     __mks_set_debug(DM_MKS_DEBUG_ENABLE);
     //return DM_MAPIO_REMAPPED;
 
-    __free_page(page);
+    //__free_page(page);
     return DM_MAPIO_SUBMITTED;
 }
 

@@ -54,9 +54,9 @@ int random_offset(u32 upper_limit){
 void encryptSpeck(uint64_t ct[2], uint64_t const pt[2], uint64_t const K[2])
 {
    uint64_t y = pt[0], x = pt[1], b = K[0], a = K[1];
-
+   int i = 0;
    R(x, y, b);
-   for (int i = 0; i < ROUNDS - 1; i++) {
+   for (i = 0; i < ROUNDS - 1; i++) {
       R(a, b, i);
       R(x, y, b);
    }
