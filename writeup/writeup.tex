@@ -1,0 +1,184 @@
+\documentclass{article}
+\bibliographystyle{plain}
+\usepackage{tikz}
+\usepackage{bibentry}
+\usepackage{multicol}
+\usepackage{enumitem}
+\usepackage{blindtext}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=1in]{geometry}
+\setlength{\parindent}{2em}
+\begin{document}
+\title{Artifice, a Steganographic File System}
+\author{Austen Barker}
+\maketitle
+
+\begin{multicols}{2}
+
+\textbf{Abstract:} There exists situations in which the existence of encrypted data can be deemed as suspicious by an adversary and incur increased risk to the user. This problem can be remedied through the use of steganography to provide a level of deniability. Existing applications of steganography in data storage are limited and are often not entirely deniable. This paper presents Matryoshka, a deniable steganographic file system intended to effectively hide data within the free list of another publicly visible file system without leaving realistically detectable markers for an adversary. 
+
+\section{Introduction}
+
+Despite the effectiveness of current encryption methods in providing confidentiality and integrity assurances pertaining to the secure transmission and storage of data, there exists situations where the existence of encrypted information can be compromising for the user. The existence of encrypted information on a device can leave the user open to coercion by an adversary to reveal sensitive information. Such coercion can possibly involve some form of harm coming to the user. An example of this could be a journalist working in a region under a repressive regime. Such a user would want to possess some form of plausible deniability which an effective method of hiding data could provide. 
+
+Steganography, the art of covertly hiding information within a nonsecret message, has been in use since long before the invention of computers. Using modern cryptographic methods one can provide an effective method of hiding information within existing data stores. This is done via hiding obfuscated data within the free space of an existing file system on either a physical or virtual disk.
+
+This paper describes Matryosha, a deniable steganographic file system named for the eponymous Russian nesting dolls. Matryoshka would allow a user to write obfuscated data to the free space of an existing file system without leaving evidence of its existence. Along with ideas on how to properly deploy Matryoshka such that the existence of the file system driver is not easily discoverable by an adversary.
+
+\section{Background}
+The idea of a steganographic file system is not entirely new. The theory behind it was described in 1998 by Anderson et al. \cite{anderson1998steganographic}. This paper presents the idea of hiding data within the free space on a disk.  Two possible mechanisms are described, one based on a one-time pad and the other on block ciphers. The second tackling the problem of accidentally overwriting hidden data on the disk. Most importantly both designs provide some assurance of plausible deniability as some encryption key can be revealed that leads to some harmless file instead of the ciphertext.
+
+Anderson's second design was later implemented by McDonald and Kuhn in the form of linux kernel module and was dubbed StegFS \cite{mcdonald1999stegfs}. Operating in concert with an EXT2 file system it provides levels of security for the hidden files stored within the free space of the public file system. With different files at each level and no indication as to how many levels exist. There is also no effort made in hiding the file system driver itself. As such it does not provide complete deniability of the hidden data's existence as one can infer beyond a reasonable doubt that there is hidden data on the disk. As of October 2017 McDonald and Kuhn's implementation is no longer available and possessed file corruption bugs. Later StegFS was ported to an implementation developed on top of the FUSE file system driver and is actively maintained \cite{stegfsDev}. This implementation possesses the same failings as the original kernel module.
+
+Our implementation differs in that it aims to give no indication that the hidden files exist at all and provide ideas on how to effectively hide the software used to interact with the hidden file system. Therefore providing plausible deniability for the user in possession of the data.
+
+\section{Design}
+
+\begin{figure*}
+  \centering
+  \includegraphics[height=2.25in]{MetadataDiagram.png}
+  \caption{Relationship of the Superblock, Hash Table, and FAT.}
+  \label{fig:design1}
+\end{figure*}
+
+\subsection{Adversary Model}
+We assume that our adversary has direct access to both the hardware and software of the machine. Even going as far to say that the adversary would have root access to the machine's operating system. In addition to this our adversary possesses the capability to carry out a forensic analysis of the machine's storage devices as well as any other media storage devices in the user's possession. The goal of this adversary is to determine the existence of a steganographic file system on a storage volume in the possession of the user. We assume that the adversary does not have access to the passphrase or knowledge of what in the public file system is used as an entropy source, if the user obtains entropy blocks in that manner. Lastly Matryoshka would ideally be released as open source software so it must be assumed that an adversary will have access to the software necessary to access a hidden volume.
+
+\subsection{Block Arrangement}
+Due to the more irregular arrangement of free space in a volume it is necessary to allow Matryoshka to store the metadata blocks in any place on the disk. These will be marked with the hash of the passphrase given by the user and identifiable by a simple linear scan of the volume. A linear scan of the disk will increase the time needed to mount the file system but will not negatively impact the latency of normal file operations. Although for the purpose of simplifying the design and managing the scope of the project the superblock, hash table, and FAT are located in the first few empty blocks. Each data block then consists of two components, a hash of the block data and the data itself.
+
+On conventional hard disks the irregular arrangement of blocks on the disk could cause read and write penalties when compared to the public file system. This is due to the additional seek time neccessary to find blocks belonging to the desired file on the disk. Although this depends heavily on the distribution of free space. The more contiguous the free space on the disk, the faster Matryoshka will be able to read and write data.
+
+\subsection{Obfuscation}
+
+The data within each block must be obfuscated such that an adversary cannot discern the hidden file system blocks from random appearing unallocated blocks from the public file system. The obfuscation could possibly take multiple forms but any method must render the data effectively indistinguishable from other psuedorandom unallocated blocks. Matryoshka relies on performing a bitwise XOR with a pseudorandom entropy block and the data block. This entropy block can be obtained from multiple sources so long as it can be retrieved or generated again at a later time in order to read the obfuscated block. In the case of this design the entropy blocks are obtained from some   pseudorandom appearing encrypted data file in the public file system. An example of this would be a DRM protected audio or video file. In this way the DRM protected file is essentially acting as an encryption key for the data stored in Matryoshka.
+
+For the sake of simplicity and maintaining a smaller scope for this project only one entropy block is used to obfuscate every data block. It would be possible to utilize additional multiple entropy blocks so long as a marker is stored that tells the file system what entropy block was used to obfuscate what data block.
+
+\subsection{The Matryoshka Superblock}
+The Matryoshka superblock stores the metadata necessary for the proper functioning of the file system and is the first thing read when a Matryoshka volume is mounted. Much of it is derived from or identical to the information stored in the public file system's superblock or boot sector. The superblock also contains the byte offsets or block indexes of the first blocks of the hash table and the FAT table. Allowing us to find the other metadata blocks easily.
+
+If this superblock is lost then it is impossible to retrieve the rest of the file system. Therefore it is ideal to have multiple copies on the disk with each superblock containing pointers to the other superblocks so that updates can be propagated across all instances. The number of superblocks should also be evenly distributed across the disk so that a the probability of the public file system overwriting multiple superblock copies is lessened.
+
+\subsection{Hash table}
+
+\begin{figure*}
+  \centering
+  \includegraphics[height=2in]{HashFATblocks.png}
+  \caption{Layout of information in the Hash and FAT blocks.}
+  \label{fig:design2}
+  \endcenter
+\end{figure*}
+
+A Hash table is used to contain a hash of each block stored on the disk that serves as a checksum/identifier and a pointer to the block on the disk. Much like in the superblock these pointers can either take the form of a block index or byte offset. Byte offsets don't require any calculations to be performed but take up more space on the disk. Block indexes are faster but require some calculations to arrive at a usable offset for the read/write operations. Similar to the FAT if a hash table entry is zero that means the corresponding block is unallocated. Multiple copies of the hash table could also be stored on the disk to provide a level of redundancy. Although for the purposes of this project only one copy is stored.
+
+\subsection{File Allocation Table}
+In Matryoshka the file allocation table functions much the same as one found in a normal FAT file system. In that it contains an entry for each block in the file system and each entry contains a value that either marks the block as reserved, points to the next block in the file, an end of file, or unallocated. If not all entries will fit into a single block then the last entry in the current block is a pointer to the next block of the table. Much like a normal FAT file system it would be possible to maintain multiple copies of the table and store pointers to these multiple tables within the superblock.
+
+\subsection{File System Operations in Matryoshka}
+
+The major difference between Matryoshka and an ordinary FAT file system are the additional steps in each operation on the disk. File attributes, directories, etc are all handled the same as they would be under FAT. The additional steps include computation of hashes for the blocks, obfuscation of data when written to the disk, maintaining a hash table, and limiting the file system to only the free blocks of the public file system.
+
+As previously described hashes are stored for each block both as a signature denoting a block as belonging to the Matryoshka instance and as a checksum to verify the block's integrity. The hashes for each block are generated using the password, block id, and the data contained in the block. Obfuscation of the block takes the form of encryption via a bitwise XOR of the data block and some user supplied entropy source to be used as a key. For writing blocks Matryoshka consults a list of block id's or byte offsets that correspond to unallocated blocks in the public file system. As stated before this list is produced via reading the public file systems FAT upon mounting Matryoshka.
+
+When reading a block the hash prefixing the block is first compared to that stored in the hash table. If the two match then we know that we have retrieved the correct Matryoshka block. The data is then decrypted using the entropy source given by the user. The now decrypted and identified block can then either be sent to the calling program. Blocks can possibly be further verified by computing the hash of the block and comparing it to the one stored in the hash table. If we wish to write a block we compute the hash of the password, block id, and block contents. This hash is then used as a prefix to the data block and entered into the hash table. Before finally writing the file to the volume it is encrypted using our entropy source. The process of writing a block is described in figure 3. Deleting data can be carried out in two different manners. Either it can simply be marked as unallocated in the hash table and FAT or it can be further overwritten using a non-reproducable entropy source such as /dev/random. These basic operations remain the same regardless of what data is stored in the block. Whether it be a directory or file data. Any other information about file operations depends on the methods used in implementing the design.
+
+
+Problems will arise if the block has been overwritten by normal public file system operations. Currently when a block has been overwritten then the entire corresponding file is marked as unallocated in both the hash table and file allocation table. Some sort of duplication or error correcting in the file system could potentially solve this problem but is outside the scope of this project.
+
+\begin{figure*}
+  \centering
+  \includegraphics[height=2.25in]{Obfuscate.png}
+  \caption{Writing a block to a volume.}
+  \label{fig:design3}
+\end{figure*}
+
+\section{Implementation}
+The current implementation of Matryoshka is split into three major sections. The library for processing the metadata of the public file system, an initialization program and the FUSE based implementation of the hidden file system. The library for processing the metadata of the public file system is called by both initialization and FUSE code. FUSE is available in both C and Python versions. It was found in early experimentation with the Python version that direct memory management would be required. Therefore the entirety of this program is written in C. The cryptographic functions are provided by the OpenSSL toolkit's libcrypto library. As of this paper only the formatting utility and libfsmeta operate as intended. The trusted computing base of this application is decently large at about 3800 lines of C code. The implementation is made up of the following files:
+\begin{enumerate}[noitemsep]
+\item Matryoshka FS:
+  \begin{itemize}[noitemsep]
+    \item mat\_fs.c : Primary file system operations and main method.
+    \item mat\_fs.h : Definitions for the file system context, loaded upon mount.
+    \item mat\_help.c : Helper functions for the file system operations.
+    \item mat\_help.h : Header file for the helper functions.
+    \item align.h : Useful macros and bit offsets/alignments for the file system.
+  \end{itemize}
+\item Formatting Utility:
+  \begin{itemize}[noitemsep]
+    \item init.c : Formats matryoshka on a new volume with the help of libfsmeta.
+  \end{itemize}
+\item libfsmeta:
+  \begin{itemize}[noitemsep]
+    \item mat\_types.h : Data type short hand definitions and macros for little-endian numbers. 
+    \item mat\_util.c : Contains helper functions for mat\_volume.c along with cryptographic functions (to be moved to new file).
+    \item mat\_util.h : Header file for mat\_util.c.
+    \item mat\_volume.c : Functions to read data about the public file system.
+    \item mat\_volume.h : Struct definitions for reading public file system data.
+  \end{itemize}
+\end{enumerate}
+
+\subsection{FUSE}
+FUSE (File System in Userspace) is a common Linux interface used to export a userspace implementation of a file system to the kernel level. It consists of both a userspace library with both high and low level APIs and a loadable kernel module. Matryoshka utilizes the high level API which provides a passthrough for basic file system operations. The primary drawback encountered when utilizing FUSE is that access to device files, such as /dev/sda, is limited and often requires root permissions for basic operations. FUSE is used primarily to manage the scope of the codebase as it provides managed access to basic file operations while still allowing access to the entirety of the device or virtual disk file.
+
+\subsection{libFSmeta}
+
+The library libFSmeta is used to read in the metadata of the public file system. As of right now it only supports the FAT32, 16, and 12 file systems. The primary function is called fat-mount() which "mounts" the volume and calls helper functions that will read in the superblock metadata and map the allocation table into memory. A key element in this process is extracting a list of free block indexes from the allocation table. This list, when combined with the correct byte offset provides the information necessary to write hidden file system blocks. All of this information is placed within a struct and returned to the caller. This library is used by both the FUSE driver the formating utility.
+
+\subsection{Formating Utility}
+Similarly to many commonly used file systems empty space must be formated as a Matryoshka volume prior to use. In order to accomplish this the user provides a passphrase, the path to a FAT volume, the desired size of Matryoshka, and the path to some persistent entropy source in the public file system (usually a pseudorandom appearing file). 
+
+The formatting utility first calls the mount() function of libFSmeta, giving us all the information needed about the public file system. The program will find the first available section of the disk to write the superblock. The superblock is then followed by the blocks for the hash table, then the allocation table is initialized to all zeros except for a few reserved blocks and the root directory. Finally the empty space on the volume is overwritten with information from /dev/random to provide the precedent that the user utilizes secure erasure techniques. Once the above steps are finished the program unmounts the volume and it is ready for use.
+
+\subsection{Hidden File System}
+The Matryoshka's hidden file system was built as an extension to a previously written FAT-like file system from an CMPS 111 class assignment \cite{hackfs}. This file system contains only contains one copy of the allocation table containing only 32 bit entries. Changes made as part of extending this file system's functionality include integrating libfsmeta and the cryptographic libraries, extending superblock contents, limiting the file system to only publicly unallocated blocks, and adding the hash table. The superblock, allocation table, and hash table are implemented as described previously.
+
+All hashes in the file system are computed using SHA-256. These hashes appear in both the hash table and as prefixes to data blocks. In this implementation the hashes are derived from the passphrase, block id, and unobfuscated contents of the data block. The hashes themselves are not obfuscated with the rest of the data block. This is done so that we can check if a block has been overwritten before devoting the resources to decrypting it.
+
+As of right now the following file system operations are supported by the FUSE driver but are not neccessarily fully operational.
+
+Any function that modifies or checks permissions for a file or directory will not work properly when the FUSE driver is called by a user as root permissions are needed to mount and interact with the device files (/dev/*).  Currently all the file system operations in the FUSE driver beyond mounting a Matryoshka volume suffer from catastrophic errors in their implementation.
+
+\section{Discussion}
+
+
+\subsection{Hiding the Software}
+
+One of the more difficult aspects of actually using Matryoshka is hiding the presence of the file system driver from the adversary. This would not be an issue if an installation of Matryoshka was common enough that its presence on a machine would not be suspicious. However in this case we have assumed that the presence of the software is enough to arouse the suspicion of an adversary. The software could be hidden in a variety of ways such as storing it on a easily disposable bootable disk such as a flash drive or CD, hiding it within some other large obfuscated program, or simply not carrying a copy of the software at all and only installing it on a machine when needed. The method of carrying a bootable disk could be effective only if the user is able to either conceal or dispose of the flash drive. Hiding the program within another program would be analogous to a trojan horse or rootkit and would eliminate the possibility of releasing Matryoshka as open source software. As any open source rootkit or trojan would be easily detectable. These two options both rely heavily on how thorough the adversary is in attempting to find something suspicious on the users person and are not fool-proof methods of hiding the software. The option of not even carrying a copy of the software is the one option that provides total plausible deniability but also limits the user's access to the hidden file system. 
+
+\subsection{Known Flaws} 
+The current implementation's reliance on userspace system calls to carry out file operations creates permissions problems when attempting to write to a device file normally handled by the kernel. Root access is then required to perform any manipulation of the hidden file system. Which while not prohibiting its use, it is more restrictive than one would expect from manipulation of user data. Also writing metadata blocks to the front of the unallocated space on the disk is highly risky as it is one of the more likely places for the public file system to write to.
+
+Another flaw in Matryoshka lies with the user themselves. If we assume that the user can be coerced into revealing information needed to decrypt data we must also assume that they would release the password and entropy source needed to access the volume. Solutions to this problem can vary based on the user case. For instance if the use case entails securely transporting information across a hostile border it would be more secure if another individual than the one in possession of the device knew the password and entropy source. The password and entropy source information could then be transmitted to another party at the users destination. Therefore the user has an additional layer of plausible deniability. Any further discussion on this topic strays beyond the scope of this paper.
+
+\section{Future Work}
+
+\subsection{Protecting File Integrity}
+One of the largest issues with the current state of Matryoshka is the fact that any operation performed by the public file system that involves writing data to the disk can compromise the integrity of one or more files stored in the hidden file system. In the worst case scenario the file system metadata itself is overwritten and the entirety of the hidden file system is lost.
+
+Two solutions that provide redundancy to Matryoshka may be used. Simple duplication of the data will provide some redundancy where the chances of survival increase as the number of duplicates increase. Another solution is the implementation of some form of erasure code. In which we split the information into $n$ pieces and some number $k$ out of the original $n$ pieces would be neccessary to reconstruct the block. Though both duplication and erasure codes both add significantly to the performance overhead they make up for that by allowing public file system operations without a significant chance of data loss. 
+
+This approach could also open the door to giving Matryoshka the ability to repair itself. When a Matryoshka volume is mounted on a system it would be possible to have the file system check the integrity of each block. Moving and reconstructing data as needed in order to better protect itself against future overwrites. 
+
+\subsection{Alternative Implmentation Methods}
+Perhaps a more advantageous approach to the challenge of implementing a mechanism for the steganographic storage of files on a disk takes the form of a virtual block device. Moving Matryoshka down to the virtual block device level would allow for the use of any file system, ease the integration of an erasure coding scheme by abstracting away the file system operations and therefore shrinking the currently substantial codebase. Similarly one could do away with directories all together and simply maintain a key-value store of files while still utilizing FUSE by only providing code for the essential file operations.
+
+\subsection{Block Obfuscation Methods}
+
+The current implementation relies on some sort of retrievable psuedo-random appearing data from a file stored in the public file system by the user. For instance, this data could be derived from a DRM protected media file. The presence of which on a system is considered by most to be perfectly normal. Extensions to the current schema are also possible. Such as multiple different entropy blocks could be used to encrypt the data blocks so long as some sort of identifier for the entropy block used is stored with each data block. This still maintains security as this identifier would be something such as a block index relative to the file being used as an entropy source.
+
+An alternative approach can be found in stream ciphers. A stream cipher such as RC4 generates a key stream given some smaller key. In the case of Matryoshka we  could use the user provided passphrase and concatenate it with something such as the block ID. The resultant key stream would then be combined with the plaintext of the block using a bitwise XOR and the result would be a pseudo-random appearing block. 
+
+\section{Conclusion}
+
+Here we have presented Matryoshka, a deniable steganographic file system that provides the user with protection via enabling then to plausibly deny the existence of files on a storage device. Even when faced with an adversary that could possess direct hardware and root access to a device. Although Matryoshka cannot yet reliably support file system operations, the fact that it can format, mount, and unmount a hidden file system denotes a significant milestone on the path to full functionality. Though future work may deviate from the use of FUSE and there are many questions regarding data integrity and general usage guidelines, this project denotes the first step towards a truly usable implementation of Matryoshka.
+ 
+\textbf{Acknowledgements:} Thanks to Gupta et al. for allowing the use of their FAT-like HackFS code as the skeleton for the FUSE driver and to Anastasia McTaggart for design ideas, inspiration, and advice.
+
+
+\bibliography{steg}
+
+\end{multicols}
+
+\end{document}
