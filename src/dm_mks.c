@@ -7,7 +7,6 @@
 #include <dm_mks.h>
 #include <dm_mks_utilities.h>
 #include <dm_mks_lib.h>
-#include <libgfshare.h>
 
 /**
  * Constructor function for this target. The constructor
@@ -146,7 +145,7 @@ mks_dtr(struct dm_target *ti)
 
 
 
-
+//TODO: REMAPPED causes issues, retrieve data, process, then return different BIO
 /**
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
