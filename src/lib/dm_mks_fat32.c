@@ -108,7 +108,6 @@ struct fat_boot_sector {
 	__le32 total_sec_32;          //total sectors (32 bit number)
 
 	//bios parameter block (FAT32, no 16 or 12 support)
-	//TODO: clean this up
 	union __attribute((packed)) {
 		struct __attribute__((packed)){
 			struct fat32_ebpb fat32_ebpb;
@@ -183,6 +182,8 @@ fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot
 		//16 bit sectors
 	}
 	return 0;
+//out_invalid:
+//	return -1;
 }
 
 /**
@@ -200,6 +201,8 @@ fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
 	memcpy(vol->fs_type, ebpb->fs_type, sizeof(ebpb->fs_type));
 	//debug here
 	return 0;
+//out_invalid:
+//	return -1;
 }
 
 /**
@@ -274,18 +277,18 @@ read_boot_sector(struct fat_volume *vol, const void *data)
 	ret = fat_read_dos_2_0_bpb(vol, boot_sec);
 	if(ret){
 		mks_debug("failed to read dos 2.0 bpb\n");
-		return ret;
+		goto out_invalid;
 	}
 	ret = fat_read_dos_3_31_bpb(vol, boot_sec);
 	if(ret){
 		mks_debug("failed to read dos3.31 bpb\n");
-		return ret;
+		goto out_invalid;
 	}
 
         ret = fat_read_fat32_ebpb(vol, &boot_sec->ebpb.fat32.fat32_ebpb);
 	if(ret){
 		mks_debug("Failed to read fat32 ebpb");
-		return ret;
+		goto out_invalid;
 	}
 	ret = fat_read_nonfat32_ebpb(vol, &boot_sec->ebpb.nonfat32_ebpb);
 
@@ -293,6 +296,8 @@ read_boot_sector(struct fat_volume *vol, const void *data)
 	mks_debug("Number of data sectors: %u\n", num_data_sectors);
 	vol->num_data_clusters = num_data_sectors >> vol->sec_cluster_order;
 	return 0;
+out_invalid:
+	return -1;
 }
 
 /**
@@ -377,6 +382,8 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	vol->empty_clusters = empty_clusters;
         vol->num_empty_clusters = cluster_number;
 	return 0;
+//out_invalid:
+//	return -1;
 }
 
 /**
