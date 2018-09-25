@@ -260,7 +260,6 @@ mks_detect_fs(struct block_device *device, struct mks_private *context)
     struct page *page;
     void *data;
     int ret;
-    //int i;
     struct mks_fs_context *fs;
 
     struct mks_io io = {
