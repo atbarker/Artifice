@@ -175,22 +175,25 @@ int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned c
     alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
     if(IS_ERR(alg)){
         mks_alert("Issue creating hash algorithm\n");
-        return -1;
+        goto error;
     }
     
     sdesc = init_sdesc(alg);
     if(IS_ERR(sdesc)){
         mks_alert("Could not generate hash description\n");
-        return -1;
+        goto error;
     }
 
     ret = crypto_shash_digest(&sdesc->shash, passphrase, pass_len, digest);
     if(ret != 0){
         mks_alert("Error Computing hash\n");
+	goto error;
     }
     kfree(sdesc);
     crypto_free_shash(alg);
     return 0;
+error:
+    return -1;
 }
 
 //should execute whilst we are generating a new superblock such that the superblock can include the location
@@ -429,7 +432,7 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
     if (IS_ERR(page)) {
         ret = PTR_ERR(page);
         mks_alert("alloc_page failure {%d}\n", ret);
-        return NULL;
+        goto error;
     }
     data = page_address(page);
     io.io_page = page;
@@ -442,7 +445,7 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
         ret = mks_blkdev_io(&io, MKS_IO_READ);
         if (ret) {
             mks_alert("mks_blkdev_io failure, Could not read superblock {%d}\n", ret);
-            return NULL;
+            goto error;
         }
         memcpy(super, data, sizeof(struct mks_super));
         mks_debug("Superblock %p\n", super);
@@ -456,10 +459,12 @@ struct mks_super* retrieve_superblock(int duplicates, unsigned char *digest, str
     }
     if(i == duplicates){
         mks_alert("superblock not found, either overwritten or no instance ever existed.\n");
-        return NULL;
+        goto error;
     }
     __free_page(page);
     return super;
+error:
+    return NULL;
 }
 
 //rewrite new copies of the superblock to bring us up to spec
