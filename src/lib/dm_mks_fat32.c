@@ -402,12 +402,10 @@ mks_boolean_t
 mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_device *device)
 {
     struct fat_volume *vol = NULL;
-    struct fs_data *parameters = NULL;
     int ret;
 
     //allocate stuff;
     vol = kmalloc(sizeof(struct fat_volume), GFP_KERNEL);
-    parameters = kmalloc(sizeof(struct fs_data), GFP_KERNEL);
 
     //read the boot sector
     ret = read_boot_sector(vol, (void *)data);
@@ -425,7 +423,6 @@ mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_devic
 
     vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved);  
 
-    //struct fs_data *fat = mks_fat32_parse((void *)data, device);
     if(fs) {
         fs->total_blocks = vol->num_data_clusters;
         fs->sectors_per_block = vol->sec_cluster;
