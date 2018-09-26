@@ -1,6 +1,6 @@
-# Matryoshka
+# Artifice
 
-Matyroshka is a device mapper implementation for a deniable file system. It is able to hide critical files in a way which is deniable for the owner.
+Artifice is a device mapper implementation for a deniable file system. It is able to hide critical files in a way which is deniable for the owner.
 
 For contributors to this project, please look at the "Guidelines for development" section.
 
@@ -20,7 +20,7 @@ echo 0 1024 mks passphrase "/dev/sdXY" | sudo dmsetup create matryoshka
 
 ## Guidelines for development
 
-Matryoshka is best developed using a virtual machine. You may choose to develop directly on the virtual machine (not recommended) or you can develop on the host machine and use `scp` to transfer your code (recommended). 
+Artifice is best developed using a virtual machine. You may choose to develop directly on the virtual machine (not recommended) or you can develop on the host machine and use `scp` to transfer your code (recommended). 
 
 **Do not push to git on the host machine and pull on the virtual machine to transfer files as this clogs the git commit log and makes it difficult to trace progress.**
 
