@@ -108,7 +108,6 @@ struct fat_boot_sector {
 	__le32 total_sec_32;          //total sectors (32 bit number)
 
 	//bios parameter block (FAT32, no 16 or 12 support)
-	//TODO: clean this up
 	union __attribute((packed)) {
 		struct __attribute__((packed)){
 			struct fat32_ebpb fat32_ebpb;
@@ -183,6 +182,8 @@ fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot
 		//16 bit sectors
 	}
 	return 0;
+//out_invalid:
+//	return -1;
 }
 
 /**
@@ -200,6 +201,8 @@ fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
 	memcpy(vol->fs_type, ebpb->fs_type, sizeof(ebpb->fs_type));
 	//debug here
 	return 0;
+//out_invalid:
+//	return -1;
 }
 
 /**
@@ -274,18 +277,18 @@ read_boot_sector(struct fat_volume *vol, const void *data)
 	ret = fat_read_dos_2_0_bpb(vol, boot_sec);
 	if(ret){
 		mks_debug("failed to read dos 2.0 bpb\n");
-		return ret;
+		goto out_invalid;
 	}
 	ret = fat_read_dos_3_31_bpb(vol, boot_sec);
 	if(ret){
 		mks_debug("failed to read dos3.31 bpb\n");
-		return ret;
+		goto out_invalid;
 	}
 
         ret = fat_read_fat32_ebpb(vol, &boot_sec->ebpb.fat32.fat32_ebpb);
 	if(ret){
 		mks_debug("Failed to read fat32 ebpb");
-		return ret;
+		goto out_invalid;
 	}
 	ret = fat_read_nonfat32_ebpb(vol, &boot_sec->ebpb.nonfat32_ebpb);
 
@@ -293,6 +296,8 @@ read_boot_sector(struct fat_volume *vol, const void *data)
 	mks_debug("Number of data sectors: %u\n", num_data_sectors);
 	vol->num_data_clusters = num_data_sectors >> vol->sec_cluster_order;
 	return 0;
+out_invalid:
+	return -1;
 }
 
 /**
@@ -377,60 +382,8 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	vol->empty_clusters = empty_clusters;
         vol->num_empty_clusters = cluster_number;
 	return 0;
-}
-
-/**
- *Parses a FAT32 (or DOS compatible) file system.
- *Returns a struct containing a map of the free space on the disk
- *and basic metadata.
- *
- *@params
- *    void *data, first 4096 bytes in the block device
- *    struct block_device *device, block device we are reading from
- *
- *@return
- *    struct fs_data *, contains generalized data about the fs.
- */
-
-struct fs_data * 
-mks_fat32_parse(void *data, struct block_device *device)
-{
-	struct fat_volume *vol = NULL;
-	struct fs_data *parameters = NULL;
-	int ret;
-
-	//allocate stuff;
-	vol = kmalloc(sizeof(struct fat_volume), GFP_KERNEL);
-	parameters = kmalloc(sizeof(struct fs_data), GFP_KERNEL);
-	
-	//read the boot sector
-	ret = read_boot_sector(vol, data);
-	if(ret){
-		mks_debug("Failed to read boot sector");
-		return NULL;
-	}
-
-	ret = fat_map(vol, data, device);
-	if(ret){
-		mks_debug("Failed to map FAT");
-		return NULL;
-	}
-
-	//set the data start offset
-	vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + 
-				      (vol->root_entries >> (vol->sector_order - 5))) 
-					<< vol->sector_order;
-
-        vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved);
-	parameters->num_blocks = vol->num_data_clusters;
-	parameters->bytes_sec = vol->bytes_sector;
-	parameters->sec_block = vol->sec_cluster;
-	parameters->bytes_block = vol->bytes_sector * vol->sec_cluster;
-	parameters->data_start_off = (u32)vol->data_start_off;
-	parameters->empty_block_offsets = vol->empty_clusters;
-        parameters->num_empty_blocks = vol->num_empty_clusters;
-
-	return parameters;
+//out_invalid:
+//	return -1;
 }
 
 /**
@@ -448,16 +401,37 @@ mks_fat32_parse(void *data, struct block_device *device)
 mks_boolean_t 
 mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_device *device)
 {
-    struct fs_data *fat = mks_fat32_parse((void *)data, device);
+    struct fat_volume *vol = NULL;
+    int ret;
+
+    //allocate stuff;
+    vol = kmalloc(sizeof(struct fat_volume), GFP_KERNEL);
+
+    //read the boot sector
+    ret = read_boot_sector(vol, (void *)data);
+    if(ret){
+        mks_debug("Failed to read boot sector");
+    }
+
+    ret = fat_map(vol, (void *)data, device);
+    if(ret){
+        mks_debug("Failed to map FAT");
+    }
+    vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved +
+                                      (vol->root_entries >> (vol->sector_order - 5)))
+                                        << vol->sector_order;
+
+    vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved);  
+
     if(fs) {
-        fs->total_blocks = fat->num_blocks;
-        fs->sectors_per_block = fat->sec_block;
-        fs->block_list = fat->empty_block_offsets;
-        fs->list_len = fat->num_empty_blocks;
-        fs->data_start_off = fat->data_start_off; //data start in clusters
+        fs->total_blocks = vol->num_data_clusters;
+        fs->sectors_per_block = vol->sec_cluster;
+        fs->block_list = vol->empty_clusters;
+        fs->list_len = vol->num_empty_clusters;
+        fs->data_start_off = vol->data_start_off; //data start in clusters
 	mks_debug("This is indeed FAT32");
-        mks_debug("Data offset %d\n", fat->data_start_off);
-	mks_debug("Number of data clusters, %u\n", fat->num_blocks);   
+        //mks_debug("Data offset %d\n", vol->data_start_off);
+	//mks_debug("Number of data clusters, %u\n", vol->num_data_clusters);   
     	return DM_MKS_TRUE;
     }
     mks_debug("Not FAT32");

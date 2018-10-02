@@ -35,17 +35,6 @@ struct mks_fs_context {
     u8      *allocation;        //allocation bitmap
 };
 
-// TODO: Obselete (Move FAT32 specific data into fat32 library)
-struct fs_data {
-	u32	*empty_block_offsets; 	//byte offsets for each block
-	u32 data_start_off;       	//probably only used with FAT
-    u16 bytes_sec;            	//bytes per sector, usually 512
-	u8	sec_block;            	//sectors per block
-	u32 bytes_block;          	//number of bytes per block
-	u32 num_blocks;           	//number of blocks
-    u32 num_empty_blocks;       //number of empty blocks
-};
-
 //
 // Filesystem support
 //
