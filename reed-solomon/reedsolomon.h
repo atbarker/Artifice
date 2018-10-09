@@ -9,8 +9,8 @@ struct encoded_block{
 
 void initialize_rs(void);
 
-int encode(uint32_t data_length, uint8_t *data, void *entropy, struct encoded_block *blocks);
+int encode(uint32_t data_length, uint8_t *data, void *entropy, uint32_t par_length, uint16_t *par);
 
-int decode(uint32_t data_length, uint8_t *data, void *entropy, struct encoded_block *blocks);
+int decode(uint32_t data_length, uint8_t *data, void *entropy, uint32_t par_length, uint16_t *par);
 
 void cleanup_rs(void);

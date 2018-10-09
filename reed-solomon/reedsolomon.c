@@ -59,19 +59,22 @@ void initialize_rs(){
     rs_decoder = init_rs(10, 0x409, 0, 1, 6);
 }
 
-int encode(uint32_t data_length, uint8_t *data, void *entropy, struct encoded_block *blocks){
-    uint16_t par[6];
-    memset(par, 0, sizeof(par));
-    encode_rs8(rs_decoder, data, 512, par, 0);		    
+int encode(uint32_t data_length, uint8_t *data, void *entropy, uint32_t par_length, uint16_t *par){
+    //uint16_t par[6];
+//    memset(par, 0, sizeof(par));
+    encode_rs8(rs_decoder, data, 512, par, 0);
+    hexDump("data", data, data_length);
+    hexDump("parity", par, par_length);    
     return 0;
 }
 
-int decode(uint32_t data_length, uint8_t *data8, void *entropy, struct encoded_block *blocks){
-    uint16_t par[6];
-    uint8_t data[512];
+int decode(uint32_t data_length, uint8_t *data, void *entropy, uint32_t par_length, uint16_t *par){
+    //uint16_t par[6];
+    //uint8_t data[512];
     int numerr;
     numerr = decode_rs8(rs_decoder, data, par, 512, NULL, 0, NULL, 0, NULL);
-    return 0;
+    hexDump("data", data, data_length);
+    return numerr;
 }
 
 
