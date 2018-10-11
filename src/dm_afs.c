@@ -295,68 +295,27 @@ afs_dtr(struct dm_target *ti)
 static int
 afs_map(struct dm_target *ti, struct bio *bio)
 {   
-    //int i, ret;
-    //struct afs_private *context = ti->private;
-    //struct afs_fs_context *fs_context = context->fs_context;
-    //struct afs_map_entry *map = context->map;
-    //struct afs_fs_context *fs = context->fs_context;
-    sector_t start_sector = bio->bi_iter.bi_sector;
-    u32 size = bio->bi_iter.bi_size;
-    //u32 start_block = (start_sector)/fs->sectors_per_block;
-    //u32 new_block = map[start_block].tuples[0].block_num;
-    //sector_t new_sector = (sector_t)((new_block*fs->sectors_per_block) + fs->data_start_off);
-    //struct page *page;
-    //const u32 read_length = 1 << PAGE_SHIFT;
-    /*struct afs_io io = {
-        .bdev = context->passive_dev->bdev,
-        .io_size = read_length
-    };*/
+    struct afs_private *context;
 
-    //__afs_set_debug(DM_MKS_DEBUG_DISABLE);
-    afs_debug("entering mapper\n");
+    context = ti->private;
     switch(bio_op(bio)) {
         case REQ_OP_READ:
-            //read a block
-            afs_debug("read op\n");
+            afs_debug("read operation");
             break;
+
         case REQ_OP_WRITE:
-            //write a block
-            afs_debug("write op\n");
+            afs_debug("write operation");
             break;
+
         default:
-            afs_debug("unknown op\n");
+            afs_debug("unknown operation");
     }
-    afs_debug("Sector: %ld, length: %d\n", start_sector, size);
-    //afs_debug("map %p\n", map);
-    //afs_debug("new block %d\n", new_block);
-    //afs_debug("start block %d\n", start_block);
-    //afs_debug("new sector %ld\n", new_sector);
     
-    /*
-     * TODO: Each bio needs to be handled somehow, otherwise the kernel thread
-     * belonging to it freezes. Even shutdown won't work as a kernel thread is
-     * engaged.
-     */
-    /*
-    //for each block in the tuple
-    for(i = 0; i < 8; i++){
-        new_block = map[start_block].tuples[i].block_num;
-        new_sector = (sector_t)((new_block*fs->sectors_per_block) + fs->data_start_off);
-        io.sector = new_sector;
-        ret = afs_blkdev_io(&io, MKS_IO_READ);
-        if(ret){
-            afs_alert("Error when reading map block {%d}\n", i);
-        }
-    } */
-    
-    //insert code to reconstruct block here
-        
+    // Each bio needs to be handled somehow, otherwise the kernel thread
+    // belonging to it freezes. Even shutdown won't work as a kernel thread is
+    // engaged.
     bio_endio(bio);
     
-    afs_debug("exiting mapper\n");
-    //return DM_MAPIO_REMAPPED;
-
-    //__free_page(page);
     return DM_MAPIO_SUBMITTED;
 }
 
