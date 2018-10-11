@@ -54,7 +54,7 @@ class mks_config:
         self.disk_blks = self.disk_sz / self.blk_sz
         self.disk_blks_bits = int(math.log(self.disk_blks, 2))
 
-        ## Sizes for the Matryoshka Map
+        ## Sizes for the Artifice Map
         self.mks_map_diskblk_sz = roundup_to_p2(self.disk_blks_bits) / 8
         self.mks_map_entry_sz = (self.shards * self.checksum_sz) + (self.shards * self.mks_map_diskblk_sz) + self.hash_sz
         self.mks_map_sz = self.mks_blks * self.mks_map_entry_sz

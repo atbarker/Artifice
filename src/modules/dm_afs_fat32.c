@@ -1,14 +1,9 @@
 /*
- * Library calls for support of the FAT32 filesystem
- * for matryoshka.
- *
- * It only supports FAT32, no FAT16 or FAT12.
- * 
  * Author: Austen Barker <atbarker@ucsc.edu>
- * Copyright: UC Santa Cruz SSRC
+ * Copyright: UC Santa Cruz, SSRC
  */
-#include <dm_mks_lib.h>
-#include <dm_mks_utilities.h>
+#include <dm_afs_modules.h>
+#include <dm_afs_utilities.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/types.h>
@@ -276,24 +271,24 @@ read_boot_sector(struct fat_volume *vol, const void *data)
 	
 	ret = fat_read_dos_2_0_bpb(vol, boot_sec);
 	if(ret){
-		mks_debug("failed to read dos 2.0 bpb\n");
+		afs_debug("failed to read dos 2.0 bpb\n");
 		goto out_invalid;
 	}
 	ret = fat_read_dos_3_31_bpb(vol, boot_sec);
 	if(ret){
-		mks_debug("failed to read dos3.31 bpb\n");
+		afs_debug("failed to read dos3.31 bpb\n");
 		goto out_invalid;
 	}
 
         ret = fat_read_fat32_ebpb(vol, &boot_sec->ebpb.fat32.fat32_ebpb);
 	if(ret){
-		mks_debug("Failed to read fat32 ebpb");
+		afs_debug("Failed to read fat32 ebpb");
 		goto out_invalid;
 	}
 	ret = fat_read_nonfat32_ebpb(vol, &boot_sec->ebpb.nonfat32_ebpb);
 
 	num_data_sectors = vol->total_sec - vol->reserved - ((vol->root_entries << 5) >> vol->sector_order);
-	mks_debug("Number of data sectors: %u\n", num_data_sectors);
+	afs_debug("Number of data sectors: %u\n", num_data_sectors);
 	vol->num_data_clusters = num_data_sectors >> vol->sec_cluster_order;
 	return 0;
 out_invalid:
@@ -329,8 +324,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	sector_t start_sector;
 	void *fat_data;
 	struct page *page = NULL;
-	struct mks_io fatio;
-	enum mks_io_flags flags;
+	struct afs_io fatio;
 	u32 page_size;
 	u32 page_number;
 
@@ -341,41 +335,41 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 	fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
 	page_number = fat_aligned_size_bytes/512;
 
-	mks_debug("FAT aligned size in bytes: %zu \n", fat_aligned_size_bytes);
-	mks_debug("FAT aligned offset: %d \n", (int)fat_aligned_offset);
-	mks_debug("FAT size in pages: %u \n", page_number);
-        //mks_debug("Reserved %u\n", vol->reserved);
+	afs_debug("FAT aligned size in bytes: %zu \n", fat_aligned_size_bytes);
+	afs_debug("FAT aligned offset: %d \n", (int)fat_aligned_offset);
+	afs_debug("FAT size in pages: %u \n", page_number);
+        //afs_debug("Reserved %u\n", vol->reserved);
 
 	//start_sector = (sector_t)(fat_aligned_offset/512);
         start_sector = 0;
 	
 	if(fat_aligned_offset + fat_aligned_size_bytes > 4096){
-		mks_debug("Read more data to map the FAT\n");
+		afs_debug("Read more data to map the FAT\n");
 		page = alloc_pages(GFP_KERNEL, (unsigned int)bsr(page_number));
                 fat_data = page_address(page);
 		fatio.bdev = device;
                 fatio.io_page = page;
 		fatio.io_sector = fat_aligned_offset/512;
 		fatio.io_size = fat_aligned_size_bytes;
-		flags = MKS_IO_READ;
-		status = mks_blkdev_io(&fatio, flags);
-		mks_debug("FAT read successfully.\n");	
+		fatio.type = IO_READ;
+		status = afs_blkdev_io(&fatio);
+		afs_debug("FAT read successfully.\n");	
 	}
 	
 	vol->fat_map = data;
 
 	p = (int*)data;
-        mks_debug("p: %p\n", p);
+        afs_debug("p: %p\n", p);
 	cluster_number = 0;
 	empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
         memset((void*)empty_clusters, 0, fat_size_bytes);
 	//uint8_t *cluster_contents = kmalloc(1, GFP_KERNEL);
 	for (i=0; i < vol->num_data_clusters; i++){
-                mks_debug("block %d: %d\n",i, p[i]);
+                afs_debug("block %d: %d\n",i, p[i]);
 		if(p[i] == 0){
-                        //mks_debug("block {%d} is empty", i);
+                        //afs_debug("block {%d} is empty", i);
 			empty_clusters[cluster_number] = i;
-                        //mks_debug("empty block %d\n", empty_clusters[cluster_number]);
+                        //afs_debug("empty block %d\n", empty_clusters[cluster_number]);
                         cluster_number++;
 		}
 	}
@@ -387,19 +381,15 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 }
 
 /**
- * Detect presence of a FAT32 filesystem. This is done by
- * sifting through the binary data and looking for FAT32
- * headers.
+ * Detect the presence of a FAT32 file system
+ * on 'device'.
  * 
- * @param   data    The data to look into.
- * 
- * @return  mks_boolean
- *  DM_MKS_TRUE     data is formatted as FAT32.
- *  DM_MKS_FALSE    data is not formatted as FAT32.
+ * @data    The first 4KB of the device.
+ * @fs      The file system information to be filled in.
+ * @return  boolean.
  */
-
-mks_boolean_t 
-mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_device *device)
+bool 
+afs_fat32_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs)
 {
     struct fat_volume *vol = NULL;
     int ret;
@@ -410,12 +400,12 @@ mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_devic
     //read the boot sector
     ret = read_boot_sector(vol, (void *)data);
     if(ret){
-        mks_debug("Failed to read boot sector");
+        afs_debug("Failed to read boot sector");
     }
 
     ret = fat_map(vol, (void *)data, device);
     if(ret){
-        mks_debug("Failed to map FAT");
+        afs_debug("Failed to map FAT");
     }
     vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved +
                                       (vol->root_entries >> (vol->sector_order - 5)))
@@ -429,13 +419,13 @@ mks_fat32_detect(const void *data, struct mks_fs_context *fs, struct block_devic
         fs->block_list = vol->empty_clusters;
         fs->list_len = vol->num_empty_clusters;
         fs->data_start_off = vol->data_start_off; //data start in clusters
-	mks_debug("This is indeed FAT32");
-        //mks_debug("Data offset %d\n", vol->data_start_off);
-	//mks_debug("Number of data clusters, %u\n", vol->num_data_clusters);   
-    	return DM_MKS_TRUE;
+	afs_debug("This is indeed FAT32");
+        //afs_debug("Data offset %d\n", vol->data_start_off);
+	//afs_debug("Number of data clusters, %u\n", vol->num_data_clusters);   
+    	return true;
     }
-    mks_debug("Not FAT32");
-    return DM_MKS_FALSE;
+    afs_debug("Not FAT32");
+    return false;
 }
 
 
