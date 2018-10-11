@@ -19,19 +19,29 @@ clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
 	rm -f src/*.rc src/modules/*.rc
 
+load:
+	@make
+	@sudo insmod dm_afs.ko afs_debug_mode=1
+
+unload:
+	@sudo rmmod dm_afs
+	@make clean
+
+reload:
+	@make unload || true
+	@make load || true
+
 ######################################################################
 # Hack for easier loading and unloading
 # Make sure your VM has another disk and its mounted at /dev/sdb, with
 # a partition at /dev/sdb1.
 debug:
+	@make
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 1024 afs pass /dev/sdb1 | sudo dmsetup create matryoshka
-
-debug1:
-	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 1024 afs pass /dev/sde1 | sudo dmsetup create matryoshka
+	@echo 0 1024 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_end:
-	@sudo dmsetup remove matryoshka
+	@sudo dmsetup remove artifice
 	@sudo rmmod dm_afs
+	@make clean
 ######################################################################

@@ -95,6 +95,7 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     afs_assert(!kstrtou8(argv[TYPE], 10, &args->instance_type), err, "incorrect instance type");
     memcpy(args->passphrase, argv[PASSPHRASE], PASSPHRASE_SZ);
     memcpy(args->passive_dev, argv[DISK], PASSIVE_DEV_SZ);
+    afs_debug("%d | %s | %s", args->instance_type, args->passphrase, args->passive_dev);
 
     // These may be optional depending on the type.
     for (i = DISK + 1; i < argc; i++) {
@@ -108,6 +109,7 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
             afs_assert(0, err, "unknown argument");
         }
     }
+    afs_debug("%s | %s", args->entropy_dir, args->shadow_passphrase);
 
     // Now that we have all the arguments, we need to make sure
     // that they semantically make sense.
