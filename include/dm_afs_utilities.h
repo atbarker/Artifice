@@ -44,7 +44,7 @@ extern int afs_debug_mode;
 // Alert information.
 #define afs_alert(fmt, ...)                                 \
 ({                                                          \
-    printk(KERN_ALERT "dm-afs-debug: [%s:%d] " fmt,         \
+    printk(KERN_ALERT "dm-afs-alert: [%s:%d] " fmt,         \
     __func__, __LINE__,                                     \
     ##__VA_ARGS__);                                         \
 })

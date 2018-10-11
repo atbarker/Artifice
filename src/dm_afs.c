@@ -190,11 +190,11 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             break;
         
         case FS_ERR:
-            afs_assert(0, fs_err, "unknown file system");
+            afs_assert_action(0, ret = -ENOENT, fs_err, "unknown file system");
             break;
         
         default:
-            afs_assert(0, fs_err, "seems like all hell broke loose");
+            afs_assert_action(0, ret = -ENXIO, fs_err, "seems like all hell broke loose");
     }
 
 //     context->fs_context->allocation = kmalloc((context->fs_context->list_len), GFP_KERNEL);

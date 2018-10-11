@@ -117,12 +117,12 @@ fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_
     vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
     vol->sector_order = bsr(vol->bytes_sector);
     afs_assert(is_power_of_2(vol->bytes_sector) && vol->sector_order >= 5 && vol->sector_order <= 12, 
-               out_invalid, "sector order mismatch");
+               out_invalid, "sector order mismatch [%d]", vol->sector_order);
 
     vol->sec_cluster = boot_sec->sec_cluster;
     vol->sec_cluster_order = bsr(vol->sec_cluster);
     afs_assert(is_power_of_2(vol->sec_cluster) && vol->sec_cluster_order <= 7, out_invalid,
-               "sector cluster order mismatch");
+               "sector cluster order mismatch [%d]", vol->sec_cluster_order);
 
     vol->cluster_order = vol->sector_order + vol->sec_cluster_order;
     vol->reserved = le16_to_cpu(boot_sec->res_sec);
