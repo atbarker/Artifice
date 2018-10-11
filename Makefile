@@ -41,7 +41,7 @@ debug:
 	@echo 0 1024 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_end:
-	@sudo dmsetup remove artifice
-	@sudo rmmod dm_afs
-	@make clean
+	@sudo dmsetup remove artifice || true
+	@sudo rmmod dm_afs || true
+	@make clean || true
 ######################################################################
