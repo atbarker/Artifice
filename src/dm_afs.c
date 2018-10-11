@@ -272,7 +272,6 @@ afs_dtr(struct dm_target *ti)
     afs_debug("destructor completed\n");
 }
 
-//TODO: REMAPPED causes issues, retrieve data, process, then return different BIO
 /**
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
@@ -284,8 +283,8 @@ afs_dtr(struct dm_target *ti)
  * issued upon the device mapper target. For performance 
  * consideration, the map function is verbose only for debug builds.
  * 
- * @param   ti      Target instance for the device.
- * @param   bio     The block I/O request to be processed.
+ * @ti  Target instance for the device.
+ * @bio The block I/O request to be processed.
  * 
  * @return  device-mapper code
  *  DM_MAPIO_SUBMITTED: dm_afs has submitted the bio request.
