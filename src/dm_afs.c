@@ -143,6 +143,11 @@ err:
  * and detect the file system in effect on the passive
  * block device.
  * 
+ * It also reads all the files in the entropy directory and
+ * creates a hash table of the files, keyed by an 8 byte
+ * hash.
+ * TODO: ^Implement.
+ * 
  * @ti      Target instance for new device.
  * @return  0       New device instance successfully created.
  * @return  <0      Error.

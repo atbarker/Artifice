@@ -83,7 +83,7 @@ enum {
     PASSPHRASE_SZ   = 64,
     PASSIVE_DEV_SZ  = 32,
     ENTROPY_DIR_SZ  = 64,
-    ENTROPY_FIL_SZ  = 32,
+    ENTROPY_HASH_SZ = 8,
     SB_MAP_PTRS_SZ  = 983,
 
     // Hash algorithms
@@ -162,9 +162,9 @@ struct __attribute__((packed)) afs_map_entry {
     // file. Each carrier block will have it's own
     // sector offset for this file.
 
-    struct afs_map_tuple *block_tuples; // List of tuples for this data block.
-    uint8_t block_hash[SHA128_SZ];      // Hash of the data block.
-    char    entropy_file_name[ENTROPY_FIL_SZ];  // Name of the entropy file for this data block.
+    struct afs_map_tuple *block_tuples;     // List of tuples for this data block.
+    uint8_t block_hash[SHA128_SZ];          // Hash of the data block.
+    uint8_t entropy_hash[ENTROPY_HASH_SZ];  // Hash of the entropy file name.
 };
 
 /**
