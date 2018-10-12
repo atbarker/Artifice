@@ -7,7 +7,7 @@ ccflags-y += -I$(src)/include/
 # Kernel module.
 obj-m 	 := dm_afs.o
 dm_afs-y := src/dm_afs.o 				\
-			src/dm_afs_utilities.o 		\
+			src/dm_afs_common.o 		\
 			src/modules/dm_afs_fat32.o	\
 			src/modules/dm_afs_ext4.o	\
 			src/modules/dm_afs_ntfs.o

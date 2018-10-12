@@ -106,28 +106,17 @@ int
 hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest)
 {
     const char *alg_name = "sha1";
-    struct crypto_shash *alg = NULL;
-    struct sdesc *sdesc = NULL;
+    struct shash_desc desc;
     int ret;
     
-    // Allocate memory for the algorithm.
-    alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
-    afs_assert_action(!IS_ERR(alg), ret = PTR_ERR(alg), alg_err, "could not allocate algorithm");
-    
-    // Generate the hash description.
-    sdesc = init_sdesc(alg);
-    afs_assert_action(!IS_ERR(sdesc), ret = PTR_ERR(sdesc), sdesc_err, "could not generate hash description");
+    desc.tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
+    afs_assert_action(!IS_ERR(desc.tfm), ret = PTR_ERR(desc.tfm), done, "could not allocate algorithm");
 
-    ret = crypto_shash_digest(&sdesc->shash, data, data_len, digest);
-    afs_assert(!ret, compute_err, "error computing sha1 [%d]", ret);
+    ret = crypto_shash_digest(&desc, data, data_len, digest);
+    afs_assert(!ret, done, "error computing sha1 [%d]", ret);
+    crypto_free_shash(desc.tfm);
 
-compute_err:
-    kfree(sdesc);
-
-sdesc_err:
-    crypto_free_shash(alg);
-
-alg_err:
+done:
     return ret;
 }
 
@@ -190,36 +179,6 @@ alg_err:
 //     sdesc->shash.flags = 0x0;
 //     return sdesc;
 // }
-
-int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest){
-    struct crypto_shash *alg;
-    char *hash_alg_name = "sha256";
-    int ret;
-    struct sdesc *sdesc;
-
-    alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
-    if(IS_ERR(alg)){
-        afs_alert("Issue creating hash algorithm\n");
-        goto error;
-    }
-    
-    sdesc = init_sdesc(alg);
-    if(IS_ERR(sdesc)){
-        afs_alert("Could not generate hash description\n");
-        goto error;
-    }
-
-    ret = crypto_shash_digest(&sdesc->shash, passphrase, pass_len, digest);
-    if(ret != 0){
-        afs_alert("Error Computing hash\n");
-	goto error;
-    }
-    kfree(sdesc);
-    crypto_free_shash(alg);
-    return 0;
-error:
-    return -1;
-}
 
 // //should execute whilst we are generating a new superblock such that the superblock can include the location
 // //returns offset of the first block written to the disk

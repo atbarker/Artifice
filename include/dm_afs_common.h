@@ -143,7 +143,7 @@ struct __attribute__((packed)) afs_map_block {
 
     uint32_t map_pointers[1023];
     uint32_t next_map_block;
-}
+};
 
 // Artifice map tuple.
 struct __attribute__((packed)) afs_map_tuple {
@@ -175,7 +175,7 @@ int afs_blkdev_io(struct afs_io *request);
 /**
  * Acquire a SHA1 hash of given data.
  */
-void hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest);
+int hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest);
 
 unsigned long bsr(unsigned long n);
 // int random_offset(u32 upper_limit);

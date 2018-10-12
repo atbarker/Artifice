@@ -7,18 +7,6 @@
 #include <dm_afs_modules.h>
 
 /**
- * Create a new super block based on the arguments
- * supplied.
- */
-static void
-create_super_block(struct afs_super_block *sb, struct afs_args *args)
-{
-    uint8_t passphrase_hash[SHA256_SZ];
-
-
-}
-
-/**
  * A procedure to detect the existing file system on a block
  * device or a block device partition.
  * 
@@ -73,7 +61,6 @@ detect_fs(struct block_device *device, struct afs_private *context)
     } else {
         ret = FS_ERR;
     }
-    context->passive_fs = fs;
     __free_page(page);
 
     afs_debug("detected %d", ret);
@@ -163,15 +150,12 @@ err:
 static int
 afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
-    int map_offset;
-    unsigned char *digest = NULL;
-
     struct afs_private *context = NULL;
     struct afs_args *args = NULL;
     struct afs_passive_fs *fs = NULL;
     struct afs_super_block *sb = NULL;
     int i, ret;
-    int8_t fs;
+    int8_t detected_fs;
 
     context = kmalloc(sizeof(*context), GFP_KERNEL);
     afs_assert_action(!IS_ERR(context), ret = PTR_ERR(context), context_err, "kmalloc failure [%d]", ret);
@@ -202,8 +186,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     ret = dm_get_device(ti, args->passive_dev, dm_table_get_mode(ti->table), &context->passive_dev);
     afs_assert(!ret, args_err, "could not find given disk [%s]", args->passive_dev);
 
-    fs = detect_fs(context->passive_dev->bdev, context);
-    switch (fs) {
+    detected_fs = detect_fs(context->passive_dev->bdev, context);
+    switch (detected_fs) {
         case FS_FAT32:
             afs_debug("detected FAT32");
             break;
@@ -232,7 +216,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     fs->list_len = 32;
 
     for (i = 0; i < fs->list_len; i++) {
-        fs->block_list = i;
+        fs->block_list[i] = i;
     }
 
 //     context->fs_context->allocation = kmalloc((context->fs_context->list_len), GFP_KERNEL);
