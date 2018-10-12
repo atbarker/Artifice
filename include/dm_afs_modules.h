@@ -2,7 +2,7 @@
  * Author: Yash Gupta, Austen Barker
  * Copyright: UC Santa Cruz, SSRC
  */
-#include <dm_afs_utilities.h>
+#include <dm_afs_common.h>
 #include <linux/string.h>
 #include <linux/bio.h>
 

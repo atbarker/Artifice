@@ -3,8 +3,20 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs.h>
-#include <dm_afs_utilities.h>
+#include <dm_afs_common.h>
 #include <dm_afs_modules.h>
+
+/**
+ * Create a new super block based on the arguments
+ * supplied.
+ */
+static void
+create_super_block(struct afs_super_block *sb, struct afs_args *args)
+{
+    uint8_t passphrase_hash[SHA256_SZ];
+
+
+}
 
 /**
  * A procedure to detect the existing file system on a block
@@ -47,9 +59,9 @@ detect_fs(struct block_device *device, struct afs_private *context)
     read_request.io_page = page;
     ret = afs_blkdev_io(&read_request);
     afs_assert(!ret, read_err, "could not read page [%d]", ret);
- 
-    fs = kmalloc(sizeof(*fs), GFP_KERNEL);
-    afs_assert_action(!IS_ERR(fs), ret = PTR_ERR(fs), fs_alloc_err, "could not allocate passive FS [%d]", ret);
+
+    // Acquire pointer to the passive file system structure.
+    fs = &context->passive_fs;
 
     // Add more detection functions as a series of else..if blocks.
     if (afs_fat32_detect(page_addr, device, fs)) {
@@ -66,9 +78,6 @@ detect_fs(struct block_device *device, struct afs_private *context)
 
     afs_debug("detected %d", ret);
     return ret;
-
-fs_alloc_err:
-    // Nothing to do.
 
 read_err:
     __free_page(page);
@@ -156,19 +165,37 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
     int map_offset;
     unsigned char *digest = NULL;
-    struct afs_super *super = NULL;
 
     struct afs_private *context = NULL;
     struct afs_args *args = NULL;
-    int ret;
+    struct afs_passive_fs *fs = NULL;
+    struct afs_super_block *sb = NULL;
+    int i, ret;
     int8_t fs;
 
-    context = kmalloc(sizeof *context, GFP_KERNEL);
+    context = kmalloc(sizeof(*context), GFP_KERNEL);
     afs_assert_action(!IS_ERR(context), ret = PTR_ERR(context), context_err, "kmalloc failure [%d]", ret);
 
     args = &context->instance_args;
     ret = parse_afs_args(args, argc, argv);
     afs_assert(!ret, args_err, "unable to parse arguments");
+
+    sb = &context->super_block;
+    switch (args->instance_type) {
+        case TYPE_NEW:
+            sb->instance_size = ti->len * 512;
+            hash_sha1(args->passphrase, PASSPHRASE_SZ, sb->hash);
+            memcpy(sb->entropy_dir, args->entropy_dir, ENTROPY_DIR_SZ);
+            break;
+        
+        case TYPE_ACCESS:
+            // Find existing super block.
+            break;
+        
+        case TYPE_SHADOW:
+            // Create nested instance.
+            break;
+    }
 
     // Acquire the block device based on the args. This gives us a 
     // wrapper on top of the kernel block device structure.
@@ -190,11 +217,22 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             break;
         
         case FS_ERR:
-            afs_assert_action(0, ret = -ENOENT, fs_err, "unknown file system");
+            // TODO: Change.
+            // afs_assert_action(0, ret = -ENOENT, fs_err, "unknown file system");
             break;
         
         default:
             afs_assert_action(0, ret = -ENXIO, fs_err, "seems like all hell broke loose");
+    }
+
+    fs = &context->passive_fs;
+
+    // This is all just for testing.
+    fs->block_list = kmalloc(32 * sizeof(*fs->block_list), GFP_KERNEL);
+    fs->list_len = 32;
+
+    for (i = 0; i < fs->list_len; i++) {
+        fs->block_list = i;
     }
 
 //     context->fs_context->allocation = kmalloc((context->fs_context->list_len), GFP_KERNEL);

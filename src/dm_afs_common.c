@@ -2,7 +2,7 @@
  * Author: Yash Gupta <ygupta@ucsc.edu>, Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
-#include <dm_afs_utilities.h>
+#include <dm_afs_common.h>
 #include <dm_afs_modules.h>
 #include <linux/errno.h>
 #include <linux/crypto.h>
@@ -97,6 +97,40 @@ alloc_err:
     return ret;
 }
 
+/**
+ * Acquire a SHA1 hash of given data.
+ * 
+ * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
+ */
+int 
+hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest)
+{
+    const char *alg_name = "sha1";
+    struct crypto_shash *alg = NULL;
+    struct sdesc *sdesc = NULL;
+    int ret;
+    
+    // Allocate memory for the algorithm.
+    alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
+    afs_assert_action(!IS_ERR(alg), ret = PTR_ERR(alg), alg_err, "could not allocate algorithm");
+    
+    // Generate the hash description.
+    sdesc = init_sdesc(alg);
+    afs_assert_action(!IS_ERR(sdesc), ret = PTR_ERR(sdesc), sdesc_err, "could not generate hash description");
+
+    ret = crypto_shash_digest(&sdesc->shash, data, data_len, digest);
+    afs_assert(!ret, compute_err, "error computing sha1 [%d]", ret);
+
+compute_err:
+    kfree(sdesc);
+
+sdesc_err:
+    crypto_free_shash(alg);
+
+alg_err:
+    return ret;
+}
+
 // /**
 //  *Set of functions for interfacing with a basic bitmap.
 //  *Takes in our array of bits and the bit index one wishes to manipulate
@@ -157,35 +191,35 @@ alloc_err:
 //     return sdesc;
 // }
 
-// int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest){
-//     struct crypto_shash *alg;
-//     char *hash_alg_name = "sha256";
-//     int ret;
-//     struct sdesc *sdesc;
+int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest){
+    struct crypto_shash *alg;
+    char *hash_alg_name = "sha256";
+    int ret;
+    struct sdesc *sdesc;
 
-//     alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
-//     if(IS_ERR(alg)){
-//         afs_alert("Issue creating hash algorithm\n");
-//         goto error;
-//     }
+    alg = crypto_alloc_shash(hash_alg_name, CRYPTO_ALG_TYPE_SHASH, 0);
+    if(IS_ERR(alg)){
+        afs_alert("Issue creating hash algorithm\n");
+        goto error;
+    }
     
-//     sdesc = init_sdesc(alg);
-//     if(IS_ERR(sdesc)){
-//         afs_alert("Could not generate hash description\n");
-//         goto error;
-//     }
+    sdesc = init_sdesc(alg);
+    if(IS_ERR(sdesc)){
+        afs_alert("Could not generate hash description\n");
+        goto error;
+    }
 
-//     ret = crypto_shash_digest(&sdesc->shash, passphrase, pass_len, digest);
-//     if(ret != 0){
-//         afs_alert("Error Computing hash\n");
-// 	goto error;
-//     }
-//     kfree(sdesc);
-//     crypto_free_shash(alg);
-//     return 0;
-// error:
-//     return -1;
-// }
+    ret = crypto_shash_digest(&sdesc->shash, passphrase, pass_len, digest);
+    if(ret != 0){
+        afs_alert("Error Computing hash\n");
+	goto error;
+    }
+    kfree(sdesc);
+    crypto_free_shash(alg);
+    return 0;
+error:
+    return -1;
+}
 
 // //should execute whilst we are generating a new superblock such that the superblock can include the location
 // //returns offset of the first block written to the disk

@@ -9,8 +9,8 @@
 #include <linux/version.h>
 #include <linux/types.h>
 
-#ifndef DM_AFS_UTILITIES_H
-#define DM_AFS_UTILITIES_H
+#ifndef DM_AFS_COMMON_H
+#define DM_AFS_COMMON_H
 
 // Standard integer types.
 typedef s8 int8_t;
@@ -74,6 +74,35 @@ enum afs_io_type {
     IO_WRITE
 };
 
+/**
+ * Collection of constants ranging from array sizes
+ * to instance types.
+ */
+enum {
+    // Array sizes.
+    PASSPHRASE_SZ   = 64,
+    PASSIVE_DEV_SZ  = 32,
+    ENTROPY_DIR_SZ  = 64,
+    ENTROPY_FIL_SZ  = 32,
+    SB_MAP_PTRS_SZ  = 983,
+
+    // Hash algorithms
+    SHA1_SZ   = 20,
+    SHA128_SZ = 16,
+    SHA256_SZ = 32,
+
+    // Artifice type.
+    TYPE_NEW    = 0,
+    TYPE_ACCESS = 1,
+    TYPE_SHADOW = 2,
+
+    // File system support.
+    FS_FAT32  = 0,
+    FS_EXT4   = 1,
+    FS_NTFS   = 2,
+    FS_ERR    = -1
+};
+
 // Artifice I/O
 struct afs_io {
     struct block_device *bdev;      // Block Device to issue I/O on.
@@ -94,33 +123,59 @@ struct afs_passive_fs {
     uint8_t     *allocation;        // Allocation bitmap.
 };
 
+// Artifice super block.
+// TODO: Add Reed Solomon information.
+struct __attribute__((packed)) afs_super_block {
+    uint8_t     hash[SHA1_SZ];  // Hash of the passphrase.
+    uint64_t    instance_size;  // Size of this Artifice instance.
+    uint8_t     reserved[4];    // Replace with RS information.
+    char        entropy_dir[ENTROPY_DIR_SZ];        // Entropy directory for this instance.
+    char        shadow_passphrase[PASSPHRASE_SZ];   // In case this instance is a nested instance.
+    uint32_t    map_pointers[SB_MAP_PTRS_SZ];       // The super block stores the pointers to the first 983 map blocks.
+    uint32_t    next_map_block; // Pointer to the next map block in the chain.
+};
+
+// Artifice map block.
+struct __attribute__((packed)) afs_map_block {
+    // Each map block is 4KB. With 32 bit pointers,
+    // we can store 1023 pointers and a pointer to
+    // the next block.
+
+    uint32_t map_pointers[1023];
+    uint32_t next_map_block;
+}
+
+// Artifice map tuple.
+struct __attribute__((packed)) afs_map_tuple {
+    uint32_t    carrier_block_pointer;  // Sector number from the free list.
+    uint32_t    entropy_block_pointer;  // Sector number from the entropy file.
+    uint16_t    checksum;               // Checksum of this carrier block.
+};
+
+// Artifice map entry.
+struct __attribute__((packed)) afs_map_entry {
+    // The number of carrier blocks per data block
+    // is configurable and hence this needs to be
+    // a pointer.
+    //
+    // Each data block will draw entropy from a single
+    // file. Each carrier block will have it's own
+    // sector offset for this file.
+
+    struct afs_map_tuple *block_tuples; // List of tuples for this data block.
+    uint8_t block_hash[SHA128_SZ];      // Hash of the data block.
+    char    entropy_file_name[ENTROPY_FIL_SZ];  // Name of the entropy file for this data block.
+};
+
 /**
- * Read or write to an block device.
+ * Read or write to a block device.
  */
 int afs_blkdev_io(struct afs_io *request);
 
-// //magical super block
-// //need to add an array to store the superblock copies, most likely hard coded.
-// struct afs_super{
-//     unsigned char hash[32];
-//     u64 afs_size;
-//     u8 ecc_scheme;
-//     u8 secret_split_type;
-//     u32 afs_map_start;
-// }__attribute__((packed));
-
-// //entry into a matryoshka map tuple
-// struct afs_map_tuple{
-//     u32 block_num;
-// //    u16 checksum;
-// }__attribute__((packed));
-
-// //Artifice Map entry
-// struct afs_map_entry{
-//     u32 block_num;
-//     struct afs_map_tuple tuples[8];
-//     unsigned char datablock_checksum[16];
-// }__attribute__((packed));
+/**
+ * Acquire a SHA1 hash of given data.
+ */
+void hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest);
 
 unsigned long bsr(unsigned long n);
 // int random_offset(u32 upper_limit);
@@ -131,4 +186,4 @@ unsigned long bsr(unsigned long n);
 // int write_new_superblock(struct afs_super *super, int duplicates, unsigned char *digest, struct afs_fs_context *context, struct block_device *device);
 // struct afs_super* retrieve_superblock(int duplicates, unsigned char *digest, struct afs_fs_context *context, struct block_device *device);
 
-#endif /* DM_AFS_UTILITIES_H */
+#endif /* DM_AFS_COMMON_H */

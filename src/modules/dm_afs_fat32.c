@@ -5,7 +5,7 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs_modules.h>
-#include <dm_afs_utilities.h>
+#include <dm_afs_common.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/types.h>
