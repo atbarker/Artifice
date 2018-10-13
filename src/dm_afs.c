@@ -75,10 +75,14 @@ alloc_err:
 
 /**
  * Parse the supplied arguments from the user.
+ * 
+ * Adding a '-1' to all sizes to make sure we
+ * keep a NULL.
  */
 static int32_t
 parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
 {
+    const uint32_t BASE_10 = 10;
     const int8_t TYPE = 0;
     const int8_t PASSPHRASE = 1;
     const int8_t DISK = 2;
@@ -88,19 +92,19 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     memset(args, 0, sizeof(*args));
 
     // These three are always required.
-    afs_assert(!kstrtou8(argv[TYPE], 10, &args->instance_type), err, "incorrect instance type");
-    memcpy(args->passphrase, argv[PASSPHRASE], PASSPHRASE_SZ);
-    memcpy(args->passive_dev, argv[DISK], PASSIVE_DEV_SZ);
+    afs_assert(!kstrtou8(argv[TYPE], BASE_10, &args->instance_type), err, "incorrect instance type");
+    strncpy(args->passphrase, argv[PASSPHRASE], PASSPHRASE_SZ-1);
+    strncpy(args->passive_dev, argv[DISK], PASSIVE_DEV_SZ-1);
     afs_debug("%d | %s | %s", args->instance_type, args->passphrase, args->passive_dev);
 
     // These may be optional depending on the type.
     for (i = DISK + 1; i < argc; i++) {
         if (!strcmp(argv[i], "--entropy")) {
             afs_assert(++i < argc, err, "missing value [entropy source]");
-            memcpy(args->entropy_dir, argv[i], ENTROPY_DIR_SZ);
+            strncpy(args->entropy_dir, argv[i], ENTROPY_DIR_SZ-1);
         } else if (!strcmp(argv[i], "--shadow_passphrase")) {
             afs_assert(++i < argc, err, "missing value [shadow passphrase]");
-            memcpy(args->shadow_passphrase, argv[i], PASSPHRASE_SZ);
+            strncpy(args->shadow_passphrase, argv[i], PASSPHRASE_SZ-1);
         } else {
             afs_assert(0, err, "unknown argument");
         }
@@ -174,7 +178,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         case TYPE_NEW:
             sb->instance_size = ti->len * 512;
             hash_sha1(args->passphrase, PASSPHRASE_SZ, sb->hash);
-            memcpy(sb->entropy_dir, args->entropy_dir, ENTROPY_DIR_SZ);
+            strncpy(sb->entropy_dir, args->entropy_dir, ENTROPY_DIR_SZ);
             break;
         
         case TYPE_ACCESS:

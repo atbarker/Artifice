@@ -7,7 +7,7 @@ Author: Yash Gupta <ygupta@ucsc.edu>
 """
 
 class afs_config:
-    def __init__(self, tuple_shards=4, shards=4, afs_bits=32, blk_bits=12, entropy_sz=4):
+    def __init__(self, tuple_shards=4, shards=4, afs_bits=32, blk_bits=12, entropy_sz=8):
         ## Entry in the map.
         tuple_sz = 2 + 4 + 4
         data_hash_sz = 16

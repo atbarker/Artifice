@@ -106,17 +106,28 @@ int
 hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest)
 {
     const char *alg_name = "sha1";
-    struct shash_desc desc;
+    struct crypto_shash *tfm;
+    struct shash_desc *desc;
     int ret;
     
-    desc.tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
-    afs_assert_action(!IS_ERR(desc.tfm), ret = PTR_ERR(desc.tfm), done, "could not allocate algorithm");
+    tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
+    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
 
-    ret = crypto_shash_digest(&desc, data, data_len, digest);
-    afs_assert(!ret, done, "error computing sha1 [%d]", ret);
-    crypto_free_shash(desc.tfm);
+    desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
+    afs_assert_action(!IS_ERR(desc), ret = PTR_ERR(desc), desc_done, "could not allocate desc [%d]", ret);
+    
+    desc->tfm = tfm;
+    desc->flags = 0;
+    ret = crypto_shash_digest(desc, data, data_len, digest);
+    afs_assert(!ret, compute_done, "error computing sha1 [%d]", ret);
 
-done:
+compute_done:
+    kfree(desc);
+
+desc_done:
+    crypto_free_shash(tfm);
+
+tfm_done:
     return ret;
 }
 
@@ -162,22 +173,6 @@ done:
 
 //    ct[0] = y;
 //    ct[1] = x;
-// }
-
-// struct sdesc{
-//     struct shash_desc shash;
-//     char ctx[];
-// };
-
-// //generate a hash of the passphrase for locating or generating the superblock
-// static struct sdesc *init_sdesc(struct crypto_shash *alg){
-//     struct sdesc *sdesc;
-//     int size;
-//     size = sizeof(struct shash_desc) + crypto_shash_descsize(alg);
-//     sdesc = kmalloc(size, GFP_KERNEL);
-//     sdesc->shash.tfm = alg;
-//     sdesc->shash.flags = 0x0;
-//     return sdesc;
 // }
 
 // //should execute whilst we are generating a new superblock such that the superblock can include the location
