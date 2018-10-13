@@ -124,24 +124,23 @@ struct afs_passive_fs {
 };
 
 // Artifice super block.
-// TODO: Add Reed Solomon information.
 struct __attribute__((packed)) afs_super_block {
     uint8_t     hash[SHA1_SZ];  // Hash of the passphrase.
     uint64_t    instance_size;  // Size of this Artifice instance.
-    uint8_t     reserved[4];    // Replace with RS information.
+    uint8_t     reserved[4];    // TODO: Replace with RS information.
     char        entropy_dir[ENTROPY_DIR_SZ];        // Entropy directory for this instance.
     char        shadow_passphrase[PASSPHRASE_SZ];   // In case this instance is a nested instance.
-    uint32_t    map_pointers[SB_MAP_PTRS_SZ];       // The super block stores the pointers to the first 983 map blocks.
+    uint32_t    map_table_pointers[SB_MAP_PTRS_SZ]; // The super block stores the pointers to the first 983 map tables.
     uint32_t    next_map_block; // Pointer to the next map block in the chain.
 };
 
 // Artifice map block.
 struct __attribute__((packed)) afs_map_block {
     // Each map block is 4KB. With 32 bit pointers,
-    // we can store 1023 pointers and a pointer to
-    // the next block.
+    // we can store 1023 pointers to map tables and
+    // a pointer to the next block.
 
-    uint32_t map_pointers[1023];
+    uint32_t map_table_pointers[1023];
     uint32_t next_map_block;
 };
 
