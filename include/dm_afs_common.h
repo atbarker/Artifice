@@ -152,7 +152,7 @@ struct __attribute__((packed)) afs_map_tuple {
 };
 
 // Artifice map entry.
-struct __attribute__((packed)) afs_map_entry {
+struct afs_map_entry {
     // The number of carrier blocks per data block
     // is configurable and hence this needs to be
     // a pointer.
@@ -164,6 +164,20 @@ struct __attribute__((packed)) afs_map_entry {
     struct afs_map_tuple *block_tuples;     // List of tuples for this data block.
     uint8_t block_hash[SHA128_SZ];          // Hash of the data block.
     uint8_t entropy_hash[ENTROPY_HASH_SZ];  // Hash of the entropy file name.
+};
+
+// Artifice map table (per block).
+struct afs_map_table {
+    // This structure represents all the map entires in
+    // a single 4KB block. As the size of a map entry is
+    // variable, we need to make space for some unused
+    // portion of the block. Unused space is always kept
+    // at the beginning of the block.
+
+    uint16_t    unused_space;
+    uint16_t    num_map_entries;
+    uint8_t     *unused;
+    struct afs_map_entry *map_entries;
 };
 
 /**
