@@ -3,7 +3,6 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs.h>
-#include <dm_afs_common.h>
 #include <dm_afs_modules.h>
 
 /**
@@ -20,54 +19,33 @@
  * @return  FS_XXXX/ FS_ERR.
  */
 static int8_t 
-detect_fs(struct block_device *device, struct afs_private *context)
+detect_fs(struct block_device *device, struct afs_passive_fs *fs)
 {
-    const sector_t start_sector = 0;
-    const uint32_t read_length = PAGE_SIZE;
+    uint8_t *page = NULL;
+    int8_t ret;
 
-    struct page *page = NULL;
-    void *page_addr = NULL;
-    struct afs_passive_fs *fs = NULL;
-    int8_t ret = FS_ERR;
-
-    // Build the IO request to read in a page.
-    struct afs_io read_request = {
-        .bdev = device,
-        .io_sector = start_sector,
-        .io_size = read_length,
-        .type = IO_READ
-    };
-
-    // Allocate a page in memory and acquire a virtual address
-    // to it.
-    page = alloc_page(GFP_KERNEL);
+    page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
     afs_assert_action(!IS_ERR(page), ret = PTR_ERR(page), alloc_err, "could not allocate page [%d]", ret);
-    page_addr = page_address(page);
-
-    read_request.io_page = page;
-    ret = afs_blkdev_io(&read_request);
+    ret = read_page(page, device, 0);
     afs_assert(!ret, read_err, "could not read page [%d]", ret);
 
-    // Acquire pointer to the passive file system structure.
-    fs = &context->passive_fs;
-
     // Add more detection functions as a series of else..if blocks.
-    if (afs_fat32_detect(page_addr, device, fs)) {
+    if (afs_fat32_detect(page, device, fs)) {
         ret = FS_FAT32;
-    } else if (afs_ext4_detect(page_addr, device, fs)) {
+    } else if (afs_ext4_detect(page, device, fs)) {
         ret = FS_EXT4;
-    } else if (afs_ntfs_detect(page_addr, device, fs)) {
+    } else if (afs_ntfs_detect(page, device, fs)) {
         ret = FS_NTFS;
     } else {
         ret = FS_ERR;
     }
-    __free_page(page);
+    kfree(page);
 
     afs_debug("detected %d", ret);
     return ret;
 
 read_err:
-    __free_page(page);
+    kfree(page);
 
 alloc_err:
     return FS_ERR;
@@ -95,7 +73,9 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     afs_assert(!kstrtou8(argv[TYPE], BASE_10, &args->instance_type), err, "incorrect instance type");
     strncpy(args->passphrase, argv[PASSPHRASE], PASSPHRASE_SZ-1);
     strncpy(args->passive_dev, argv[DISK], PASSIVE_DEV_SZ-1);
-    afs_debug("%d | %s | %s", args->instance_type, args->passphrase, args->passive_dev);
+    afs_debug("Type: %d", args->instance_type);
+    afs_debug("Passphrase: %s", args->passphrase);
+    afs_debug("Device: %s", args->passive_dev);
 
     // These may be optional depending on the type.
     for (i = DISK + 1; i < argc; i++) {
@@ -109,7 +89,8 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
             afs_assert(0, err, "unknown argument");
         }
     }
-    afs_debug("%s | %s", args->entropy_dir, args->shadow_passphrase);
+    afs_debug("Entropy: %s", args->entropy_dir);
+    afs_debug("Shadow Passphrase: %s", args->shadow_passphrase);
 
     // Now that we have all the arguments, we need to make sure
     // that they semantically make sense.
@@ -152,9 +133,9 @@ err:
  * hash.
  * TODO: ^Implement.
  * 
- * @ti      Target instance for new device.
- * @return  0       New device instance successfully created.
- * @return  <0      Error.
+ * @ti Target instance for new device.
+ * @return 0  New device instance successfully created.
+ * @return <0 Error.
  */
 static int
 afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
@@ -165,37 +146,29 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     struct afs_super_block *sb = NULL;
     int i, ret;
     int8_t detected_fs;
+    uint64_t instance_size;
+
+    // Make sure instance is large enough.
+    instance_size = ti->len * 512;
+    afs_assert_action(instance_size >= AFS_MIN_SIZE, ret = -EINVAL, err, "instance too small [%llu]", instance_size);
+    afs_assert_action(sizeof(*sb) <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "super block structure too large [%lu]", sizeof(*sb));
 
     context = kmalloc(sizeof(*context), GFP_KERNEL);
-    afs_assert_action(!IS_ERR(context), ret = PTR_ERR(context), context_err, "kmalloc failure [%d]", ret);
+    afs_assert_action(!IS_ERR(context), ret = PTR_ERR(context), err, "kmalloc failure [%d]", ret);
+    memset(context, 0, sizeof(*context));
 
     args = &context->instance_args;
     ret = parse_afs_args(args, argc, argv);
     afs_assert(!ret, args_err, "unable to parse arguments");
 
-    sb = &context->super_block;
-    switch (args->instance_type) {
-        case TYPE_NEW:
-            sb->instance_size = ti->len * 512;
-            hash_sha1(args->passphrase, PASSPHRASE_SZ, sb->hash);
-            strncpy(sb->entropy_dir, args->entropy_dir, ENTROPY_DIR_SZ);
-            break;
-        
-        case TYPE_ACCESS:
-            // Find existing super block.
-            break;
-        
-        case TYPE_SHADOW:
-            // Create nested instance.
-            break;
-    }
-
     // Acquire the block device based on the args. This gives us a 
     // wrapper on top of the kernel block device structure.
     ret = dm_get_device(ti, args->passive_dev, dm_table_get_mode(ti->table), &context->passive_dev);
     afs_assert(!ret, args_err, "could not find given disk [%s]", args->passive_dev);
+    context->bdev = context->passive_dev->bdev;
 
-    detected_fs = detect_fs(context->passive_dev->bdev, context);
+    fs = &context->passive_fs;
+    detected_fs = detect_fs(context->bdev, fs);
     switch (detected_fs) {
         case FS_FAT32:
             afs_debug("detected FAT32");
@@ -218,14 +191,65 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             afs_assert_action(0, ret = -ENXIO, fs_err, "seems like all hell broke loose");
     }
 
-    fs = &context->passive_fs;
-
     // This is all just for testing.
-    fs->block_list = kmalloc(32 * sizeof(*fs->block_list), GFP_KERNEL);
-    fs->list_len = 32;
+    // BEGIN.
+    fs->block_list = kmalloc(4096 * sizeof(*fs->block_list), GFP_KERNEL);
+    fs->list_len = 4096;
 
     for (i = 0; i < fs->list_len; i++) {
         fs->block_list[i] = i;
+    }
+    // END.
+
+    // Build the configuration parameters.
+    // TODO: Acquire carrier block count from RS parameters.
+    context->num_carrier_blocks = 4;
+    context->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * context->num_carrier_blocks);
+    context->unused_space_per_table = AFS_BLOCK_SIZE % context->map_entry_sz;
+    context->num_map_entries_per_table = AFS_BLOCK_SIZE / context->map_entry_sz;
+    context->num_blocks = instance_size / AFS_BLOCK_SIZE;
+
+    // Kernel doesn't support floating point math. We need to round up.
+    context->num_map_tables = context->num_blocks / context->num_map_entries_per_table;
+    context->num_map_tables += (context->num_blocks % context->num_map_entries_per_table)? 1: 0;
+
+    // We store a certain amount of pointers to map tables in the SB itself. 
+    // So we need to adjust for that when calculating num_map_blocks. We also
+    // exploit unsigned math.
+    if ((context->num_map_tables - SB_MAP_PTRS_SZ) > context->num_map_tables) {
+        // We can store everything in the SB itself.
+        context->num_map_blocks = 0;
+    } else {
+        context->num_map_blocks = (context->num_map_tables - SB_MAP_PTRS_SZ) / MAP_BLK_PTRS_SZ;
+        context->num_map_blocks += ((context->num_map_tables - SB_MAP_PTRS_SZ) % MAP_BLK_PTRS_SZ)? 1: 0;
+    }
+
+    afs_debug("Map entry size: %u", context->map_entry_sz);
+    afs_debug("Unused: %u | Entries per table: %u", context->unused_space_per_table, context->num_map_entries_per_table);
+    afs_debug("Blocks: %u", context->num_blocks);
+    afs_debug("Map tables: %u", context->num_map_tables);
+    afs_debug("Map blocks: %u", context->num_map_blocks);
+
+    sb = &context->super_block;
+    switch (args->instance_type) {
+        case TYPE_NEW:
+            // Create a new super block and write it and the
+            // map to the disk.
+            sb->instance_size = instance_size;
+            hash_sha1(args->passphrase, PASSPHRASE_SZ, sb->hash);
+            strncpy(sb->entropy_dir, args->entropy_dir, ENTROPY_DIR_SZ);
+
+            ret = write_super_block(sb, fs, context);
+            afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
+            break;
+        
+        case TYPE_ACCESS:
+            // Find existing super block.
+            break;
+        
+        case TYPE_SHADOW:
+            // Create nested instance.
+            break;
     }
 
 //     context->fs_context->allocation = kmalloc((context->fs_context->list_len), GFP_KERNEL);
@@ -276,13 +300,16 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     
     return 0;
 
+sb_err:
+    // TODO: Clear out the passive_fs information.
+
 fs_err:
     dm_put_device(ti, context->passive_dev);
 
 args_err:
     kfree(context);
 
-context_err:
+err:
     return ret;
 }
 

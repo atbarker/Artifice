@@ -20,9 +20,9 @@ class afs_config:
         map_sz *= shards
 
         ## Map Block overhead.
-        entries_in_block = (2 ** blk_bits) / map_entry_sz
-        entries_in_map_block = 1023 * entries_in_block
-        num_map_blocks = num_blocks / entries_in_map_block
+        map_entries_per_table = (2 ** blk_bits) / map_entry_sz
+        num_map_tables = num_blocks / map_entries_per_table
+        num_map_blocks = (num_map_tables - 983) / 1023
         map_blocks_sz = num_map_blocks * 4096
         map_blocks_sz *= shards
         print "map_blocks_sz: " + str(((float(map_blocks_sz) / 1024) / 1024)) + " MB"

@@ -2,7 +2,7 @@
  * Author: Yash Gupta <ygupta@ucsc.edu>, Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
-#include <dm_afs_common.h>
+#include <dm_afs.h>
 #include <dm_afs_modules.h>
 #include <linux/errno.h>
 #include <linux/crypto.h>
@@ -98,6 +98,64 @@ alloc_err:
 }
 
 /**
+ * Read a single page.
+ */
+int 
+read_page(uint8_t *page, struct block_device *bdev, uint32_t block_num)
+{
+    struct afs_io request;
+    struct page *page_structure;
+    uint64_t sector_num;
+    int ret;
+
+    // Acquire page structure and sector offset.
+    page_structure = virt_to_page(page);
+    sector_num = (block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
+
+    // Build the request.
+    request.bdev = bdev;
+    request.io_page = page_structure;
+    request.io_sector = sector_num;
+    request.io_size = AFS_BLOCK_SIZE;
+    request.type = IO_READ;
+
+    ret = afs_blkdev_io(&request);
+    afs_assert(!ret, done, "error in reading block device [%d]", ret);
+
+done:
+    return ret;
+}
+
+/**
+ * Write a single page.
+ */
+int 
+write_page(const uint8_t *page, struct block_device *bdev, uint32_t block_num)
+{
+    struct afs_io request;
+    struct page *page_structure;
+    uint64_t sector_num;
+    int ret;
+
+    // Acquire page structure and sector offset.
+    page_structure = virt_to_page(page);
+    sector_num = (block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
+
+    // Build the request.
+    request.bdev = bdev;
+    request.io_page = page_structure;
+    request.io_sector = sector_num;
+    request.io_size = AFS_BLOCK_SIZE;
+    request.type = IO_READ;
+
+    ret = afs_blkdev_io(&request);
+    afs_assert(!ret, done, "error in reading block device [%d]", ret);
+
+done:
+    return ret;
+}
+
+/**
  * Acquire a SHA1 hash of given data.
  * 
  * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
@@ -129,6 +187,26 @@ desc_done:
 
 tfm_done:
     return ret;
+}
+
+/**
+ * Write the super block onto the disk.
+ * 
+ * TODO: Change the way the blocks are chosen. Also
+ * need to maintain a list of used free blocks.
+ */
+int 
+write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
+{
+    const uint32_t sb_block = 0;
+    struct afs_map_block *mb;
+
+    mb = kmalloc(sizeof(*mb) * context->num_map_blocks, GFP_KERNEL);
+    // assert.
+
+    // Something something bit vector.
+
+    return 0;
 }
 
 // /**

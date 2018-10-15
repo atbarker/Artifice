@@ -3,7 +3,7 @@
  * Copyright: Fill in.
  */
 #include <dm_afs_modules.h>
-#include <dm_afs_common.h>
+#include <dm_afs.h>
 
 /**
  * Detect the presence of an NTFS file system
