@@ -187,21 +187,6 @@ struct __attribute__((packed)) afs_map_tuple {
 // .
 // afs_map_entry[num_map_entries_per_table-1] (map_entry_sz bytes)
 
-// Artifice map table (per block).
-struct afs_map_table {
-    // This structure represents all the map entires in
-    // a single 4KB block. As the size of a map entry is
-    // variable, we need to make space for some unused
-    // portion of the block. Unused space is always kept
-    // at the beginning of the block.
-
-    uint8_t hash[SHA512_SZ];
-    uint8_t unused_space;
-    uint8_t num_map_entries;
-    uint8_t *unused;
-    struct afs_map_entry *map_entries;
-};
-
 // Artifice I/O
 struct afs_io {
     struct block_device *bdev;      // Block Device to issue I/O on.
@@ -233,12 +218,12 @@ struct afs_args {
 };
 
 // Private data per instance.
-struct afs_private {
+struct __attribute__((aligned(4096))) afs_private {
+    struct afs_super_block super_block;
+    struct afs_passive_fs  passive_fs;
     struct afs_args instance_args;
     struct dm_dev   *passive_dev;
     struct block_device    *bdev;
-    struct afs_passive_fs  passive_fs;
-    struct afs_super_block super_block;
 
     // Configuration information.
     uint8_t  num_carrier_blocks;
@@ -267,17 +252,22 @@ int afs_blkdev_io(struct afs_io *request);
 /**
  * Read a single page.
  */
-int read_page(uint8_t *page, struct block_device *bdev, uint32_t block_num);
+int read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
 
 /**
  * Write a single page.
  */
-int write_page(const uint8_t *page, struct block_device *bdev, uint32_t block_num);
+int write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
 
 /**
  * Acquire a SHA1 hash of given data.
  */
-int hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest);
+int hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest);
+
+/**
+ * Acquire a SHA256 hash of given data.
+ */
+int hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
  * Write the super block onto the disk.

@@ -28,7 +28,7 @@ __callback_blkdev_io(struct bio *bio)
 {
     struct completion *event = bio->bi_private;
 
-    afs_debug("completed event: %p\n", event);
+    //afs_debug("completed event: %p\n", event);
     complete(event);
 }
 
@@ -101,7 +101,7 @@ alloc_err:
  * Read a single page.
  */
 int 
-read_page(uint8_t *page, struct block_device *bdev, uint32_t block_num)
+read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc)
 {
     struct afs_io request;
     struct page *page_structure;
@@ -112,7 +112,7 @@ read_page(uint8_t *page, struct block_device *bdev, uint32_t block_num)
     afs_assert_action(!((uint64_t)page & (AFS_BLOCK_SIZE-1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
     // Acquire page structure and sector offset.
-    page_structure = virt_to_page(page);
+    page_structure = (used_vmalloc)? vmalloc_to_page(page): virt_to_page(page);
     sector_num = (block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
 
     // Build the request.
@@ -133,7 +133,7 @@ done:
  * Write a single page.
  */
 int 
-write_page(const uint8_t *page, struct block_device *bdev, uint32_t block_num)
+write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc)
 {
     struct afs_io request;
     struct page *page_structure;
@@ -144,7 +144,7 @@ write_page(const uint8_t *page, struct block_device *bdev, uint32_t block_num)
     afs_assert_action(!((uint64_t)page & (AFS_BLOCK_SIZE-1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
     // Acquire page structure and sector offset.
-    page_structure = virt_to_page(page);
+    page_structure = (used_vmalloc)? vmalloc_to_page(page): virt_to_page(page);
     sector_num = (block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
 
     // Build the request.
@@ -152,46 +152,12 @@ write_page(const uint8_t *page, struct block_device *bdev, uint32_t block_num)
     request.io_page = page_structure;
     request.io_sector = sector_num;
     request.io_size = AFS_BLOCK_SIZE;
-    request.type = IO_READ;
+    request.type = IO_WRITE;
 
     ret = afs_blkdev_io(&request);
     afs_assert(!ret, done, "error in reading block device [%d]", ret);
 
 done:
-    return ret;
-}
-
-/**
- * Acquire a SHA1 hash of given data.
- * 
- * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
- */
-int 
-hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest)
-{
-    const char *alg_name = "sha1";
-    struct crypto_shash *tfm;
-    struct shash_desc *desc;
-    int ret;
-    
-    tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
-    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
-
-    desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
-    afs_assert_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
-    
-    desc->tfm = tfm;
-    desc->flags = 0;
-    ret = crypto_shash_digest(desc, data, data_len, digest);
-    afs_assert(!ret, compute_done, "error computing sha1 [%d]", ret);
-
-compute_done:
-    kfree(desc);
-
-desc_done:
-    crypto_free_shash(tfm);
-
-tfm_done:
     return ret;
 }
 
@@ -311,12 +277,13 @@ write_map_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
     struct afs_map_block *map_blocks = NULL;
     uint8_t *afs_map = NULL;
     uint8_t *afs_map_tables = NULL;
+    uint8_t  map_block_digest[SHA1_SZ];
     uint32_t num_map_tables;
     uint32_t num_map_blocks;
     uint32_t tables_written;
     uint32_t tables_left;
     uint32_t block_num;
-    uint32_t i, j;
+    int64_t i, j;
     int ret = 0;
 
     // Create the map.
@@ -339,12 +306,13 @@ write_map_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
         tables_left = num_map_tables - tables_written;
         if (tables_left) {
             block_num = acquire_block(fs, context);
-            afs_assert(block_num != AFS_INVALID_BLOCK, sb_write_err, "no more free blocks");
-            ret = write_page(afs_map_tables + (tables_written * AFS_BLOCK_SIZE), context->bdev, block_num);
+            afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, sb_write_err, "no more free blocks");
+            ret = write_page(afs_map_tables + (tables_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
             afs_assert(!ret, sb_write_err, "could not write table [%d:%u]", ret, tables_written);
             sb->map_table_pointers[i] = block_num;
             tables_written += 1;
         } else {
+            afs_debug("super block map table pointers filled");
             return 0;
         }
     }
@@ -354,14 +322,15 @@ write_map_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
     // some map_blocks are required.
     map_blocks = kmalloc(num_map_blocks * sizeof(*map_blocks), GFP_KERNEL);
     afs_assert_action(map_blocks, ret = -ENOMEM, map_blocks_err, "could not allocate map_blocks [%d]", ret);
+    memset(map_blocks, 0, num_map_blocks * sizeof(*map_blocks));
 
     for (i = 0; i < num_map_blocks; i++) {
         for (j = 0; j < MAP_BLK_PTRS_SZ; j++) {
             tables_left = num_map_tables - tables_written;
             if (tables_left) {
                 block_num = acquire_block(fs, context);
-                afs_assert(block_num != AFS_INVALID_BLOCK, map_block_write_err, "no more free blocks");
-                ret = write_page(afs_map_tables + (tables_written * AFS_BLOCK_SIZE), context->bdev, block_num);
+                afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, map_block_write_err, "no more free blocks");
+                ret = write_page(afs_map_tables + (tables_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
                 afs_assert(!ret, map_block_write_err, "could not write table [%d:%u]", ret, tables_written);
                 map_blocks[i].map_table_pointers[j] = block_num;
                 tables_written += 1;
@@ -375,11 +344,16 @@ write_map_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
 
     // Write out the map blocks themselves to disk. Needs to be done in reverse
     // as map blocks themselves hold pointers to other map blocks.
-    for (i = num_map_blocks-1; i >= 0; i++) {
+    for (i = num_map_blocks-1; i >= 0; i--) {
+        // Calculate hash of the map blocks.
+        hash_sha1((uint8_t*)(map_blocks + i) + SHA128_SZ, sizeof(*map_blocks) - SHA128_SZ, map_block_digest);
+        memcpy(map_blocks[i].hash, map_block_digest, sizeof(map_blocks[i].hash));
+
+        // Write to disk and save pointer.
         block_num = acquire_block(fs, context);
-        afs_assert(block_num != AFS_INVALID_BLOCK, map_block_save_err, "no more free blocks");
-        ret = write_page((uint8_t*)(map_blocks + i), context->bdev, block_num);
-        afs_assert(!ret, map_block_save_err, "could not write map block [%d:%u]", ret, i);
+        afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, map_block_save_err, "no more free blocks");
+        ret = write_page(map_blocks + i, context->bdev, block_num, false);
+        afs_assert(!ret, map_block_save_err, "could not write map block [%d:%llu]", ret, i);
         
         if (i == 0) {
             sb->next_map_block = block_num;
@@ -414,20 +388,37 @@ map_err:
 /**
  * Write the super block onto the disk.
  * 
- * TODO: Change the way the blocks are chosen. Also
- * need to maintain a list of used free blocks.
+ * // TODO: Change sb_block location.
  */
 int 
 write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
 {
+    const uint32_t sb_block = 0;
     int ret = 0;
 
     // Reserve space for the super block location.
-    // TODO.
+    spin_lock(&context->allocation_lock);
+    bit_vector_set(context->allocation_vec, sb_block);
+    spin_unlock(&context->allocation_lock);
 
+    // Build the full map block structure.
     sb->next_map_block = AFS_INVALID_BLOCK;
     ret = write_map_blocks(sb, fs, context);
     afs_assert(!ret, mb_err, "could not write map blocks [%d]", ret);
+
+    // Calculate hash of the super block and write it
+    // to the disk.
+    hash_sha256((uint8_t*)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
+    ret = write_page(sb, context->bdev, sb_block, false);
+    afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
+    afs_debug("super block written to disk [block: %u]", sb_block);
+
+    return 0;
+
+sb_err:
+    kfree(context->afs_map_blocks);
+    vfree(context->afs_map_tables);
+    vfree(context->afs_map);
 
 mb_err:
     return ret;
@@ -447,7 +438,7 @@ acquire_block(struct afs_passive_fs *fs, struct afs_private *context)
             bit_vector_set(context->allocation_vec, block_num);
             spin_unlock(&context->allocation_lock);
 
-            afs_debug("block: %u", fs->block_list[block_num]);
+            //afs_debug("block: %u", fs->block_list[block_num]);
             return fs->block_list[block_num];
         }
     }
@@ -457,25 +448,73 @@ acquire_block(struct afs_passive_fs *fs, struct afs_private *context)
     return AFS_INVALID_BLOCK;
 }
 
-// /**
-//  *Set of functions for interfacing with a basic bitmap.
-//  *Takes in our array of bits and the bit index one wishes to manipulate
-//  *
-//  *
-//  */
-// //TODO: add bitmap length to these functions
-// void set_bitmap(u8 *bits, int n){
-//     bits[BYTE_OFFSET(n)] |= (1 << BIT_OFFSET(n));
-// }
+/**
+ * Acquire a SHA256 hash of given data.
+ *
+ * @digest Array to return digest into. Needs to be pre-allocated 32 bytes.
+ */
+int 
+hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest)
+{
+    const char *alg_name = "sha256";
+    struct crypto_shash *tfm;
+    struct shash_desc *desc;
+    int ret;
+    
+    tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
+    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
 
-// void clear_bitmap(u8 *bits, int n){
-//     bits[BYTE_OFFSET(n)] &= ~(1 << BIT_OFFSET(n));
-// }
+    desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
+    afs_assert_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
+    
+    desc->tfm = tfm;
+    desc->flags = 0;
+    ret = crypto_shash_digest(desc, data, data_len, digest);
+    afs_assert(!ret, compute_done, "error computing sha256 [%d]", ret);
 
-// int get_bitmap(u8 *bits, int n){
-//     int bit = (bits[BYTE_OFFSET(n)] & (1 << BIT_OFFSET(n))) >> BIT_OFFSET(n);
-//     return bit;
-// }
+compute_done:
+    kfree(desc);
+
+desc_done:
+    crypto_free_shash(tfm);
+
+tfm_done:
+    return ret;
+}
+
+/**
+ * Acquire a SHA1 hash of given data.
+ * 
+ * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
+ */
+int 
+hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest)
+{
+    const char *alg_name = "sha1";
+    struct crypto_shash *tfm;
+    struct shash_desc *desc;
+    int ret;
+    
+    tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
+    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
+
+    desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
+    afs_assert_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
+    
+    desc->tfm = tfm;
+    desc->flags = 0;
+    ret = crypto_shash_digest(desc, data, data_len, digest);
+    afs_assert(!ret, compute_done, "error computing sha1 [%d]", ret);
+
+compute_done:
+    kfree(desc);
+
+desc_done:
+    crypto_free_shash(tfm);
+
+tfm_done:
+    return ret;
+}
 
 // /*
 //  *Returns a random offset
