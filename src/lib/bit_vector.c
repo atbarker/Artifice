@@ -26,7 +26,7 @@ bit_vector_create(uint64_t length)
         return NULL;
     }
 
-    vector->array = kmalloc(BIT_VECTOR_BITS_TO_BYTES(temp_length) * sizeof *(vector->array), GFP_KERNEL);
+    vector->array = vmalloc(BIT_VECTOR_BITS_TO_BYTES(temp_length) * sizeof *(vector->array));
     if (!(vector->array)) {
         kfree(vector);
         return NULL;
@@ -45,7 +45,7 @@ bit_vector_create(uint64_t length)
 void
 bit_vector_free(bit_vector_t *vector)
 {
-    kfree(vector->array);
+    vfree(vector->array);
     kfree(vector);
 }
 

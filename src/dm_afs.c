@@ -25,7 +25,7 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
     int8_t ret;
 
     page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
-    afs_assert_action(!IS_ERR(page), ret = PTR_ERR(page), alloc_err, "could not allocate page [%d]", ret);
+    afs_assert_action(page, ret = -ENOMEM, alloc_err, "could not allocate page [%d]", ret);
     ret = read_page(page, device, 0);
     afs_assert(!ret, read_err, "could not read page [%d]", ret);
 
@@ -151,10 +151,13 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     // Make sure instance is large enough.
     instance_size = ti->len * 512;
     afs_assert_action(instance_size >= AFS_MIN_SIZE, ret = -EINVAL, err, "instance too small [%llu]", instance_size);
+
+    // Confirm our structure sizes.
     afs_assert_action(sizeof(*sb) <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "super block structure too large [%lu]", sizeof(*sb));
+    afs_assert_action(sizeof(struct afs_map_block) <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "map block structure too large");
 
     context = kmalloc(sizeof(*context), GFP_KERNEL);
-    afs_assert_action(!IS_ERR(context), ret = PTR_ERR(context), err, "kmalloc failure [%d]", ret);
+    afs_assert_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);
     memset(context, 0, sizeof(*context));
 
     args = &context->instance_args;
@@ -193,8 +196,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // This is all just for testing.
     // BEGIN.
-    fs->block_list = kmalloc(4096 * sizeof(*fs->block_list), GFP_KERNEL);
-    fs->list_len = 4096;
+    fs->block_list = kmalloc(8192 * sizeof(*fs->block_list), GFP_KERNEL);
+    fs->list_len = 8192;
 
     for (i = 0; i < fs->list_len; i++) {
         fs->block_list[i] = i;
@@ -205,8 +208,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     // TODO: Acquire carrier block count from RS parameters.
     context->num_carrier_blocks = 4;
     context->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * context->num_carrier_blocks);
-    context->unused_space_per_table = AFS_BLOCK_SIZE % context->map_entry_sz;
-    context->num_map_entries_per_table = AFS_BLOCK_SIZE / context->map_entry_sz;
+    context->unused_space_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) % context->map_entry_sz;
+    context->num_map_entries_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) / context->map_entry_sz;
     context->num_blocks = instance_size / AFS_BLOCK_SIZE;
 
     // Kernel doesn't support floating point math. We need to round up.
@@ -229,6 +232,13 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     afs_debug("Blocks: %u", context->num_blocks);
     afs_debug("Map tables: %u", context->num_map_tables);
     afs_debug("Map blocks: %u", context->num_map_blocks);
+
+    // Allocate the free list allocation vector. This needs to be able
+    // to map all possible blocks (with the exception of the very last
+    // block). Hence, this will be huge.
+    context->allocation_vec = bit_vector_create(((uint64_t)1 << 32) - 1);
+    afs_assert_action(context->allocation_vec, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
+    spin_lock_init(&context->allocation_lock);
 
     sb = &context->super_block;
     switch (args->instance_type) {
@@ -301,6 +311,9 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     return 0;
 
 sb_err:
+    bit_vector_free(context->allocation_vec);
+
+vec_err:
     // TODO: Clear out the passive_fs information.
 
 fs_err:
@@ -325,8 +338,27 @@ afs_dtr(struct dm_target *ti)
 {
     struct afs_private *context = ti->private;
 
+    // Free the Artifice map.
+    vfree(context->afs_map);
+
+    // Free the Artifice map tables in case they
+    // were allocated.
+    if (context->afs_map_tables) {
+        vfree(context->afs_map_tables);
+    }
+
+    // Free the bit vector allocation in case
+    // one was allocated.
+    if (context->allocation_vec) {
+        bit_vector_free(context->allocation_vec);
+    }
+
+    // Put the device back.
     dm_put_device(ti, context->passive_dev);
+    
+    // Free storage used by context.
     kfree(context);
+
     afs_debug("destructor completed\n");
 }
 

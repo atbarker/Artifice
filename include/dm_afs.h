@@ -12,6 +12,7 @@
 #include <linux/version.h>
 #include <linux/types.h>
 #include <linux/device-mapper.h>
+#include <linux/spinlock_types.h>
 
 #ifndef DM_AFS_H
 #define DM_AFS_H
@@ -90,22 +91,24 @@ enum afs_io_type {
  */
 enum {
     // Configuration.
-    AFS_MIN_SIZE    = 1 << 16,
-    AFS_BLOCK_SIZE  = 4096,
-    AFS_SECTOR_SIZE = 512,
+    AFS_MIN_SIZE      = 1 << 16,
+    AFS_BLOCK_SIZE    = 4096,
+    AFS_SECTOR_SIZE   = 512,
+    AFS_INVALID_BLOCK = (((uint64_t)1 << 32) - 1),
 
     // Array sizes.
     PASSPHRASE_SZ   = 64,
     PASSIVE_DEV_SZ  = 32,
     ENTROPY_DIR_SZ  = 64,
     ENTROPY_HASH_SZ = 8,
-    SB_MAP_PTRS_SZ  = 983,
-    MAP_BLK_PTRS_SZ = 1023,
+    SB_MAP_PTRS_SZ  = 975,
+    MAP_BLK_PTRS_SZ = 1019,
 
     // Hash algorithms
     SHA1_SZ   = 20,
     SHA128_SZ = 16,
     SHA256_SZ = 32,
+    SHA512_SZ = 64,
 
     // Artifice type.
     TYPE_NEW    = 0,
@@ -121,9 +124,10 @@ enum {
 
 // Artifice super block.
 struct __attribute__((packed)) afs_super_block {
-    uint8_t     hash[SHA1_SZ];  // Hash of the passphrase.
-    uint64_t    instance_size;  // Size of this Artifice instance.
-    uint8_t     reserved[4];    // TODO: Replace with RS information.
+    uint8_t     sb_hash[SHA256_SZ]; // Hash of the superblock.
+    uint8_t     hash[SHA1_SZ];      // Hash of the passphrase.
+    uint64_t    instance_size;      // Size of this Artifice instance.
+    uint8_t     reserved[4];        // TODO: Replace with RS information.
     char        entropy_dir[ENTROPY_DIR_SZ];        // Entropy directory for this instance.
     char        shadow_passphrase[PASSPHRASE_SZ];   // In case this instance is a nested instance.
     uint32_t    map_table_pointers[SB_MAP_PTRS_SZ]; // The super block stores the pointers to the first 983 map tables.
@@ -133,9 +137,10 @@ struct __attribute__((packed)) afs_super_block {
 // Artifice map block.
 struct __attribute__((packed)) afs_map_block {
     // Each map block is 4KB. With 32 bit pointers,
-    // we can store 1023 pointers to map tables and
+    // we can store 1019 pointers to map tables and
     // a pointer to the next block.
 
+    uint8_t  hash[SHA128_SZ];
     uint32_t map_table_pointers[MAP_BLK_PTRS_SZ];
     uint32_t next_map_block;
 };
@@ -147,21 +152,40 @@ struct __attribute__((packed)) afs_map_tuple {
     uint16_t    checksum;               // Checksum of this carrier block.
 };
 
-// Artifice map entry.
-struct afs_map_entry {
-    // The number of carrier blocks per data block
-    // is configurable and hence this needs to be
-    // a pointer.
-    //
-    // Each data block will draw entropy from a single
-    // file. Each carrier block will have it's own
-    // sector offset for this file.
+// afs_map_entry
+//
+// We cannot create a struct out of this since
+// the number of carrier blocks is user defined.
+//
+// Overall Size: 24 + (10 * num_carrier_blocks) bytes.
+//
+// Structure:
+// afs_map_tuple[0] (10 bytes)
+// afs_map_tuple[1] (10 bytes)
+// .
+// .
+// .
+// afs_map_tuple[num_carrier_blocks-1] (10 bytes)
+// hash (16 bytes)
+// Entropy file name hash (8 bytes)
 
-    uint8_t num_tuples;
-    struct afs_map_tuple *block_tuples;     // List of tuples for this data block.
-    uint8_t block_hash[SHA128_SZ];          // Hash of the data block.
-    uint8_t entropy_hash[ENTROPY_HASH_SZ];  // Hash of the entropy file name.
-};
+// afs_map_table
+//
+// We cannot create a struct out of this since
+// the size of an afs_map_entry is variable based
+// on user configuration.
+//
+// Overall Size: Exactly 4096 bytes.
+//
+// Structure:
+// hash (64 bytes)
+// unused space (unused_space_per_table bytes)
+// afs_map_entry[0] (map_entry_sz bytes)
+// afs_map_entry[1] (map_entry_sz bytes)
+// .
+// .
+// .
+// afs_map_entry[num_map_entries_per_table-1] (map_entry_sz bytes)
 
 // Artifice map table (per block).
 struct afs_map_table {
@@ -171,9 +195,10 @@ struct afs_map_table {
     // portion of the block. Unused space is always kept
     // at the beginning of the block.
 
-    uint8_t    unused_space;
-    uint8_t    num_map_entries;
-    uint8_t     *unused;
+    uint8_t hash[SHA512_SZ];
+    uint8_t unused_space;
+    uint8_t num_map_entries;
+    uint8_t *unused;
     struct afs_map_entry *map_entries;
 };
 
@@ -223,6 +248,15 @@ struct afs_private {
     uint32_t num_blocks;
     uint32_t num_map_tables;
     uint32_t num_map_blocks;
+
+    // Free list allocation vector.
+    spinlock_t  allocation_lock;
+    bit_vector_t *allocation_vec;
+
+    // Map information.
+    uint8_t *afs_map;
+    uint8_t *afs_map_tables;
+    struct afs_map_block *afs_map_blocks;
 };
 
 /**
@@ -249,6 +283,11 @@ int hash_sha1(const uint8_t *data, const uint32_t data_len, uint8_t *digest);
  * Write the super block onto the disk.
  */
 int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context);
+
+/**
+ * Acquire a free block from the free list.
+ */
+uint32_t acquire_block(struct afs_passive_fs *fs, struct afs_private *context);
 
 /**
  * Bit scan reverse.
