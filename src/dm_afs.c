@@ -120,6 +120,56 @@ err:
 }
 
 /**
+ * Callback scheduled thread for the map function.
+ */
+static void
+__work_afs_map(struct work_struct *work)
+{
+    struct afs_private *context;
+    struct bio *bio;
+    int ret;
+
+    afs_debug("sceduled!");
+    context = container_of(work, struct afs_private, map_work);
+
+    spin_lock(&context->bio_lock);
+    bio = context->bio;
+    spin_unlock(&context->bio_lock);
+
+    switch(bio_op(bio)) {
+        case REQ_OP_READ:
+            ret = 0;
+            //ret = afs_read_request(context, bio);
+            bio_set_dev(bio, context->bdev);
+            break;
+
+        case REQ_OP_WRITE:
+            ret = 0;
+            //ret = afs_write_request(context, bio);
+            bio_set_dev(bio, context->bdev);
+            break;
+
+        default:
+            // This case should never be encountered.
+            ret = -EINVAL;
+            afs_debug("What the hell!");
+    }
+
+    if (!ret) {
+        submit_bio(bio);
+        afs_debug("submitted");
+    } else {
+        bio_endio(bio);
+        afs_debug("ended");
+    }
+
+    spin_lock(&context->bio_lock);
+    context->bio = NULL;
+    wake_up_process(context->current_process);
+    spin_unlock(&context->bio_lock);
+}
+
+/**
  * Constructor function for this target. The constructor
  * is called for each new instance of a device for this
  * target. To create a new device, 'dmsetup create' is used.
@@ -160,6 +210,13 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     afs_assert_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);
     memset(context, 0, sizeof(*context));
     context->instance_size = instance_size;
+    context->current_process = current;
+
+    // Initialize the work queues.
+    context->map_queue = create_singlethread_workqueue("afs_map queue");
+    afs_assert_action(!IS_ERR(context->map_queue), ret = PTR_ERR(context->map_queue), wq_err, "could not create wq [%d]", ret);
+    INIT_WORK(&context->map_work, __work_afs_map);
+    spin_lock_init(&context->bio_lock);
 
     args = &context->instance_args;
     ret = parse_afs_args(args, argc, argv);
@@ -252,6 +309,9 @@ fs_err:
     dm_put_device(ti, context->passive_dev);
 
 args_err:
+    destroy_workqueue(context->map_queue);
+
+wq_err:
     kfree(context);
 
 err:
@@ -282,40 +342,13 @@ afs_dtr(struct dm_target *ti)
     // Put the device back.
     dm_put_device(ti, context->passive_dev);
     
+    // Destroy the map queue.
+    destroy_workqueue(context->map_queue);
+
     // Free storage used by context.
     kfree(context);
 
-    afs_debug("destructor completed\n");
-}
-
-static void 
-__work_afs_map(struct work_struct *work)
-{
-    struct afs_private *context;
-    struct bio *bio;
-    int ret = -EINVAL;
-
-    context = container_of(work, struct afs_private, map_work);
-    bio = context->bio;
-
-    switch(bio_op(bio)) {
-        case REQ_OP_READ:
-            ret = afs_read_request(context, bio);
-            break;
-
-        case REQ_OP_WRITE:
-            ret = afs_write_request(context, bio);
-            break;
-
-        default:
-            afs_debug("unknown operation");
-    }
-
-    if (!ret) {
-        submit_bio(bio);
-    } else {
-        bio_endio(bio);
-    }
+    afs_debug("destructor completed");
 }
 
 /**
@@ -345,15 +378,34 @@ afs_map(struct dm_target *ti, struct bio *bio)
     const int block_to_sectors = AFS_BLOCK_SIZE / AFS_SECTOR_SIZE;
     struct afs_private *context = ti->private;
 
+    set_current_state(TASK_INTERRUPTIBLE);
+    spin_lock(&context->bio_lock);
+    context->current_process = current;
+    while (context->bio) {
+        spin_unlock(&context->bio_lock);
+        schedule();
+        spin_lock(&context->bio_lock);
+    }
     context->bio = bio;
-    INIT_WORK(&context->map_work, __work_afs_map);
+    set_current_state(TASK_RUNNING);
+    spin_unlock(&context->bio_lock);
 
     if (bio_sectors(bio) > block_to_sectors) {
         dm_accept_partial_bio(bio, block_to_sectors);
     }
-    schedule_work(&context->map_work);
 
-    return DM_MAPIO_SUBMITTED;
+    switch(bio_op(bio)) {
+        case REQ_OP_READ:
+        case REQ_OP_WRITE:
+            queue_work(context->map_queue, &context->map_work);
+            return DM_MAPIO_SUBMITTED;
+            break;
+
+        default:
+            afs_debug("unknown operation");
+            bio_endio(bio);
+            return DM_MAPIO_KILL;
+    }
 }
 
 /** ----------------------------------------------------------- DO-NOT-CROSS ------------------------------------------------------------------- **/
@@ -400,7 +452,7 @@ static void
 afs_exit(void)
 {
     dm_unregister_target(&afs_target);
-    afs_debug("unregistered dm_afs\n");
+    afs_debug("unregistered dm_afs");
 }
 
 module_init(afs_init);

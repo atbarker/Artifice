@@ -37,28 +37,27 @@ extern int afs_debug_mode;
 #define DM_AFS_PATCH_VER        0
 
 // Simple information.
-#define afs_info(fmt, ...)                                  \
-({                                                          \
-    printk(KERN_INFO "dm-afs-info: " fmt, ##__VA_ARGS__);   \
+#define afs_info(fmt, ...)                                      \
+({                                                              \
+    printk(KERN_INFO "dm-afs-info: " fmt "\n", ##__VA_ARGS__);  \
 })
 
 // Debug information.
-#define afs_debug(fmt, ...)                                 \
-({                                                          \
-    if (afs_debug_mode) {                                   \
-        printk(KERN_DEBUG "dm-afs-debug: [%s:%d] " fmt,     \
-        __func__, __LINE__,                                 \
-        ##__VA_ARGS__);                                     \
-    }                                                       \
+#define afs_debug(fmt, ...)                                     \
+({                                                              \
+    if (afs_debug_mode) {                                       \
+        printk(KERN_DEBUG "dm-afs-debug: [%s:%d] " fmt "\n",    \
+        __func__, __LINE__,                                     \
+        ##__VA_ARGS__);                                         \
+    }                                                           \
 })
 
 // Alert information.
 #define afs_alert(fmt, ...)                                 \
 ({                                                          \
-    printk(KERN_ALERT "dm-afs-alert: [%s:%d] " fmt,         \
+    printk(KERN_ALERT "dm-afs-alert: [%s:%d] " fmt "\n",    \
     __func__, __LINE__,                                     \
     ##__VA_ARGS__);                                         \
-    printk(KERN_ALERT "");                                  \
 })
 
 // Assert and jump.
@@ -225,10 +224,13 @@ struct __attribute__((aligned(4096))) afs_private {
     struct afs_passive_fs  passive_fs;
     struct afs_args instance_args;
     struct dm_dev   *passive_dev;
-    struct block_device    *bdev;
+    struct block_device *bdev;
     uint64_t instance_size;
     struct work_struct map_work;
+    struct workqueue_struct *map_queue;
     struct bio *bio;
+    spinlock_t bio_lock;
+    struct task_struct *current_process;
 
     // Configuration information.
     uint8_t  num_carrier_blocks;
