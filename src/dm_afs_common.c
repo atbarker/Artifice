@@ -81,7 +81,6 @@ afs_blkdev_io(struct afs_io *request)
     struct bio *bio = NULL;
     struct completion event;
 
-    
     // Any IO to a block device in the kernel is done using bio.
     // We need to allocate a bio with a single IO vector and set
     // its corresponding fields.
@@ -108,12 +107,7 @@ afs_blkdev_io(struct afs_io *request)
     bio->bi_opf |= REQ_SYNC;
     // TODO: Perhaps make ASYNC for performance considerations?
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 2)
-    bio->bi_disk = request->bdev->bd_disk;
-#else
-    bio->bi_bdev = request->bdev;
-#endif
-
+    bio_set_dev(bio, request->bdev);
     bio->bi_iter.bi_sector = request->io_sector;
     bio->bi_private = &event;
     bio->bi_end_io = __callback_blkdev_io;
@@ -644,9 +638,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
 {
     const uint32_t sb_block = 0;
     uint8_t sb_digest[SHA256_SZ];
-    uint64_t *stored_hash = NULL, *calculated_hash = NULL;
     int ret = 0;
-    int i;
 
     // Mark super block location as reserved.
     allocation_set(context, sb_block);
@@ -657,11 +649,8 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
 
     // Check for corruption.
     hash_sha256((uint8_t*)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
-    stored_hash = (uint64_t*)sb->sb_hash;
-    calculated_hash = (uint64_t*)sb_digest;
-    for (i = 0; i < SHA256_SZ / sizeof(uint64_t); i++) {
-        afs_assert_action(stored_hash[i] == calculated_hash[i], ret = -ENOENT, err, "super block corrupted");
-    }
+    ret = memcmp(sb->sb_hash, sb_digest, SHA256_SZ);
+    afs_assert_action(!ret, ret = -ENOENT, err, "super block corrupted");
 
     // Confirm size is same.
     afs_assert_action(context->instance_size == sb->instance_size, ret = -EINVAL, err,
@@ -837,42 +826,57 @@ int afs_read_request(struct afs_private *context, struct bio *bio)
     uint8_t digest[SHA1_SZ];
     uint32_t req_size;
     uint32_t block_num;
-    uint64_t *stored_hash = NULL, *calculated_hash = NULL;
-    void *user_data = NULL;
+    uint32_t sector_offset;
     int ret = 0, i;
 
-    user_data = page_address(bio_page(bio));
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
-    afs_assert_action(req_size == AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req_size);
+    afs_assert_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req_size);
 
     map_entry = afs_get_map_entry(context, block_num);
     map_entry_tuple = (struct afs_map_tuple*)map_entry;
     map_entry_hash = map_entry + (context->num_carrier_blocks * sizeof(*map_entry_tuple));
     map_entry_entropy = map_entry_hash + SHA128_SZ;
+    afs_debug("here");
+    afs_debug("here1");
 
-    // Unmapped block if even a single carrier block pointer
-    // in invalid.
+    // Its an unmapped block if even a single carrier block pointer
+    // is invalid.
     if (map_entry_tuple[0].carrier_block_pointer == AFS_INVALID_BLOCK) {
-        memset(user_data, 0, AFS_BLOCK_SIZE);
+        memset(context->raw_block, 1, AFS_BLOCK_SIZE);
     } else {
         for (i = 0; i < context->num_carrier_blocks; i++) {
             // TODO: Read into separate pages and pass to Reed Solomon library for reconstruction.
-            ret = read_page(user_data, context->bdev, block_num, false);
-            afs_assert_action(!ret, ret = -EIO, done, "could not read page at block [%u]", block_num);
+            ret = read_page(context->raw_block, context->bdev, map_entry_tuple[i].carrier_block_pointer, false);
+            afs_assert_action(!ret, ret = -EIO, done, "could not read page at block [%u]", map_entry_tuple[i].carrier_block_pointer);
         }
-    }
 
-    // Confirm hash matches.
-    hash_sha1(user_data, req_size, digest);
-    stored_hash = (uint64_t*)map_entry_hash;
-    calculated_hash = (uint64_t*)(digest + (SHA1_SZ - SHA128_SZ));
-    for (i = 0; i < SHA128_SZ / sizeof(*calculated_hash); i++) {
-        afs_assert_action(stored_hash[i] == calculated_hash[i], ret = -ENOENT, done, "user data is corrupted [%u]", block_num);
+        // Confirm hash matches.
+        hash_sha1(context->raw_block, req_size, digest);
+        ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
+        afs_assert_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block_num);
     }
+    afs_debug("here2");
+    afs_debug("here3");
+
+    // Write the raw block to the bio block.
+    ret = write_page(context->raw_block, context->bdev, context->bio_block, false);
+    afs_assert_action(!ret, ret = -EIO, done, "could not write page at block [%u]", context->bio_block);
+
+    // Build the bio.
+    bio_set_dev(bio, context->bdev);
+    bio->bi_iter.bi_sector = (context->bio_block * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
+    bio->bi_iter.bi_sector += sector_offset;
+
+    afs_debug("finished read");
     ret = 0;
 
 done:
+    if (ret) {
+        bio_endio(bio);
+    }
+
     return ret;
 }
 
@@ -888,13 +892,15 @@ int afs_write_request(struct afs_private *context, struct bio *bio)
     uint8_t digest[SHA1_SZ];
     uint32_t req_size;
     uint32_t block_num;
-    void *user_data = NULL;
+    uint32_t sector_offset;
+    void *user_data;
     int ret = 0, i;
 
     user_data = page_address(bio_page(bio));
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
-    afs_assert_action(req_size == AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
+    afs_assert_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     map_entry = afs_get_map_entry(context, block_num);
     map_entry_tuple = (struct afs_map_tuple*)map_entry;
@@ -910,11 +916,13 @@ int afs_write_request(struct afs_private *context, struct bio *bio)
     // It's a modification of a block if even one carrier block pointer
     // is not invalid. In that case, we can simply re-use the blocks.
     if (map_entry_tuple[0].carrier_block_pointer != AFS_INVALID_BLOCK) {
+        afs_debug("modificaiton");
         for (i = 0; i < context->num_carrier_blocks; i++) {
             ret = write_page(user_data, context->bdev, map_entry_tuple[i].carrier_block_pointer, false);
             afs_assert_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", map_entry_tuple[i].carrier_block_pointer);
         }
     } else {
+        afs_debug("new block");
         for (i = 0; i < context->num_carrier_blocks; i++) {
             block_num = acquire_block(&context->passive_fs, context);
             afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
@@ -923,6 +931,14 @@ int afs_write_request(struct afs_private *context, struct bio *bio)
             afs_assert_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", map_entry_tuple[i].carrier_block_pointer);
         }
     }
+
+    // Build the bio. This will write to the bio_block
+    // which is just a dummy write in this case.
+    bio_set_dev(bio, context->bdev);
+    bio->bi_iter.bi_sector = (context->bio_block * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
+    bio->bi_iter.bi_sector += sector_offset;
+
+    afs_debug("finished write");
     return 0;
 
 reset_entry:

@@ -58,6 +58,7 @@ extern int afs_debug_mode;
     printk(KERN_ALERT "dm-afs-alert: [%s:%d] " fmt,         \
     __func__, __LINE__,                                     \
     ##__VA_ARGS__);                                         \
+    printk(KERN_ALERT "");                                  \
 })
 
 // Assert and jump.
@@ -216,14 +217,18 @@ struct afs_args {
     uint8_t instance_type;                      // Type of instance.
 };
 
-// Private data per instance.
+// Private data per instance. Do NOT change order
+// of variables.
 struct __attribute__((aligned(4096))) afs_private {
+    uint8_t raw_block[AFS_BLOCK_SIZE];
     struct afs_super_block super_block;
     struct afs_passive_fs  passive_fs;
     struct afs_args instance_args;
     struct dm_dev   *passive_dev;
     struct block_device    *bdev;
     uint64_t instance_size;
+    struct work_struct map_work;
+    struct bio *bio;
 
     // Configuration information.
     uint8_t  num_carrier_blocks;
@@ -239,6 +244,7 @@ struct __attribute__((aligned(4096))) afs_private {
     bit_vector_t *allocation_vec;
 
     // Map information.
+    uint32_t bio_block;
     uint8_t *afs_map;
     uint8_t *afs_map_tables;
     struct afs_map_block *afs_map_blocks;

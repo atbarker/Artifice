@@ -231,10 +231,16 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
             break;
     }
 
+    // Reserve one block we can direct a bio towards.
+    context->bio_block = acquire_block(fs, context);
+    afs_assert_action(context->bio_block != AFS_BLOCK_SIZE, ret = -ENOSPC, bio_block_err, "could not reserve bio block [%d]", ret);
+    
     afs_debug("constructor completed");
     ti->private = context;
-    
     return 0;
+
+bio_block_err:
+    vfree(context->afs_map);
 
 sb_err:
     bit_vector_free(context->allocation_vec);
@@ -282,6 +288,36 @@ afs_dtr(struct dm_target *ti)
     afs_debug("destructor completed\n");
 }
 
+static void 
+__work_afs_map(struct work_struct *work)
+{
+    struct afs_private *context;
+    struct bio *bio;
+    int ret = -EINVAL;
+
+    context = container_of(work, struct afs_private, map_work);
+    bio = context->bio;
+
+    switch(bio_op(bio)) {
+        case REQ_OP_READ:
+            ret = afs_read_request(context, bio);
+            break;
+
+        case REQ_OP_WRITE:
+            ret = afs_write_request(context, bio);
+            break;
+
+        default:
+            afs_debug("unknown operation");
+    }
+
+    if (!ret) {
+        submit_bio(bio);
+    } else {
+        bio_endio(bio);
+    }
+}
+
 /**
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
@@ -306,23 +342,18 @@ afs_dtr(struct dm_target *ti)
 static int
 afs_map(struct dm_target *ti, struct bio *bio)
 {   
-    int ret = 0;
+    const int block_to_sectors = AFS_BLOCK_SIZE / AFS_SECTOR_SIZE;
+    struct afs_private *context = ti->private;
 
-    switch(bio_op(bio)) {
-        case REQ_OP_READ:
-        ret = afs_read_request(ti->private, bio);
-            break;
+    context->bio = bio;
+    INIT_WORK(&context->map_work, __work_afs_map);
 
-        case REQ_OP_WRITE:
-            ret = afs_write_request(ti->private, bio);
-            break;
-
-        default:
-            afs_debug("unknown operation");
+    if (bio_sectors(bio) > block_to_sectors) {
+        dm_accept_partial_bio(bio, block_to_sectors);
     }
-    bio_endio(bio);
-    
-    return (!ret)? DM_MAPIO_SUBMITTED: DM_MAPIO_KILL;
+    schedule_work(&context->map_work);
+
+    return DM_MAPIO_SUBMITTED;
 }
 
 /** ----------------------------------------------------------- DO-NOT-CROSS ------------------------------------------------------------------- **/
