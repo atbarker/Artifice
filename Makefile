@@ -41,7 +41,11 @@ reload:
 # a partition at /dev/sdb1.
 debug_new:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 8192 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 8192 artifice 0 pass /dev/sdb --entropy /home/movies/ | sudo dmsetup create artifice
+
+debug_access:
+	@sudo insmod dm_afs.ko afs_debug_mode=1
+	@echo 0 8192 artifice 1 pass /dev/sdb | sudo dmsetup create artifice
 
 debug_end:
 	@sudo dmsetup remove artifice || true

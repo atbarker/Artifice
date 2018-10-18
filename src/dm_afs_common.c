@@ -10,20 +10,54 @@
 #include <linux/rslib.h>
 #include <crypto/hash.h>
 
-// #define BYTE_OFFSET(b) ((b) / 8)
-// #define BIT_OFFSET(b) ((b) % 8)
- 
-// //speck definitions
-// #define ROR(x, r) ((x >> r) | (x << (64 - r)))
-// #define ROL(x, r) ((x << r) | (x >> (64 - r)))
-// #define R(x, y, k) (x = ROR(x, 8), x += y, x ^= k, y = ROL(y, 3), y ^= x)
-// #define ROUNDS 32
+/**
+ * Set the usage of a block in the allocation vector.
+ */
+bool 
+allocation_set(struct afs_private *context, uint32_t index)
+{
+    spin_lock(&context->allocation_lock);
+    if (bit_vector_get(context->allocation_vec, index)) {
+        spin_unlock(&context->allocation_lock);
+        return false;
+    }
+    bit_vector_set(context->allocation_vec, index);
+    spin_unlock(&context->allocation_lock);
+
+    return true;
+}
+
+/**
+ * Clear the usage of a block in the allocation vector.
+ */
+void 
+allocation_free(struct afs_private *context, uint32_t index)
+{
+    spin_lock(&context->allocation_lock);
+    bit_vector_clear(context->allocation_vec, index);
+    spin_unlock(&context->allocation_lock);
+}
+
+/**
+ * Get the state of a block in the allocation vector.
+ */
+uint8_t 
+allocation_get(struct afs_private *context, uint32_t index)
+{
+    uint8_t bit;
+
+    spin_lock(&context->allocation_lock);
+    bit = bit_vector_get(context->allocation_vec, index);
+    spin_unlock(&context->allocation_lock);
+
+    return bit;
+}
 
 /**
  * Callback function to signify the completion 
  * of an IO transfer to a block device.
  */
-static void 
+static void
 __callback_blkdev_io(struct bio *bio)
 {
     struct completion *event = bio->bi_private;
@@ -162,14 +196,47 @@ done:
 }
 
 /**
- * Create the Artifie map and initialize it to
+ * Build the configuration for an instance.
+ */
+void 
+build_configuration(struct afs_private *context, uint8_t num_carrier_blocks)
+{
+    context->num_carrier_blocks = num_carrier_blocks;
+    context->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * context->num_carrier_blocks);
+    context->unused_space_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) % context->map_entry_sz;
+    context->num_map_entries_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) / context->map_entry_sz;
+    context->num_blocks = context->instance_size / AFS_BLOCK_SIZE;
+
+    // Kernel doesn't support floating point math. We need to round up.
+    context->num_map_tables = context->num_blocks / context->num_map_entries_per_table;
+    context->num_map_tables += (context->num_blocks % context->num_map_entries_per_table)? 1: 0;
+
+    // We store a certain amount of pointers to map tables in the SB itself. 
+    // So we need to adjust for that when calculating num_map_blocks. We also
+    // exploit unsigned math.
+    if ((context->num_map_tables - SB_MAP_PTRS_SZ) > context->num_map_tables) {
+        // We can store everything in the SB itself.
+        context->num_map_blocks = 0;
+    } else {
+        context->num_map_blocks = (context->num_map_tables - SB_MAP_PTRS_SZ) / MAP_BLK_PTRS_SZ;
+        context->num_map_blocks += ((context->num_map_tables - SB_MAP_PTRS_SZ) % MAP_BLK_PTRS_SZ)? 1: 0;
+    }
+
+    afs_debug("Map entry size: %u", context->map_entry_sz);
+    afs_debug("Unused: %u | Entries per table: %u", context->unused_space_per_table, context->num_map_entries_per_table);
+    afs_debug("Blocks: %u", context->num_blocks);
+    afs_debug("Map tables: %u", context->num_map_tables);
+    afs_debug("Map blocks: %u", context->num_map_blocks);
+}
+
+/**
+ * Create the Artifice map and initialize it to
  * invalids.
  */
 static int
 afs_create_map(struct afs_private *context)
 {
     struct afs_map_tuple *map_tuple = NULL;
-    uint8_t *ptr = NULL;
     uint8_t *map_entries = NULL;
     uint8_t  map_entry_sz;
     uint32_t num_blocks;
@@ -182,7 +249,7 @@ afs_create_map(struct afs_private *context)
     // Allocate all required map_entries.
     map_entries = vmalloc(num_blocks * map_entry_sz);
     afs_assert_action(map_entries, ret = -ENOMEM, done, "could not allocate map entries [%d]", ret);
-    afs_debug("allocated map_entries");
+    afs_debug("allocated Artifice map");
 
     for (i = 0; i < num_blocks; i++) {
         map_tuple = (struct afs_map_tuple*)(map_entries + (i * map_entry_sz));
@@ -192,15 +259,122 @@ afs_create_map(struct afs_private *context)
             map_tuple->checksum = 0;
             map_tuple += 1;
         }
-        ptr = (uint8_t*)map_tuple;
-        memset(ptr, 0, SHA128_SZ + ENTROPY_HASH_SZ);
-        ptr += (SHA128_SZ + ENTROPY_HASH_SZ);
+        // map_tuple now points to the beginning of the hash and the entropy.
+        memset(map_tuple, 0, SHA128_SZ + ENTROPY_HASH_SZ);
     }
-    afs_debug("initialized map_entries");
+    afs_debug("initialized Artifice map");
     context->afs_map = map_entries;
     ret = 0;
 
 done:
+    return ret;
+}
+
+/**
+ * Fill an Artifice map with values from the
+ * metadata.
+ */
+static int
+afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
+{
+    struct afs_map_block *map_block = NULL;
+    uint8_t *afs_map = NULL;
+    uint8_t *map_table = NULL;
+    uint8_t *map_table_hash = NULL;
+    uint8_t *map_table_unused = NULL;
+    uint8_t *map_table_entries = NULL;
+    uint8_t  map_entry_sz;
+    uint8_t  num_map_entries_per_table;
+    uint32_t next_block;
+    uint32_t entries_read;
+    uint32_t entries_left;
+    uint32_t i, j;
+    int ret = 0;
+
+    // Acquire the map.
+    afs_map = context->afs_map;
+
+    map_entry_sz = context->map_entry_sz;
+    num_map_entries_per_table = context->num_map_entries_per_table;
+
+    map_table = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
+    map_block = kmalloc(sizeof(*map_block), GFP_KERNEL);
+    afs_assert_action(map_block && map_table, ret = -ENOMEM, err, "could not allocate memory for map data [%d]", ret);
+
+    // Read in everything from the super block first.
+    entries_read = 0;
+    for (i = 0; i < SB_MAP_PTRS_SZ; i++) {
+        // Read map table.
+        ret = read_page(map_table, context->bdev, sb->map_table_pointers[i], false);
+        afs_assert(!ret, read_err, "could not read map table [%d:%u]", ret, entries_read % context->num_map_tables);
+        allocation_set(context, sb->map_table_pointers[i]);
+
+        // Offset into the table.
+        map_table_hash = map_table;
+        map_table_unused = map_table_hash + SHA512_SZ;
+        map_table_entries = map_table_unused + context->unused_space_per_table;
+        // TODO: Calculate and verify hash.
+
+        entries_left = context->num_blocks - entries_read;
+        if (entries_left <= num_map_entries_per_table) {
+            memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, entries_left * map_entry_sz);
+            entries_read += entries_left;
+            break;
+        } else {
+            memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, num_map_entries_per_table * map_entry_sz);
+            entries_read += num_map_entries_per_table;
+        }
+    }
+    afs_debug("super block's map tables read");
+
+    // Begin reading from map blocks.
+    for (i = 0; i < context->num_map_blocks; i++) {
+        next_block = (i == 0)? sb->next_map_block: map_block->next_map_block;
+        ret = read_page(map_block, context->bdev, next_block, false);
+        afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, i);
+        allocation_set(context, next_block);
+        // TODO: Calculate and verify hash of map_block.
+
+        for (j = 0; j < MAP_BLK_PTRS_SZ; i++) {
+            // Read map table.
+            ret = read_page(map_table, context->bdev, map_block->map_table_pointers[j], false);
+            afs_assert(!ret, read_err, "could not read map table [%d:%u]", ret, entries_read % context->num_map_tables);
+            allocation_set(context, map_block->map_table_pointers[j]);
+
+            // Offset into the table.
+            map_table_hash = map_table;
+            map_table_unused = map_table_hash + SHA512_SZ;
+            map_table_entries = map_table_unused + context->unused_space_per_table;
+            // TODO: Calculate and verify hash.
+
+            entries_left = context->num_blocks - entries_read;
+            if (entries_left <= num_map_entries_per_table) {
+                memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, entries_left * map_entry_sz);
+                entries_read += entries_left;
+                break;
+            } else {
+                memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, num_map_entries_per_table * map_entry_sz);
+                entries_read += num_map_entries_per_table;
+            }
+        }
+
+        // If we break into here because no more entries were left,
+        // then clearly we shouldn't even have any more map blocks 
+        // left.
+    }
+    afs_assert_action(entries_read == context->num_blocks, ret = -EIO, read_err, 
+                      "read incorrect amount [%u:%u]", entries_read, context->num_blocks);
+    afs_debug("map blocks' map tables read");
+
+    kfree(map_block);
+    kfree(map_table);
+    return 0;
+
+read_err:
+    if (map_block) kfree(map_block);
+    if (map_table) kfree(map_table);
+
+err:
     return ret;
 }
 
@@ -234,7 +408,7 @@ afs_create_map_tables(struct afs_private *context)
     // Allocate all required map_tables.
     map_tables = vmalloc(AFS_BLOCK_SIZE * num_map_tables);
     afs_assert_action(map_tables, ret = -ENOMEM, table_err, "could not allocate map tables [%d]", ret);
-    afs_debug("allocated map_tables");
+    afs_debug("allocated Artifice map tables");
 
     memset(map_tables, 0, AFS_BLOCK_SIZE * num_map_tables);
     entries_written = 0;
@@ -255,8 +429,9 @@ afs_create_map_tables(struct afs_private *context)
         }
         ptr += AFS_BLOCK_SIZE;
     }
-    afs_assert(entries_written == num_blocks, write_err, "wrote incorrect amount of entries to table [%u]", entries_written);
-    afs_debug("initialized map_tables");
+    afs_assert_action(entries_written == num_blocks, ret = -EIO, write_err, 
+                      "wrote incorrect amount [%u:%u]", entries_written, num_blocks);
+    afs_debug("initialized Artifice map tables");
     
     context->afs_map_tables = map_tables;
     return 0;
@@ -388,7 +563,7 @@ map_err:
 /**
  * Write the super block onto the disk.
  * 
- * // TODO: Change sb_block location.
+ * TODO: Change sb_block location.
  */
 int 
 write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
@@ -397,22 +572,29 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     int ret = 0;
 
     // Reserve space for the super block location.
-    spin_lock(&context->allocation_lock);
-    bit_vector_set(context->allocation_vec, sb_block);
-    spin_unlock(&context->allocation_lock);
+    allocation_set(context, sb_block);
 
     // Build the full map block structure.
     sb->next_map_block = AFS_INVALID_BLOCK;
     ret = write_map_blocks(sb, fs, context);
     afs_assert(!ret, mb_err, "could not write map blocks [%d]", ret);
 
-    // Calculate hash of the super block and write it
-    // to the disk.
+    // 1. Take note of the instance size.
+    // 2. Calculate the hash of the provided passphrase.
+    // 3. Take note of the entropy directory for the instance.
+    // 4. Hash the super block.
+    // 5. Write to disk.
+    sb->instance_size = context->instance_size;
+    hash_sha1(context->instance_args.passphrase, PASSPHRASE_SZ, sb->hash);
+    strncpy(sb->entropy_dir, context->instance_args.entropy_dir, ENTROPY_DIR_SZ);
     hash_sha256((uint8_t*)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
     ret = write_page(sb, context->bdev, sb_block, false);
     afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
     afs_debug("super block written to disk [block: %u]", sb_block);
 
+    // Don't need blocks and tables anymore.
+    kfree(context->afs_map_blocks);
+    vfree(context->afs_map_tables);
     return 0;
 
 sb_err:
@@ -425,6 +607,87 @@ mb_err:
 }
 
 /**
+ * Traverse through the Artifice map and
+ * rebuild the allocation vector.
+ */
+static void
+rebuild_allocation_vector(struct afs_private *context)
+{
+    struct afs_map_tuple *map_tuple = NULL;
+    uint8_t  *afs_map = NULL;
+    uint8_t  num_carrier_blocks;
+    uint8_t  map_entry_sz;
+    uint32_t num_entries;
+    uint32_t i, j;
+
+    afs_map = context->afs_map;
+    num_entries = context->num_blocks;
+    num_carrier_blocks = context->num_carrier_blocks;
+    map_entry_sz = context->map_entry_sz;
+
+    for (i = 0; i < num_entries; i++) {
+        map_tuple = (struct afs_map_tuple*)(afs_map + (i * map_entry_sz));
+        for (j = 0; j < num_carrier_blocks; j++) {
+            allocation_set(context, map_tuple->carrier_block_pointer);
+            map_tuple += 1;
+        }
+    }
+}
+
+/**
+ * Find the super block on the disk.
+ *
+ * TODO: Change sb_block location.
+ */
+int 
+find_super_block(struct afs_super_block *sb, struct afs_private *context)
+{
+    const uint32_t sb_block = 0;
+    uint8_t sb_digest[SHA256_SZ];
+    uint64_t *stored_hash = NULL, *calculated_hash = NULL;
+    int ret = 0;
+    int i;
+
+    // Mark super block location as reserved.
+    allocation_set(context, sb_block);
+
+    // Read in the super block from disk.
+    ret = read_page(sb, context->bdev, sb_block, false);
+    afs_assert(!ret, err, "could not read super block page [%d]", ret);
+
+    // Check for corruption.
+    hash_sha256((uint8_t*)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
+    stored_hash = (uint64_t*)sb->sb_hash;
+    calculated_hash = (uint64_t*)sb_digest;
+    for (i = 0; i < SHA256_SZ / sizeof(uint64_t); i++) {
+        afs_assert_action(stored_hash[i] == calculated_hash[i], ret = -ENOENT, err, "super block corrupted");
+    }
+
+    // Confirm size is same.
+    afs_assert_action(context->instance_size == sb->instance_size, ret = -EINVAL, err,
+                      "incorrect size provided [%llu:%llu]", context->instance_size, sb->instance_size);
+
+    // TODO: Acquire from RS params in SB.
+    build_configuration(context, 4);
+
+    ret = afs_create_map(context);
+    afs_assert(!ret, err, "could not create artifice map [%d]", ret);
+
+    ret = afs_fill_map(sb, context);
+    afs_assert(!ret, fill_err, "could not fill artifice map [%d]", ret);
+
+    rebuild_allocation_vector(context);
+    afs_debug("Artifice map recreated");
+    return 0;
+
+fill_err:
+    vfree(context->afs_map);
+
+err:
+    return ret;
+}
+
+/**
  * Acquire a free block from the free list.
  */
 uint32_t 
@@ -432,20 +695,47 @@ acquire_block(struct afs_passive_fs *fs, struct afs_private *context)
 {
     uint32_t block_num;
 
-    spin_lock(&context->allocation_lock);
     for (block_num = 0; block_num < fs->list_len; block_num++) {
-        if (!bit_vector_get(context->allocation_vec, block_num)) {
-            bit_vector_set(context->allocation_vec, block_num);
-            spin_unlock(&context->allocation_lock);
-
-            //afs_debug("block: %u", fs->block_list[block_num]);
+        if (allocation_set(context, block_num)) {
             return fs->block_list[block_num];
         }
     }
-    spin_unlock(&context->allocation_lock);
 
-    // Invalid block. Exploiting unsigned math.
     return AFS_INVALID_BLOCK;
+}
+
+/**
+ * Acquire a SHA1 hash of given data.
+ * 
+ * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
+ */
+int 
+hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest)
+{
+    const char *alg_name = "sha1";
+    struct crypto_shash *tfm;
+    struct shash_desc *desc;
+    int ret;
+    
+    tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
+    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
+
+    desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
+    afs_assert_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
+    
+    desc->tfm = tfm;
+    desc->flags = 0;
+    ret = crypto_shash_digest(desc, data, data_len, digest);
+    afs_assert(!ret, compute_done, "error computing sha1 [%d]", ret);
+
+compute_done:
+    kfree(desc);
+
+desc_done:
+    crypto_free_shash(tfm);
+
+tfm_done:
+    return ret;
 }
 
 /**
@@ -483,14 +773,14 @@ tfm_done:
 }
 
 /**
- * Acquire a SHA1 hash of given data.
- * 
- * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
+ * Acquire a SHA512 hash of given data.
+ *
+ * @digest Array to return digest into. Needs to be pre-allocated 64 bytes.
  */
 int 
-hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest)
+hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest)
 {
-    const char *alg_name = "sha1";
+    const char *alg_name = "sha512";
     struct crypto_shash *tfm;
     struct shash_desc *desc;
     int ret;
@@ -504,7 +794,7 @@ hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest)
     desc->tfm = tfm;
     desc->flags = 0;
     ret = crypto_shash_digest(desc, data, data_len, digest);
-    afs_assert(!ret, compute_done, "error computing sha1 [%d]", ret);
+    afs_assert(!ret, compute_done, "error computing sha512 [%d]", ret);
 
 compute_done:
     kfree(desc);
@@ -516,323 +806,133 @@ tfm_done:
     return ret;
 }
 
-// /*
-//  *Returns a random offset
-//  *Used for spreading out blocks in the matryoshka disk
-//  */
-// int random_offset(u32 upper_limit){
-//     u32 i;
-//     get_random_bytes(&i, sizeof(i));
-//     return i % upper_limit;
-// }
-
-// void encryptSpeck(uint64_t ct[2], uint64_t const pt[2], uint64_t const K[2])
-// {
-//    uint64_t y = pt[0], x = pt[1], b = K[0], a = K[1];
-//    int i = 0;
-//    R(x, y, b);
-//    for (i = 0; i < ROUNDS - 1; i++) {
-//       R(a, b, i);
-//       R(x, y, b);
-//    }
-
-//    ct[0] = y;
-//    ct[1] = x;
-// }
-
-// //should execute whilst we are generating a new superblock such that the superblock can include the location
-// //returns offset of the first block written to the disk
-// //TODO: CHange the context passed in here.
-// struct afs_map_entry* write_new_map(u32 entries, struct afs_fs_context *context, struct block_device *device, u32 first_offset){
-//     //figure out how many blocks are needed to write the map
-//     //determine locations for the matryoshka map blocks
-//     //mark those in the bitmap and record in each block data structure
-
-//     int i, j, k;
-//     int tuple_size = 8;
-//     u32 entry_size = (32 + tuple_size*(32) + 128)/8;
-//     u32 block_size = context->sectors_per_block * 512;
-//     u32 entries_per_block = block_size / entry_size;
-//     u32 blocks = (entries / entries_per_block) + 1;
-//     u32 map_offsets[blocks];
-//     int entry_size_32 = sizeof(struct afs_map_entry) / 4;
-//     int block_offset;
-//     int ret;
-//     void *data;
-//     const u32 read_length = 1 << PAGE_SHIFT;
-//     struct page *page;
-//     struct afs_io io = {
-//         .bdev = device,
-//         .io_size = read_length
-//     };
-//     struct afs_map_entry *map_block;
-
-//     //ensure that we have 48 bits left over for map pointer and checksums
-//     //32 bits for the pointer and 16 for the checksum (could be changed)
-//     if(block_size - (entry_size * entries_per_block) < entry_size){
-//         entries_per_block -= 1;
-//         blocks = (entries / entries_per_block) + 1;
-//     }
-    
-//     afs_debug("Space ensured for pointer\n");
-
-//     page = alloc_page(GFP_KERNEL);
-//     data = page_address(page);
-//     io.io_page = page;
-
-//     block_offset = random_offset(100);
-//     map_offsets[0] = first_offset;
-//     for(i = 1; i < blocks; i++){
-//         while(get_bitmap(context->allocation, block_offset) != 0){
-//             block_offset = block_offset + random_offset(100);
-//             if(block_offset > context->list_len){
-//                 block_offset = random_offset(100);
-//             }
-//         }
-//         map_offsets[i] = block_offset;
-//         set_bitmap(context->allocation, block_offset);
-//         block_offset = block_offset + random_offset(100);
-//     } 
-//     afs_debug("offsets generated\n");
- 
-//     //use the number of entries, block size, and entry sizes to calculate the number of blocks needed
-//     //for each block, and for each matryoshka map entry, generate random numbers to determine the carrier block location on the disk
-//     //fills out the bitmap
-//     //TODO: bug in this block
-//     map_block = kmalloc(entries * sizeof(struct afs_map_entry), GFP_KERNEL);
-//     afs_debug("Allocated space for the map\n");
-//     afs_debug("Number of entries in map: %d\n", entries);
-//     block_offset = random_offset(100);
-//     afs_debug("Initial block offset: %d\n", block_offset);
-//     for(j = 0; j < entries; j++){
-//         //find locations for each block
-//         for(k = 0; k < tuple_size; k++){
-//             while(get_bitmap(context->allocation, block_offset) != 0){
-//                 //afs_debug("bitmap result offset %d  %d \n", block_offset, get_bitmap(context->allocation, block_offset));
-// 		//afs_debug("block offset collision\n");
-//                 block_offset = block_offset + random_offset(100);
-//                 if(block_offset > context->list_len){
-//                     block_offset = random_offset(100);
-//                 }
-//             }
-//             //afs_debug("list_length: %d\n", context->list_len);
-// 	    afs_debug("block offset: %d\n", block_offset);
-//             map_block[j].tuples[k].block_num = context->block_list[block_offset];
-//             set_bitmap(context->allocation, block_offset);
-// 	    block_offset += random_offset(100);
-//             //write the checksum for each individual data block
-//         }
-// 	afs_debug("Map block written\n");
-//     }
-//     afs_debug("map blocks formatted in memory\n");
-//     afs_debug("Entries: %d", entries);
-//     afs_debug("Entry size: %d", entry_size);
-//     //afs_debug("Blocks: %d", blocks);
-//     afs_debug("Entries per block: %d", entries_per_block);
-
-//     //rewrite to handle the blocks correctly
-//     for(i = 0; i < blocks; i++){
-//         io.io_sector = (context->block_list[map_offsets[i]] * context->sectors_per_block) + context->data_start_off;
-//         if(i < (blocks - 1)){
-//             afs_debug("entry size %lu\n", entries_per_block * sizeof(struct afs_map_entry));
-//             memcpy(data, &map_block[i * entries_per_block], entries_per_block * sizeof(struct afs_map_entry));
-//             memcpy(data + (entry_size_32 * entries_per_block), &map_offsets[i+1], sizeof(u32));
-//         }else{
-//             afs_debug("last block\n");
-//             memcpy(data, &map_block[i * entries_per_block], (entries % entries_per_block) * sizeof(struct afs_map_entry));
-//         }
-//         ret = afs_blkdev_io(&io, MKS_IO_WRITE);
-//         if(ret){
-//             afs_alert("Error when writing map block {%d}\n", i);
-//         }
-//         afs_debug("block written\n");
-//     }
-//     __free_page(page);
-//     return map_block;
-// }
-
-// //retrieve the matryoshka map from disk and save into memory in order to speed up some stuff.
-// struct afs_map_entry* retrieve_map(u32 entries, struct afs_fs_context *context, struct block_device *device, struct afs_super *super){
-//     //calculate how many blocks are needed to store the map
-//     int i = 0;
-//     int tuple_size = 8;
-//     u32 entry_size = (32 + tuple_size*(32) + 128)/8;
-//     u32 block_size = context->sectors_per_block * 512;
-//     u32 entries_per_block = block_size / entry_size;
-//     u32 blocks = (entries / entries_per_block) + 1; 
-//     //u32 map_offsets[blocks];
-//     int ret;
-//     void *data;
-//     const u32 read_length = 1 << PAGE_SHIFT;
-//     struct page *page;
-//     u32 current_block = super->afs_map_start;
-//     struct afs_io io = {
-//         .bdev = device,
-//         .io_size = read_length
-//     };
-//     struct afs_map_entry *map_blocks;
-//     struct afs_map_entry *block;
-//     int entry_size_32 = sizeof(struct afs_map_entry) / 4;
-
-//     if(block_size - (entry_size * entries_per_block) < entry_size){
-//         entries_per_block -= 1;
-//         blocks = (entries / entries_per_block) + 1;
-//     }
-
-//     page = alloc_pages(GFP_KERNEL, (unsigned int)bsr((entry_size * entries)/512));
-//     data = page_address(page);
-//     io.io_page = page;
-
-//     map_blocks = kmalloc(entries * sizeof(struct afs_map_entry), GFP_KERNEL);
-//     //execute a for loop over every logical block number
-//     for(i = 0; i<blocks; i++){
-//         if(block == 0){
-//             afs_debug("retrieving map block %d\n", i);
-//             io.io_sector = (current_block * context->sectors_per_block) + context->data_start_off;
-//             ret = afs_blkdev_io(&io, MKS_IO_READ);
-//             if(ret){
-//                 afs_alert("Error when reading map block {%d}\n", i);
-//             }
-//             memcpy(&map_blocks[i * entries_per_block], data, entries_per_block * sizeof(struct afs_map_entry));
-//             block = data;
-//             set_bitmap(context->allocation, current_block);
-//             memcpy(&current_block, data + (entry_size_32 * entries_per_block), sizeof(u32));
-//         }
-//     }
-//     afs_debug("Finished retrieving map");
-//     __free_page(page);
-//     return map_blocks;
-// }
-
-// //get a pointer to a new superblock
-// //TODO: add a field for a tuple of the other superblock block offsets
-// struct afs_super * generate_superblock(unsigned char *digest, u64 afs_size, u8 ecc_scheme, u8 secret_split_type, u32 afs_map_start){
-//     struct afs_super *super;
-//     super = kmalloc(sizeof(struct afs_super), GFP_KERNEL);
-//     memcpy(super->hash, (void*)digest ,32);
-//     super->afs_size = afs_size;
-//     super->ecc_scheme = ecc_scheme;
-//     super->secret_split_type = secret_split_type;
-//     super->afs_map_start = afs_map_start;
-//     return super;
-// }
-
-// //write the superblock to the disk in a set number of locations
-// int write_new_superblock(struct afs_super *super, int duplicates, unsigned char *digest, struct afs_fs_context *context, struct block_device *device){
-//     //u32 location[duplicates];
-//     int i;
-//     struct page *page;
-//     const u32 read_length = 1 << PAGE_SHIFT;
-//     void *data;
-//     int ret;
-//     struct afs_io io = {
-//         .bdev = device,
-//         .io_sector = (context->block_list[0]*context->sectors_per_block) + context->data_start_off,
-//         .io_size = read_length  
-//     };
-//     page = alloc_page(GFP_KERNEL);
-//     if (IS_ERR(page)) {
-//         ret = PTR_ERR(page);
-//         afs_alert("alloc_page failure {%d}\n", ret);
-//         return ret;
-//     }
-//     data = page_address(page);
-//     io.io_page = page;
-//     afs_debug("context block %p\n", context->block_list);
-//     //compute the hash 8 times and populate  the requisite array, use modulo to determine block offsets
-//     //this is nondeterministic, must find a more reliable way to do it over the search space
-//     //slightly different superblock for each copy on the disk
-//     afs_debug("superblock %p\n", super);
-//     memcpy(data, super, sizeof(struct afs_super));
-//     //write duplicate number of times to those locations on the disk
-//     for(i = 0; i < duplicates; i++){
-//         ret = afs_blkdev_io(&io, MKS_IO_WRITE);
-//         if(ret){
-//             afs_alert("Error when writing superblock copy {%d}\n", i);
-//             return ret;
-//         }
-//         afs_alert("Superblock written {%d}\n", i);
-//         set_bitmap(context->allocation, 0);
-//     }
-//     __free_page(page);
-//     return 0;
-// }
-
-// //retrieve the superblock from hashes of the passphrase
-// struct afs_super* retrieve_superblock(int duplicates, unsigned char *digest, struct afs_fs_context *context, struct block_device *device){
-//     int i;
-//     const u32 read_length = 1 << PAGE_SHIFT;
-//     struct page *page;
-//     struct afs_super *super = kmalloc(sizeof(struct afs_super), GFP_KERNEL);
-//     void *data;
-//     int ret;
-//     struct afs_io io = {
-//         .bdev = device,
-//         .io_sector = (context->block_list[0]*context->sectors_per_block)+ context->data_start_off,
-//         .io_size = read_length  
-//     };
-
-//     page = alloc_page(GFP_KERNEL);
-//     if (IS_ERR(page)) {
-//         ret = PTR_ERR(page);
-//         afs_alert("alloc_page failure {%d}\n", ret);
-//         goto error;
-//     }
-//     data = page_address(page);
-//     io.io_page = page;
-//     //compute the first hash and check the location on the disk, if the prefix matches the specific hash then we are good.
-
-//     //check locations
-//     for(i = 0; i < duplicates; i++){
-// 	//put something here to repair the superblock when it is written to the disk
-// 	//if we know that the block is here we can break out of the loop and return.
-//         ret = afs_blkdev_io(&io, MKS_IO_READ);
-//         if (ret) {
-//             afs_alert("afs_blkdev_io failure, Could not read superblock {%d}\n", ret);
-//             goto error;
-//         }
-//         memcpy(super, data, sizeof(struct afs_super));
-//         afs_debug("Superblock %p\n", super);
-//         afs_debug("Hash %d\n", super->hash[0]);
-//         if(super->hash[0] == digest[0]){
-//             afs_debug("Superblock copy {%d} found\n", i);
-//             set_bitmap(context->allocation, 0);
-//             break;
-// 	    }
-//         afs_debug("Superblock copy {%d} not found\n", i);
-//     }
-//     if(i == duplicates){
-//         afs_alert("superblock not found, either overwritten or no instance ever existed.\n");
-//         goto error;
-//     }
-//     __free_page(page);
-//     return super;
-// error:
-//     return NULL;
-// }
-
-// //rewrite new copies of the superblock to bring us up to spec
-// int superblock_repair(struct afs_fs_context *context, struct block_device *device){
-//     return 0;
-// }
-
-// //run repair cycle on the matryoshka map
-// int map_repair(struct afs_fs_context *context, struct block_device *device){
-//     return 0;
-// }
-
-// //takes in the matryoshak map and the free list of blocks, then returns a physical block tuple based on logical block number
-// int find_physical_block(struct afs_fs_context *context, struct block_device *device){
-//     return 0;
-// }
-
-
 /**
  * Perform a reverse bit scan for an unsigned long.
  */
-inline unsigned long
-bsr(unsigned long n)
+inline uint64_t 
+bsr(uint64_t n)
 {
 	__asm__("bsr %1,%0" : "=r" (n) : "rm" (n));
 	return n;
+}
+
+/**
+ * Get a pointer to a map entry in the Artifice map.
+ */
+static inline uint8_t*
+afs_get_map_entry(struct afs_private *context, uint32_t index)
+{
+    return context->afs_map + (index * context->map_entry_sz);
+}
+
+/**
+ * Map a read request from userspace.
+ */
+int afs_read_request(struct afs_private *context, struct bio *bio)
+{
+    struct afs_map_tuple *map_entry_tuple = NULL;
+    uint8_t *map_entry = NULL;
+    uint8_t *map_entry_hash = NULL;
+    uint8_t *map_entry_entropy = NULL;
+    uint8_t digest[SHA1_SZ];
+    uint32_t req_size;
+    uint32_t block_num;
+    uint64_t *stored_hash = NULL, *calculated_hash = NULL;
+    void *user_data = NULL;
+    int ret = 0, i;
+
+    user_data = page_address(bio_page(bio));
+    block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+    req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+    afs_assert_action(req_size == AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req_size);
+
+    map_entry = afs_get_map_entry(context, block_num);
+    map_entry_tuple = (struct afs_map_tuple*)map_entry;
+    map_entry_hash = map_entry + (context->num_carrier_blocks * sizeof(*map_entry_tuple));
+    map_entry_entropy = map_entry_hash + SHA128_SZ;
+
+    // Unmapped block if even a single carrier block pointer
+    // in invalid.
+    if (map_entry_tuple[0].carrier_block_pointer == AFS_INVALID_BLOCK) {
+        memset(user_data, 0, AFS_BLOCK_SIZE);
+    } else {
+        for (i = 0; i < context->num_carrier_blocks; i++) {
+            // TODO: Read into separate pages and pass to Reed Solomon library for reconstruction.
+            ret = read_page(user_data, context->bdev, block_num, false);
+            afs_assert_action(!ret, ret = -EIO, done, "could not read page at block [%u]", block_num);
+        }
+    }
+
+    // Confirm hash matches.
+    hash_sha1(user_data, req_size, digest);
+    stored_hash = (uint64_t*)map_entry_hash;
+    calculated_hash = (uint64_t*)(digest + (SHA1_SZ - SHA128_SZ));
+    for (i = 0; i < SHA128_SZ / sizeof(*calculated_hash); i++) {
+        afs_assert_action(stored_hash[i] == calculated_hash[i], ret = -ENOENT, done, "user data is corrupted [%u]", block_num);
+    }
+    ret = 0;
+
+done:
+    return ret;
+}
+
+/**
+ * Map a write request from userspace.
+ */
+int afs_write_request(struct afs_private *context, struct bio *bio)
+{
+    struct afs_map_tuple *map_entry_tuple = NULL;
+    uint8_t *map_entry = NULL;
+    uint8_t *map_entry_hash = NULL;
+    uint8_t *map_entry_entropy = NULL;
+    uint8_t digest[SHA1_SZ];
+    uint32_t req_size;
+    uint32_t block_num;
+    void *user_data = NULL;
+    int ret = 0, i;
+
+    user_data = page_address(bio_page(bio));
+    block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+    req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+    afs_assert_action(req_size == AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
+
+    map_entry = afs_get_map_entry(context, block_num);
+    map_entry_tuple = (struct afs_map_tuple*)map_entry;
+    map_entry_hash = map_entry + (context->num_carrier_blocks * sizeof(*map_entry_tuple));
+    map_entry_entropy = map_entry_hash + SHA128_SZ;
+
+    // TODO: Acquire shards of this data block.
+    // TODO: Set the entropy hash correctly.
+    hash_sha1(user_data, req_size, digest);
+    memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
+    memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
+
+    // It's a modification of a block if even one carrier block pointer
+    // is not invalid. In that case, we can simply re-use the blocks.
+    if (map_entry_tuple[0].carrier_block_pointer != AFS_INVALID_BLOCK) {
+        for (i = 0; i < context->num_carrier_blocks; i++) {
+            ret = write_page(user_data, context->bdev, map_entry_tuple[i].carrier_block_pointer, false);
+            afs_assert_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", map_entry_tuple[i].carrier_block_pointer);
+        }
+    } else {
+        for (i = 0; i < context->num_carrier_blocks; i++) {
+            block_num = acquire_block(&context->passive_fs, context);
+            afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
+            map_entry_tuple[i].carrier_block_pointer = block_num;
+            ret = write_page(user_data, context->bdev, block_num, false);
+            afs_assert_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", map_entry_tuple[i].carrier_block_pointer);
+        }
+    }
+    return 0;
+
+reset_entry:
+    for (i = 0; i < context->num_carrier_blocks; i++) {
+        if (map_entry_tuple[i].carrier_block_pointer != AFS_INVALID_BLOCK) {
+            allocation_free(context, map_entry_tuple[i].carrier_block_pointer);
+        }
+        map_entry_tuple[i].carrier_block_pointer = AFS_INVALID_BLOCK;
+    }
+
+err:
+    return ret;
 }

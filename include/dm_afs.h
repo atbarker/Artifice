@@ -70,7 +70,7 @@ extern int afs_debug_mode;
 })
 
 // Assert, perform an action, and jump.
-#define afs_assert_action(cond, action, label, fmt, args ...)  \
+#define afs_assert_action(cond, action, label, fmt, args ...)   \
 ({                                                              \
     if (!(cond)) {                                              \
         action;                                                 \
@@ -204,7 +204,6 @@ struct afs_passive_fs {
 	uint32_t	total_blocks;       // Total number of blocks in the FS.
     uint32_t    data_start_off;     // Data start offset in the filesystem (bypass reserved blocks).
 	uint8_t     blocks_in_tuple;    // Blocks in a tuple.
-    uint8_t     *allocation;        // Allocation bitmap.
 };
 
 // A parsed structure of arguments received from the
@@ -224,6 +223,7 @@ struct __attribute__((aligned(4096))) afs_private {
     struct afs_args instance_args;
     struct dm_dev   *passive_dev;
     struct block_device    *bdev;
+    uint64_t instance_size;
 
     // Configuration information.
     uint8_t  num_carrier_blocks;
@@ -260,6 +260,46 @@ int read_page(void *page, struct block_device *bdev, uint32_t block_num, bool us
 int write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
 
 /**
+ * Acquire a free block from the free list.
+ */
+uint32_t acquire_block(struct afs_passive_fs *fs, struct afs_private *context);
+
+/**
+ * Set the usage of a block in the allocation vector.
+ */
+bool allocation_set(struct afs_private *context, uint32_t index);
+
+/**
+ * Clear the usage of a block in the allocation vector.
+ */
+void allocation_free(struct afs_private *context, uint32_t index);
+
+/**
+ * Get the state of a block in the allocation vector.
+ */
+uint8_t allocation_get(struct afs_private *context, uint32_t index);
+
+/**
+ * Build the configuration for an instance.
+ */
+void build_configuration(struct afs_private *context, uint8_t num_carrier_blocks);
+
+/**
+ * Write the super block onto the disk.
+ */
+int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context);
+
+/**
+ * Find the super block on the disk.
+ */
+int find_super_block(struct afs_super_block *sb, struct afs_private *context);
+
+/**
+ * Bit scan reverse.
+ */
+uint64_t bsr(uint64_t n);
+
+/**
  * Acquire a SHA1 hash of given data.
  */
 int hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest);
@@ -270,26 +310,18 @@ int hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest);
 int hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
- * Write the super block onto the disk.
+ * Acquire a SHA512 hash of given data.
  */
-int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context);
+int hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
- * Acquire a free block from the free list.
+ * Map a read request from userspace.
  */
-uint32_t acquire_block(struct afs_passive_fs *fs, struct afs_private *context);
+int afs_read_request(struct afs_private *context, struct bio *bio);
 
 /**
- * Bit scan reverse.
+ * Map a write request from userspace.
  */
-unsigned long bsr(unsigned long n);
-
-// int random_offset(u32 upper_limit);
-// int passphrase_hash(unsigned char *passphrase, unsigned int pass_len, unsigned char *digest);
-// struct afs_map_entry* write_new_map(u32 entries, struct afs_fs_context *context, struct block_device *device, u32 first_offset);
-// struct afs_map_entry* retrieve_map(u32 entries, struct afs_fs_context *context, struct block_device *device, struct afs_super *super);
-// struct afs_super * generate_superblock(unsigned char *digest, u64 afs_size, u8 ecc_scheme, u8 secret_split_type, u32 afs_map_start);
-// int write_new_superblock(struct afs_super *super, int duplicates, unsigned char *digest, struct afs_fs_context *context, struct block_device *device);
-// struct afs_super* retrieve_superblock(int duplicates, unsigned char *digest, struct afs_fs_context *context, struct block_device *device);
+int afs_write_request(struct afs_private *context, struct bio *bio);
 
 #endif /* DM_AFS_H */

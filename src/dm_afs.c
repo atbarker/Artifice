@@ -70,7 +70,7 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     memset(args, 0, sizeof(*args));
 
     // These three are always required.
-    afs_assert(!kstrtou8(argv[TYPE], BASE_10, &args->instance_type), err, "incorrect instance type");
+    afs_assert(!kstrtou8(argv[TYPE], BASE_10, &args->instance_type), err, "instance type not integer");
     strncpy(args->passphrase, argv[PASSPHRASE], PASSPHRASE_SZ-1);
     strncpy(args->passive_dev, argv[DISK], PASSIVE_DEV_SZ-1);
     afs_debug("Type: %d", args->instance_type);
@@ -159,6 +159,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context = kmalloc(sizeof(*context), GFP_KERNEL);
     afs_assert_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);
     memset(context, 0, sizeof(*context));
+    context->instance_size = instance_size;
 
     args = &context->instance_args;
     ret = parse_afs_args(args, argc, argv);
@@ -204,106 +205,31 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     }
     // END.
 
-    // Build the configuration parameters.
-    // TODO: Acquire carrier block count from RS parameters.
-    context->num_carrier_blocks = 4;
-    context->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * context->num_carrier_blocks);
-    context->unused_space_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) % context->map_entry_sz;
-    context->num_map_entries_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) / context->map_entry_sz;
-    context->num_blocks = instance_size / AFS_BLOCK_SIZE;
-
-    // Kernel doesn't support floating point math. We need to round up.
-    context->num_map_tables = context->num_blocks / context->num_map_entries_per_table;
-    context->num_map_tables += (context->num_blocks % context->num_map_entries_per_table)? 1: 0;
-
-    // We store a certain amount of pointers to map tables in the SB itself. 
-    // So we need to adjust for that when calculating num_map_blocks. We also
-    // exploit unsigned math.
-    if ((context->num_map_tables - SB_MAP_PTRS_SZ) > context->num_map_tables) {
-        // We can store everything in the SB itself.
-        context->num_map_blocks = 0;
-    } else {
-        context->num_map_blocks = (context->num_map_tables - SB_MAP_PTRS_SZ) / MAP_BLK_PTRS_SZ;
-        context->num_map_blocks += ((context->num_map_tables - SB_MAP_PTRS_SZ) % MAP_BLK_PTRS_SZ)? 1: 0;
-    }
-
-    afs_debug("Map entry size: %u", context->map_entry_sz);
-    afs_debug("Unused: %u | Entries per table: %u", context->unused_space_per_table, context->num_map_entries_per_table);
-    afs_debug("Blocks: %u", context->num_blocks);
-    afs_debug("Map tables: %u", context->num_map_tables);
-    afs_debug("Map blocks: %u", context->num_map_blocks);
-
-    // Allocate the free list allocation vector. This needs to be able
-    // to map all possible blocks (with the exception of the very last
-    // block). Hence, this will be huge.
+    // Allocate the free list allocation vector to be able
+    // to map all possible blocks and mask the invalid block.
     context->allocation_vec = bit_vector_create(((uint64_t)1 << 32) - 1);
     afs_assert_action(context->allocation_vec, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
     spin_lock_init(&context->allocation_lock);
+    allocation_set(context, AFS_INVALID_BLOCK);
 
     sb = &context->super_block;
     switch (args->instance_type) {
         case TYPE_NEW:
-            // Create a new super block and write it and the
-            // map to the disk.
-            sb->instance_size = instance_size;
-            hash_sha1(args->passphrase, PASSPHRASE_SZ, sb->hash);
-            strncpy(sb->entropy_dir, args->entropy_dir, ENTROPY_DIR_SZ);
-
+            // TODO: Acquire carrier block count from RS parameters.
+            build_configuration(context, 4);
             ret = write_super_block(sb, fs, context);
             afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
             break;
         
         case TYPE_ACCESS:
-            // Find existing super block.
+            ret = find_super_block(sb, context);
+            afs_assert(!ret, sb_err, "could not find super block [%d]", ret);
             break;
         
         case TYPE_SHADOW:
             // Create nested instance.
             break;
     }
-
-//     context->fs_context->allocation = kmalloc((context->fs_context->list_len), GFP_KERNEL);
-
-//     //Generate the hash of our password.
-//     digest = kmalloc(sizeof(DM_MKS_PASSPHRASE_SZ), GFP_KERNEL);
-//     ret = passphrase_hash((unsigned char *)context->passphrase, (unsigned int)DM_MKS_PASSPHRASE_SZ, digest);
-
-//     //generate superblock locations
-
-//     //write the superblock copies to the disk or search for the superblock
-//     //if(1){
-//     //if(argc == DM_MKS_ARG_MAX){
-// 	    map_offset = random_offset(1000);
-// 	    //Generate the superblock
-//         super = generate_superblock(digest, ti->len / context->fs_context->sectors_per_block, 0, 0, map_offset);
-	
-// 	    //Write the superblock
-//         write_new_superblock(super, 1, digest, context->fs_context, context->passive_dev->bdev);
-
-//         afs_debug("Superblock written\n");
-	
-// 	    //write the new matryoshka map
-//         context->map = write_new_map(ti->len / context->fs_context->sectors_per_block, context->fs_context, context->passive_dev->bdev, map_offset);
-	
-//         afs_debug("Artifice Formatting Complete.\n");
-//     //}else{
-// 	    //retrieve the superblock
-//         super = retrieve_superblock(1, digest, context->fs_context, context->passive_dev->bdev);
-	
-// 	    //Perform an integrity check on where the superblocks are
-//         if(super == NULL){
-// 		    afs_alert("Could not find superblock with passphrase\n");
-// 		    return -1;
-// 	    }else{
-//             afs_debug("Found superblock\n");
-// 	    }
-//         //context->map = retrieve_map((u32)super->afs_size, context->fs_context, context->passive_dev->bdev, super);
-//    // }
-//     afs_debug("length of artifice %lu", ti->len);
-//     afs_debug("sectors per block %d", context->fs_context->sectors_per_block);
-
-//     afs_info("exiting constructor\n");
-
 
     afs_debug("constructor completed");
     ti->private = context;
@@ -314,7 +240,7 @@ sb_err:
     bit_vector_free(context->allocation_vec);
 
 vec_err:
-    // TODO: Clear out the passive_fs information.
+    kfree(fs->block_list);
 
 fs_err:
     dm_put_device(ti, context->passive_dev);
@@ -341,17 +267,11 @@ afs_dtr(struct dm_target *ti)
     // Free the Artifice map.
     vfree(context->afs_map);
 
-    // Free the Artifice map tables in case they
-    // were allocated.
-    if (context->afs_map_tables) {
-        vfree(context->afs_map_tables);
-    }
+    // Free the bit vector allocation.
+    bit_vector_free(context->allocation_vec);
 
-    // Free the bit vector allocation in case
-    // one was allocated.
-    if (context->allocation_vec) {
-        bit_vector_free(context->allocation_vec);
-    }
+    // Free the block list for the passive FS.
+    kfree(context->passive_fs.block_list);
 
     // Put the device back.
     dm_put_device(ti, context->passive_dev);
@@ -386,28 +306,23 @@ afs_dtr(struct dm_target *ti)
 static int
 afs_map(struct dm_target *ti, struct bio *bio)
 {   
-    struct afs_private *context;
+    int ret = 0;
 
-    context = ti->private;
     switch(bio_op(bio)) {
         case REQ_OP_READ:
-            afs_debug("read operation");
+        ret = afs_read_request(ti->private, bio);
             break;
 
         case REQ_OP_WRITE:
-            afs_debug("write operation");
+            ret = afs_write_request(ti->private, bio);
             break;
 
         default:
             afs_debug("unknown operation");
     }
-    
-    // Each bio needs to be handled somehow, otherwise the kernel thread
-    // belonging to it freezes. Even shutdown won't work as a kernel thread is
-    // engaged.
     bio_endio(bio);
     
-    return DM_MAPIO_SUBMITTED;
+    return (!ret)? DM_MAPIO_SUBMITTED: DM_MAPIO_KILL;
 }
 
 /** ----------------------------------------------------------- DO-NOT-CROSS ------------------------------------------------------------------- **/
