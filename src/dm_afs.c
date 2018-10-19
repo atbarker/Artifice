@@ -129,24 +129,18 @@ __work_afs_map(struct work_struct *work)
     struct bio *bio;
     int ret;
 
-    afs_debug("sceduled!");
     context = container_of(work, struct afs_private, map_work);
-
     spin_lock(&context->bio_lock);
     bio = context->bio;
     spin_unlock(&context->bio_lock);
 
     switch(bio_op(bio)) {
         case REQ_OP_READ:
-            ret = 0;
-            //ret = afs_read_request(context, bio);
-            bio_set_dev(bio, context->bdev);
+            ret = afs_read_request(context, bio);
             break;
 
         case REQ_OP_WRITE:
-            ret = 0;
-            //ret = afs_write_request(context, bio);
-            bio_set_dev(bio, context->bdev);
+            ret = afs_write_request(context, bio);
             break;
 
         default:
@@ -154,15 +148,10 @@ __work_afs_map(struct work_struct *work)
             ret = -EINVAL;
             afs_debug("What the hell!");
     }
+    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(bio));
 
-    if (!ret) {
-        submit_bio(bio);
-        afs_debug("submitted");
-    } else {
-        bio_endio(bio);
-        afs_debug("ended");
-    }
-
+done:
+    bio_endio(bio);
     spin_lock(&context->bio_lock);
     context->bio = NULL;
     wake_up_process(context->current_process);
