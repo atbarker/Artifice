@@ -246,7 +246,6 @@ struct __attribute__((aligned(4096))) afs_private {
     bit_vector_t *allocation_vec;
 
     // Map information.
-    uint32_t bio_block;
     uint8_t *afs_map;
     uint8_t *afs_map_tables;
     struct afs_map_block *afs_map_blocks;
