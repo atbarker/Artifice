@@ -219,7 +219,8 @@ struct afs_args {
 // Private data per instance. Do NOT change order
 // of variables.
 struct __attribute__((aligned(4096))) afs_private {
-    uint8_t raw_block[AFS_BLOCK_SIZE];
+    uint8_t raw_block_read[AFS_BLOCK_SIZE];
+    uint8_t raw_block_write[AFS_BLOCK_SIZE];
     struct afs_super_block super_block;
     struct afs_passive_fs  passive_fs;
     struct afs_args instance_args;

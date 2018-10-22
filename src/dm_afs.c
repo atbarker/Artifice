@@ -143,6 +143,12 @@ __work_afs_map(struct work_struct *work)
             ret = afs_write_request(context, bio);
             break;
 
+        case REQ_OP_FLUSH:
+            // We are anyway writing everything to disk directly,
+            // so this is like a nop.
+            ret = 0;
+            break;
+
         default:
             // This case should never be encountered.
             ret = -EINVAL;
@@ -188,7 +194,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     uint64_t instance_size;
 
     // Make sure instance is large enough.
-    instance_size = ti->len * 512;
+    instance_size = ti->len * AFS_SECTOR_SIZE;
     afs_assert_action(instance_size >= AFS_MIN_SIZE, ret = -EINVAL, err, "instance too small [%llu]", instance_size);
 
     // Confirm our structure sizes.
