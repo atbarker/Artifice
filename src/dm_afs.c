@@ -379,7 +379,7 @@ static int
 afs_map(struct dm_target *ti, struct bio *bio)
 {  
     struct afs_private *context = ti->private;
-    uint32_t block_num;
+    uint32_t sector_offset;
     uint32_t max_sector_count;
 
     set_current_state(TASK_INTERRUPTIBLE);
@@ -400,8 +400,8 @@ afs_map(struct dm_target *ti, struct bio *bio)
     // multiple blocks (imagine a request of 4KB at sector 1). In such a 
     // case, we truncate the request to fit within a single aligned block.
 
-    block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-    max_sector_count = (((block_num + 1) * AFS_BLOCK_SIZE) - (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE)) / AFS_SECTOR_SIZE;
+    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+    max_sector_count = (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE) - sector_offset;
     if (bio_sectors(bio) > max_sector_count) {
         dm_accept_partial_bio(bio, max_sector_count);
     }
