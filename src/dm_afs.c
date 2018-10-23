@@ -249,8 +249,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // This is all just for testing.
     // BEGIN.
-    fs->block_list = kmalloc(8192 * sizeof(*fs->block_list), GFP_KERNEL);
-    fs->list_len = 8192;
+    fs->block_list = kmalloc(65536 * sizeof(*fs->block_list), GFP_KERNEL);
+    fs->list_len = 65536;
 
     for (i = 0; i < fs->list_len; i++) {
         fs->block_list[i] = i;
@@ -317,6 +317,22 @@ static void
 afs_dtr(struct dm_target *ti)
 {
     struct afs_private *context = ti->private;
+    int err;
+
+    // Update the Artifice map on the disk.
+    err = afs_create_map_tables(context);
+    if (err) {
+        afs_alert("could not create Artifice map tables [%d]", err);
+    } else {
+        err = write_map_tables(context, true);
+        if (err) {
+            afs_alert("could not update Artifice map on disk [%d]", err);
+        }
+        vfree(context->afs_map_tables);
+    }
+
+    // Free the Artifice map blocks.
+    kfree(context->afs_map_blocks);
 
     // Free the Artifice map.
     vfree(context->afs_map);
@@ -335,7 +351,6 @@ afs_dtr(struct dm_target *ti)
 
     // Free storage used by context.
     kfree(context);
-
     afs_debug("destructor completed");
 }
 
@@ -362,9 +377,10 @@ afs_dtr(struct dm_target *ti)
  */
 static int
 afs_map(struct dm_target *ti, struct bio *bio)
-{   
-    const int block_to_sectors = AFS_BLOCK_SIZE / AFS_SECTOR_SIZE;
+{  
     struct afs_private *context = ti->private;
+    uint32_t block_num;
+    uint32_t max_sector_count;
 
     set_current_state(TASK_INTERRUPTIBLE);
     spin_lock(&context->bio_lock);
@@ -378,8 +394,16 @@ afs_map(struct dm_target *ti, struct bio *bio)
     set_current_state(TASK_RUNNING);
     spin_unlock(&context->bio_lock);
 
-    if (bio_sectors(bio) > block_to_sectors) {
-        dm_accept_partial_bio(bio, block_to_sectors);
+    // There is a huge hack here. Firstly, we do not want to process any 
+    // bio which is larger than our block size, hence, we limit each bio 
+    // to be at max 4KB. Secondly, it is possible that a request may span
+    // multiple blocks (imagine a request of 4KB at sector 1). In such a 
+    // case, we truncate the request to fit within a single aligned block.
+
+    block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+    max_sector_count = (((block_num + 1) * AFS_BLOCK_SIZE) - (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE)) / AFS_SECTOR_SIZE;
+    if (bio_sectors(bio) > max_sector_count) {
+        dm_accept_partial_bio(bio, max_sector_count);
     }
 
     switch(bio_op(bio)) {

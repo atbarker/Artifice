@@ -130,7 +130,7 @@ struct __attribute__((packed)) afs_super_block {
     uint8_t     reserved[4];        // TODO: Replace with RS information.
     char        entropy_dir[ENTROPY_DIR_SZ];        // Entropy directory for this instance.
     char        shadow_passphrase[PASSPHRASE_SZ];   // In case this instance is a nested instance.
-    uint32_t    map_table_pointers[SB_MAP_PTRS_SZ]; // The super block stores the pointers to the first 983 map tables.
+    uint32_t    map_table_pointers[SB_MAP_PTRS_SZ]; // The super block stores the pointers to the first 975 map tables.
     uint32_t    next_map_block; // Pointer to the next map block in the chain.
 };
 
@@ -293,6 +293,33 @@ uint8_t allocation_get(struct afs_private *context, uint32_t index);
 void build_configuration(struct afs_private *context, uint8_t num_carrier_blocks);
 
 /**
+ * Create the Artifice map and initialize it to
+ * invalids.
+ */
+int afs_create_map(struct afs_private *context);
+
+/**
+ * Fill an Artifice map with values from the
+ * metadata.
+ */
+int afs_fill_map(struct afs_super_block *sb, struct afs_private *context);
+
+/**
+ * Create the Artifice map tables.
+ */
+int afs_create_map_tables(struct afs_private *context);
+
+/**
+ * Write map tables to map blocks.
+ */
+int write_map_tables(struct afs_private *context, bool update);
+
+/**
+ * Write out the map blocks to disk.
+ */
+int write_map_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context);
+
+/**
  * Write the super block onto the disk.
  */
 int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context);
@@ -301,11 +328,6 @@ int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, str
  * Find the super block on the disk.
  */
 int find_super_block(struct afs_super_block *sb, struct afs_private *context);
-
-/**
- * Write map tables to map blocks.
- */
-int write_map_tables(struct afs_private *context, bool update);
 
 /**
  * Bit scan reverse.
