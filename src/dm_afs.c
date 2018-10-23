@@ -385,12 +385,14 @@ afs_map(struct dm_target *ti, struct bio *bio)
     switch(bio_op(bio)) {
         case REQ_OP_READ:
         case REQ_OP_WRITE:
+        case REQ_OP_FLUSH:
             queue_work(context->map_queue, &context->map_work);
             return DM_MAPIO_SUBMITTED;
             break;
 
         default:
             afs_debug("unknown operation");
+            context->bio = NULL;
             bio_endio(bio);
             return DM_MAPIO_KILL;
     }

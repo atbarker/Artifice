@@ -303,6 +303,11 @@ int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, str
 int find_super_block(struct afs_super_block *sb, struct afs_private *context);
 
 /**
+ * Write map tables to map blocks.
+ */
+int write_map_tables(struct afs_private *context, bool update);
+
+/**
  * Bit scan reverse.
  */
 uint64_t bsr(uint64_t n);
