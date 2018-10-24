@@ -394,11 +394,11 @@ afs_map(struct dm_target *ti, struct bio *bio)
     set_current_state(TASK_RUNNING);
     spin_unlock(&context->bio_lock);
 
-    // There is a huge hack here. Firstly, we do not want to process any 
-    // bio which is larger than our block size, hence, we limit each bio 
-    // to be at max 4KB. Secondly, it is possible that a request may span
-    // multiple blocks (imagine a request of 4KB at sector 1). In such a 
-    // case, we truncate the request to fit within a single aligned block.
+    // We only support bio's with a maximum length of 8 sectors (4KB).
+    // Moreover, we only support processing a single block per bio. 
+    // Hence, a request such as (length: 4KB, sector: 1) crosses
+    // a block boundary and involves two blocks. For all such requests,
+    // we truncate the bio to within the single page.
 
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     max_sector_count = (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE) - sector_offset;
