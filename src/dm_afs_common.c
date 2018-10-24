@@ -947,7 +947,7 @@ int afs_read_request(struct afs_private *context, struct bio *bio)
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
     afs_assert_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req_size);
-    afs_debug("read  request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
+    afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
 
     // Read the raw block.
     raw_block = context->raw_block_read;
@@ -958,7 +958,13 @@ int afs_read_request(struct afs_private *context, struct bio *bio)
     segment_offset = 0;
     bio_for_each_segment(bv, bio, iter) {
         bio_data = kmap(bv.bv_page);
-        memcpy(bio_data + bv.bv_offset, raw_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+        if (bv.bv_len <= (req_size - segment_offset)) {
+            memcpy(bio_data + bv.bv_offset, raw_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+        } else {
+            memcpy(bio_data + bv.bv_offset, raw_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, req_size - segment_offset);
+            kunmap(bv.bv_page);
+            break;
+        }
         segment_offset += bv.bv_len;
         kunmap(bv.bv_page);
     }
@@ -1016,7 +1022,13 @@ int afs_write_request(struct afs_private *context, struct bio *bio)
     segment_offset = 0;
     bio_for_each_segment(bv, bio, iter) {
         bio_data = kmap(bv.bv_page);
-        memcpy(raw_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, bv.bv_len);
+        if (bv.bv_len <= (req_size - segment_offset)) {
+            memcpy(raw_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, bv.bv_len);
+        } else {
+            memcpy(raw_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, req_size - segment_offset);
+            kunmap(bv.bv_page);
+            break;
+        }
         segment_offset += bv.bv_len;
         kunmap(bv.bv_page);
     }
