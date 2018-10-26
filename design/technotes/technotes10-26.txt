@@ -1,9 +1,9 @@
 Austen Barker:
 
-Matryoshka on disk carrier block control flow and storage, White board work by Austen and Yash
+Artifice on disk carrier block control flow and storage, White board work by Austen and Yash
 Abstracts away any error correcting/erasure coding or entropy block sources for now.
 
-Matryoshka Super block (MKS-SB)
+Artifice Super block (MKS-SB)
 	Contains a table with signatures of carrier blocks and a pointer to each carrier block.
 	One entry in this table points to another table with human readable file names
 	Linear scan of the disk to find this super block on matryoshka startup before disk reads/writes.

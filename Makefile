@@ -1,32 +1,63 @@
 KERNELDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 
-# Extra flags.
+# Compile flags.
 ccflags-y += -I$(src)/include/
 
-# Kernel module object name.
-obj-m := dm_mks.o
-dm_mks-y := src/dm_mks.o src/dm_mks_utilities.o src/lib/dm_mks_fat32.o 
+# Modules.
+AFS_MODULES :=	src/modules/dm_afs_fat32.o	\
+				src/modules/dm_afs_ext4.o	\
+				src/modules/dm_afs_ntfs.o
+
+# Libraries
+AFS_LIBRARIES := src/lib/bit_vector.o
+
+# Kernel module.
+obj-m 	 := dm_afs.o
+dm_afs-y := src/dm_afs.o src/dm_afs_common.o $(AFS_LIBRARIES) $(AFS_MODULES)
 
 default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
 clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
+	rm -f src/*.rc src/modules/*.rc src/lib/*.rc
+
+load:
+	@make
+	@sudo insmod dm_afs.ko afs_debug_mode=1
+
+unload:
+	@sudo rmmod dm_afs
+	@make clean
+
+reload:
+	@make unload || true
+	@make load || true
 
 ######################################################################
 # Hack for easier loading and unloading
 # Make sure your VM has another disk and its mounted at /dev/sdb, with
 # a partition at /dev/sdb1.
-debug:
-	@sudo insmod dm_mks.ko mks_debug_mode=1
-	@echo 0 1024 mks pass /dev/sdb1 | sudo dmsetup create matryoshka
+debug_new:
+	@sudo insmod dm_afs.ko afs_debug_mode=1
+	@echo 0 65536 artifice 0 pass /dev/sdb --entropy /home/movies/ | sudo dmsetup create artifice
 
-debug1:
-	@sudo insmod dm_mks.ko mks_debug_mode=1
-	@echo 0 1024 mks pass /dev/sde1 | sudo dmsetup create matryoshka
+debug_access:
+	@sudo insmod dm_afs.ko afs_debug_mode=1
+	@echo 0 65536 artifice 1 pass /dev/sdb | sudo dmsetup create artifice
+
+debug_use:
+	@make debug_mkfs
+	@make debug_mount
+
+debug_mkfs:
+	@sudo mkfs.fat -F32 /dev/dm-0
+
+debug_mount:
+	@sudo mount -ouser,umask=000 /dev/dm-0 /mnt
 
 debug_end:
-	@sudo dmsetup remove matryoshka
-	@sudo rmmod dm_mks
+	@sudo dmsetup remove artifice || true
+	@sudo rmmod dm_afs || true
 ######################################################################
