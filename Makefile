@@ -39,23 +39,13 @@ reload:
 # Hack for easier loading and unloading
 # Make sure your VM has another disk and its mounted at /dev/sdb, with
 # a partition at /dev/sdb1.
-debug_new:
+debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
 	@echo 0 65536 artifice 0 pass /dev/sdb --entropy /home/movies/ | sudo dmsetup create artifice
 
-debug_access:
+debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
 	@echo 0 65536 artifice 1 pass /dev/sdb | sudo dmsetup create artifice
-
-debug_use:
-	@make debug_mkfs
-	@make debug_mount
-
-debug_mkfs:
-	@sudo mkfs.fat -F32 /dev/dm-0
-
-debug_mount:
-	@sudo mount -ouser,umask=000 /dev/dm-0 /mnt
 
 debug_end:
 	@sudo dmsetup remove artifice || true

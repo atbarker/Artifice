@@ -16,7 +16,7 @@
  * the 4KB acts as a cache.
  * 
  * @device  Block device to look at.
- * @return  FS_XXXX/ FS_ERR.
+ * @return  FS_XXXX/FS_ERR.
  */
 static int8_t 
 detect_fs(struct block_device *device, struct afs_passive_fs *fs)
@@ -78,6 +78,7 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     afs_debug("Device: %s", args->passive_dev);
 
     // These may be optional depending on the type.
+    // TODO: Add long parameter for reed-solomon configuration.
     for (i = DISK + 1; i < argc; i++) {
         if (!strcmp(argv[i], "--entropy")) {
             afs_assert(++i < argc, err, "missing value [entropy source]");
@@ -95,12 +96,12 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     // Now that we have all the arguments, we need to make sure
     // that they semantically make sense.
     switch (args->instance_type) {
-        case TYPE_NEW:
+        case TYPE_CREATE:
             afs_assert(args->entropy_dir[0] != 0, err, "entropy source not provided");
             afs_assert(args->shadow_passphrase[0] == 0, err, "shadow passphrase provided");
             break;
 
-        case TYPE_ACCESS:
+        case TYPE_MOUNT:
             afs_assert(args->entropy_dir[0] == 0, err, "entropy source provided");
             afs_assert(args->shadow_passphrase[0] == 0, err, "shadow passphrase provided");
             break;
@@ -198,8 +199,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     afs_assert_action(instance_size >= AFS_MIN_SIZE, ret = -EINVAL, err, "instance too small [%llu]", instance_size);
 
     // Confirm our structure sizes.
-    afs_assert_action(sizeof(*sb) <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "super block structure too large [%lu]", sizeof(*sb));
-    afs_assert_action(sizeof(struct afs_map_block) <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "map block structure too large");
+    afs_assert_action(sizeof(*sb) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "super block structure incorrect size [%lu]", sizeof(*sb));
+    afs_assert_action(sizeof(struct afs_ptr_block) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "pointer block structure incorrect size");
 
     context = kmalloc(sizeof(*context), GFP_KERNEL);
     afs_assert_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);
@@ -266,14 +267,14 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     sb = &context->super_block;
     switch (args->instance_type) {
-        case TYPE_NEW:
+        case TYPE_CREATE:
             // TODO: Acquire carrier block count from RS parameters.
             build_configuration(context, 4);
             ret = write_super_block(sb, fs, context);
             afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
             break;
         
-        case TYPE_ACCESS:
+        case TYPE_MOUNT:
             ret = find_super_block(sb, context);
             afs_assert(!ret, sb_err, "could not find super block [%d]", ret);
             break;
@@ -320,19 +321,19 @@ afs_dtr(struct dm_target *ti)
     int err;
 
     // Update the Artifice map on the disk.
-    err = afs_create_map_tables(context);
+    err = afs_create_map_blocks(context);
     if (err) {
-        afs_alert("could not create Artifice map tables [%d]", err);
+        afs_alert("could not create Artifice map blocks [%d]", err);
     } else {
-        err = write_map_tables(context, true);
+        err = write_map_blocks(context, true);
         if (err) {
             afs_alert("could not update Artifice map on disk [%d]", err);
         }
-        vfree(context->afs_map_tables);
+        vfree(context->afs_map_blocks);
     }
 
-    // Free the Artifice map blocks.
-    kfree(context->afs_map_blocks);
+    // Free the Artifice pointer blocks.
+    kfree(context->afs_ptr_blocks);
 
     // Free the Artifice map.
     vfree(context->afs_map);

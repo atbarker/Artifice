@@ -197,30 +197,30 @@ build_configuration(struct afs_private *context, uint8_t num_carrier_blocks)
 {
     context->num_carrier_blocks = num_carrier_blocks;
     context->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * context->num_carrier_blocks);
-    context->unused_space_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) % context->map_entry_sz;
-    context->num_map_entries_per_table = (AFS_BLOCK_SIZE - SHA512_SZ) / context->map_entry_sz;
+    context->unused_space_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) % context->map_entry_sz;
+    context->num_map_entries_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) / context->map_entry_sz;
     context->num_blocks = context->instance_size / AFS_BLOCK_SIZE;
 
     // Kernel doesn't support floating point math. We need to round up.
-    context->num_map_tables = context->num_blocks / context->num_map_entries_per_table;
-    context->num_map_tables += (context->num_blocks % context->num_map_entries_per_table)? 1: 0;
+    context->num_map_blocks = context->num_blocks / context->num_map_entries_per_block;
+    context->num_map_blocks += (context->num_blocks % context->num_map_entries_per_block)? 1: 0;
 
-    // We store a certain amount of pointers to map tables in the SB itself. 
-    // So we need to adjust for that when calculating num_map_blocks. We also
+    // We store a certain amount of pointers to map blocks in the SB itself. 
+    // So we need to adjust for that when calculating num_ptr_blocks. We also
     // exploit unsigned math.
-    if ((context->num_map_tables - SB_MAP_PTRS_SZ) > context->num_map_tables) {
+    if ((context->num_map_blocks - NUM_MAP_BLKS_IN_SB) > context->num_map_blocks) {
         // We can store everything in the SB itself.
-        context->num_map_blocks = 0;
+        context->num_ptr_blocks = 0;
     } else {
-        context->num_map_blocks = (context->num_map_tables - SB_MAP_PTRS_SZ) / MAP_BLK_PTRS_SZ;
-        context->num_map_blocks += ((context->num_map_tables - SB_MAP_PTRS_SZ) % MAP_BLK_PTRS_SZ)? 1: 0;
+        context->num_ptr_blocks = (context->num_map_blocks - NUM_MAP_BLKS_IN_SB) / NUM_MAP_BLKS_IN_PB;
+        context->num_ptr_blocks += ((context->num_map_blocks - NUM_MAP_BLKS_IN_SB) % NUM_MAP_BLKS_IN_PB)? 1: 0;
     }
 
     afs_debug("Map entry size: %u", context->map_entry_sz);
-    afs_debug("Unused: %u | Entries per table: %u", context->unused_space_per_table, context->num_map_entries_per_table);
+    afs_debug("Unused: %u | Entries per block: %u", context->unused_space_per_block, context->num_map_entries_per_block);
     afs_debug("Blocks: %u", context->num_blocks);
-    afs_debug("Map tables: %u", context->num_map_tables);
     afs_debug("Map blocks: %u", context->num_map_blocks);
+    afs_debug("Ptr blocks: %u", context->num_ptr_blocks);
 }
 
 /**
@@ -248,8 +248,8 @@ afs_create_map(struct afs_private *context)
     for (i = 0; i < num_blocks; i++) {
         map_tuple = (struct afs_map_tuple*)(map_entries + (i * map_entry_sz));
         for (j = 0; j < context->num_carrier_blocks; j++) {
-            map_tuple->carrier_block_pointer = AFS_INVALID_BLOCK;
-            map_tuple->entropy_block_pointer = AFS_INVALID_BLOCK;
+            map_tuple->carrier_block_ptr = AFS_INVALID_BLOCK;
+            map_tuple->entropy_block_ptr = AFS_INVALID_BLOCK;
             map_tuple->checksum = 0;
             map_tuple += 1;
         }
@@ -271,14 +271,14 @@ done:
 int
 afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
 {
-    struct afs_map_block *map_block = NULL;
+    struct afs_ptr_block *ptr_block = NULL;
     uint8_t *afs_map = NULL;
-    uint8_t *map_table = NULL;
-    uint8_t *map_table_hash = NULL;
-    uint8_t *map_table_unused = NULL;
-    uint8_t *map_table_entries = NULL;
+    uint8_t *map_block = NULL;
+    uint8_t *map_block_hash = NULL;
+    uint8_t *map_block_unused = NULL;
+    uint8_t *map_block_entries = NULL;
     uint8_t  map_entry_sz;
-    uint8_t  num_map_entries_per_table;
+    uint8_t  num_map_entries_per_block;
     uint32_t next_block;
     uint32_t entries_read;
     uint32_t entries_left;
@@ -289,104 +289,104 @@ afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
     afs_map = context->afs_map;
 
     map_entry_sz = context->map_entry_sz;
-    num_map_entries_per_table = context->num_map_entries_per_table;
+    num_map_entries_per_block = context->num_map_entries_per_block;
 
-    map_table = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
-    map_block = kmalloc(sizeof(*map_block), GFP_KERNEL);
-    afs_assert_action(map_block && map_table, ret = -ENOMEM, err, "could not allocate memory for map data [%d]", ret);
+    map_block = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
+    ptr_block = kmalloc(sizeof(*ptr_block), GFP_KERNEL);
+    afs_assert_action(map_block && ptr_block, ret = -ENOMEM, err, "could not allocate memory for map data [%d]", ret);
 
     // Read in everything from the super block first.
     entries_read = 0;
-    for (i = 0; i < SB_MAP_PTRS_SZ; i++) {
-        // Read map table.
-        ret = read_page(map_table, context->bdev, sb->map_table_pointers[i], false);
-        afs_assert(!ret, read_err, "could not read map table [%d:%u]", ret, entries_read % context->num_map_tables);
-        allocation_set(context, sb->map_table_pointers[i]);
+    for (i = 0; i < NUM_MAP_BLKS_IN_SB; i++) {
+        // Read map block.
+        ret = read_page(map_block, context->bdev, sb->map_block_ptrs[i], false);
+        afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, entries_read % context->num_map_blocks);
+        allocation_set(context, sb->map_block_ptrs[i]);
 
-        // Offset into the table.
-        map_table_hash = map_table;
-        map_table_unused = map_table_hash + SHA512_SZ;
-        map_table_entries = map_table_unused + context->unused_space_per_table;
+        // Offset into the block.
+        map_block_hash = map_block;
+        map_block_unused = map_block_hash + SHA512_SZ;
+        map_block_entries = map_block_unused + context->unused_space_per_block;
         // TODO: Calculate and verify hash.
 
         entries_left = context->num_blocks - entries_read;
-        if (entries_left <= num_map_entries_per_table) {
-            memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, entries_left * map_entry_sz);
+        if (entries_left <= num_map_entries_per_block) {
+            memcpy(afs_map + (entries_read * map_entry_sz), map_block_entries, entries_left * map_entry_sz);
             entries_read += entries_left;
             break;
         } else {
-            memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, num_map_entries_per_table * map_entry_sz);
-            entries_read += num_map_entries_per_table;
+            memcpy(afs_map + (entries_read * map_entry_sz), map_block_entries, num_map_entries_per_block * map_entry_sz);
+            entries_read += num_map_entries_per_block;
         }
     }
-    afs_debug("super block's map tables read");
+    afs_debug("super block's map blocks read");
 
-    // Begin reading from map blocks.
-    for (i = 0; i < context->num_map_blocks; i++) {
-        next_block = (i == 0)? sb->next_map_block: map_block->next_map_block;
-        ret = read_page(map_block, context->bdev, next_block, false);
-        afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, i);
+    // Begin reading from pointer blocks.
+    for (i = 0; i < context->num_ptr_blocks; i++) {
+        next_block = (i == 0)? sb->first_ptr_block: ptr_block->next_ptr_block;
+        ret = read_page(ptr_block, context->bdev, next_block, false);
+        afs_assert(!ret, read_err, "could not read pointer block [%d:%u]", ret, i);
         allocation_set(context, next_block);
-        // TODO: Calculate and verify hash of map_block.
+        // TODO: Calculate and verify hash of ptr_block.
 
-        for (j = 0; j < MAP_BLK_PTRS_SZ; i++) {
-            // Read map table.
-            ret = read_page(map_table, context->bdev, map_block->map_table_pointers[j], false);
-            afs_assert(!ret, read_err, "could not read map table [%d:%u]", ret, entries_read % context->num_map_tables);
-            allocation_set(context, map_block->map_table_pointers[j]);
+        for (j = 0; j < NUM_MAP_BLKS_IN_PB; i++) {
+            // Read map block.
+            ret = read_page(map_block, context->bdev, ptr_block->map_block_ptrs[j], false);
+            afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, entries_read % context->num_map_blocks);
+            allocation_set(context, ptr_block->map_block_ptrs[j]);
 
-            // Offset into the table.
-            map_table_hash = map_table;
-            map_table_unused = map_table_hash + SHA512_SZ;
-            map_table_entries = map_table_unused + context->unused_space_per_table;
+            // Offset into the block.
+            map_block_hash = map_block;
+            map_block_unused = map_block_hash + SHA512_SZ;
+            map_block_entries = map_block_unused + context->unused_space_per_block;
             // TODO: Calculate and verify hash.
 
             entries_left = context->num_blocks - entries_read;
-            if (entries_left <= num_map_entries_per_table) {
-                memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, entries_left * map_entry_sz);
+            if (entries_left <= num_map_entries_per_block) {
+                memcpy(afs_map + (entries_read * map_entry_sz), map_block_entries, entries_left * map_entry_sz);
                 entries_read += entries_left;
                 break;
             } else {
-                memcpy(afs_map + (entries_read * map_entry_sz), map_table_entries, num_map_entries_per_table * map_entry_sz);
-                entries_read += num_map_entries_per_table;
+                memcpy(afs_map + (entries_read * map_entry_sz), map_block_entries, num_map_entries_per_block * map_entry_sz);
+                entries_read += num_map_entries_per_block;
             }
         }
 
         // If we break into here because no more entries were left,
-        // then clearly we shouldn't even have any more map blocks 
+        // then clearly we shouldn't even have any more pointer blocks
         // left.
     }
     afs_assert_action(entries_read == context->num_blocks, ret = -EIO, read_err, 
                       "read incorrect amount [%u:%u]", entries_read, context->num_blocks);
-    afs_debug("map blocks' map tables read");
+    afs_debug("pointer blocks' map blocks read");
 
+    kfree(ptr_block);
     kfree(map_block);
-    kfree(map_table);
     return 0;
 
 read_err:
+    if (ptr_block) kfree(ptr_block);
     if (map_block) kfree(map_block);
-    if (map_table) kfree(map_table);
 
 err:
     return ret;
 }
 
 /**
- * Create the Artifice map tables.
+ * Create the Artifice map blocks.
  */
 int
-afs_create_map_tables(struct afs_private *context)
+afs_create_map_blocks(struct afs_private *context)
 {
     uint8_t *ptr = NULL;
     uint8_t *afs_map = NULL;
-    uint8_t *map_tables = NULL;
+    uint8_t *map_blocks = NULL;
     uint8_t *hash = NULL;
     uint8_t *unused_space = NULL;
     uint8_t *entries_start = NULL;
     uint8_t  map_entry_sz;
-    uint8_t  num_map_entries_per_table;
-    uint32_t num_map_tables;
+    uint8_t  num_map_entries_per_block;
+    uint32_t num_map_blocks;
     uint32_t num_blocks;
     uint32_t entries_written;
     uint32_t entries_left;
@@ -395,175 +395,174 @@ afs_create_map_tables(struct afs_private *context)
 
     afs_map = context->afs_map;
     map_entry_sz = context->map_entry_sz;
-    num_map_entries_per_table = context->num_map_entries_per_table;
-    num_map_tables = context->num_map_tables;
+    num_map_entries_per_block = context->num_map_entries_per_block;
+    num_map_blocks = context->num_map_blocks;
     num_blocks = context->num_blocks;
 
-    // Allocate all required map_tables.
-    map_tables = vmalloc(AFS_BLOCK_SIZE * num_map_tables);
-    afs_assert_action(map_tables, ret = -ENOMEM, table_err, "could not allocate map tables [%d]", ret);
-    afs_debug("allocated Artifice map tables");
+    // Allocate all required map_blocks.
+    map_blocks = vmalloc(AFS_BLOCK_SIZE * num_map_blocks);
+    afs_assert_action(map_blocks, ret = -ENOMEM, block_err, "could not allocate map blocks [%d]", ret);
+    afs_debug("allocated Artifice map blocks");
 
-    memset(map_tables, 0, AFS_BLOCK_SIZE * num_map_tables);
+    memset(map_blocks, 0, AFS_BLOCK_SIZE * num_map_blocks);
     entries_written = 0;
 
-    ptr = map_tables;
-    for (i = 0; i < num_map_tables; i++) {
+    ptr = map_blocks;
+    for (i = 0; i < num_map_blocks; i++) {
         hash = ptr;
         unused_space = hash + SHA512_SZ;
-        entries_start = unused_space + context->unused_space_per_table;
+        entries_start = unused_space + context->unused_space_per_block;
         
         entries_left = num_blocks - entries_written;
-        if (entries_left <= num_map_entries_per_table) {
+        if (entries_left <= num_map_entries_per_block) {
             memcpy(entries_start, afs_map + (entries_written * map_entry_sz), entries_left * map_entry_sz);
             entries_written += entries_left;
         } else {
-            memcpy(entries_start, afs_map + (entries_written * map_entry_sz), num_map_entries_per_table * map_entry_sz);
-            entries_written += num_map_entries_per_table;
+            memcpy(entries_start, afs_map + (entries_written * map_entry_sz), num_map_entries_per_block * map_entry_sz);
+            entries_written += num_map_entries_per_block;
         }
 
-        hash_sha512(entries_start, AFS_BLOCK_SIZE - SHA512_SZ - context->unused_space_per_table, hash);
+        hash_sha512(entries_start, AFS_BLOCK_SIZE - SHA512_SZ - context->unused_space_per_block, hash);
         ptr += AFS_BLOCK_SIZE;
     }
     afs_assert_action(entries_written == num_blocks, ret = -EIO, write_err, 
                       "wrote incorrect amount [%u:%u]", entries_written, num_blocks);
-    afs_debug("initialized Artifice map tables");
+    afs_debug("initialized Artifice map blocks");
     
-    context->afs_map_tables = map_tables;
+    context->afs_map_blocks = map_blocks;
     return 0;
     
 write_err:
-    vfree(map_tables);
+    vfree(map_blocks);
 
-table_err:
+block_err:
     return ret;
 }
 
 /**
- * Write map tables to map blocks.
+ * Write map blocks to pointer blocks.
  */
 int
-write_map_tables(struct afs_private *context, bool update)
+write_map_blocks(struct afs_private *context, bool update)
 {
     struct afs_super_block *sb = NULL;
     struct afs_passive_fs  *fs = NULL;
-    struct afs_map_block   *afs_map_blocks = NULL;
-    uint8_t *afs_map_tables = NULL;
-    uint32_t num_map_tables;
+    struct afs_ptr_block   *afs_ptr_blocks = NULL;
+    uint8_t *afs_map_blocks = NULL;
     uint32_t num_map_blocks;
-    uint32_t tables_written;
-    uint32_t tables_left;
+    uint32_t num_ptr_blocks;
+    uint32_t blocks_written;
+    uint32_t blocks_left;
     uint32_t block_num;
     int64_t i, j;
     int ret = 0;
 
     sb = &context->super_block;
     fs = &context->passive_fs;
-    afs_map_tables = context->afs_map_tables;
+    afs_map_blocks = context->afs_map_blocks;
 
-    num_map_tables = context->num_map_tables;
     num_map_blocks = context->num_map_blocks;
+    num_ptr_blocks = context->num_ptr_blocks;
 
-    // First utilize all the map table pointers from the super block.
-    tables_written = 0;
-    for (i = 0; i < SB_MAP_PTRS_SZ; i++) {
-        tables_left = num_map_tables - tables_written;
-        if (!tables_left) {
-            afs_debug("super block map table pointers filled");
+    // First utilize all the map block pointers from the super block.
+    blocks_written = 0;
+    for (i = 0; i < NUM_MAP_BLKS_IN_SB; i++) {
+        blocks_left = num_map_blocks - blocks_written;
+        if (!blocks_left) {
+            afs_debug("super block map block pointers filled");
             return 0;
         }
 
         if (!update) {
             block_num = acquire_block(fs, context);
             afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
-            sb->map_table_pointers[i] = block_num;
+            sb->map_block_ptrs[i] = block_num;
         } else {
-            block_num = sb->map_table_pointers[i];
+            block_num = sb->map_block_ptrs[i];
         }
-        ret = write_page(afs_map_tables + (tables_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
-        afs_assert(!ret, done, "could not write table [%d:%u]", ret, tables_written);
-        tables_written += 1;
+        ret = write_page(afs_map_blocks + (blocks_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
+        afs_assert(!ret, done, "could not write blocks [%d:%u]", ret, blocks_written);
+        blocks_written += 1;
     }
-    afs_debug("super block map table pointers filled");
+    afs_debug("super block map block pointers filled");
 
-    // If we even reach this point, then it means that some map_blocks are required.
-    afs_map_blocks = context->afs_map_blocks;
-    for (i = 0; i < num_map_blocks; i++) {
-        for (j = 0; j < MAP_BLK_PTRS_SZ; j++) {
-            tables_left = num_map_tables - tables_written;
-            if (!tables_left) {
+    // If we even reach this point, then it means that some ptr_blocks are required.
+    afs_ptr_blocks = context->afs_ptr_blocks;
+    for (i = 0; i < num_ptr_blocks; i++) {
+        for (j = 0; j < NUM_MAP_BLKS_IN_PB; j++) {
+            blocks_left = num_map_blocks - blocks_written;
+            if (!blocks_left) {
                 break;
             }
             
             if (!update) {
                 block_num = acquire_block(fs, context);
                 afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
-                afs_map_blocks[i].map_table_pointers[j] = block_num;
+                afs_ptr_blocks[i].map_block_ptrs[j] = block_num;
             } else {
-                block_num = afs_map_blocks[i].map_table_pointers[j];
+                block_num = afs_ptr_blocks[i].map_block_ptrs[j];
             }
-            ret = write_page(afs_map_tables + (tables_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
-            afs_assert(!ret, done, "could not write table [%d:%u]", ret, tables_written);
-            tables_written += 1;
+            ret = write_page(afs_map_blocks + (blocks_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
+            afs_assert(!ret, done, "could not write block [%d:%u]", ret, blocks_written);
+            blocks_written += 1;
         }
     }
-    afs_debug("map blocks map table pointers filled");
+    afs_debug("pointer blocks map block pointers filled");
     ret = 0;
 
 done:
     return ret;
 }
 
-
 /**
- * Write out the map blocks to disk.
+ * Write out the ptr blocks to disk.
  */
 int
-write_map_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
+write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
 {
-    struct afs_map_block *map_blocks = NULL;
-    uint8_t  map_block_digest[SHA1_SZ];
-    uint32_t num_map_blocks;
+    struct afs_ptr_block *ptr_blocks = NULL;
+    uint8_t  ptr_block_digest[SHA1_SZ];
+    uint32_t num_ptr_blocks;
     uint32_t block_num;
     int64_t i;
     int ret = 0;
 
-    // Write all the map tables.
-    ret = write_map_tables(context, false);
-    afs_assert(!ret, done, "could not write Artifice map tables [%d]", ret);
+    // Write all the map blocks.
+    ret = write_map_blocks(context, false);
+    afs_assert(!ret, done, "could not write Artifice map blocks [%d]", ret);
 
-    num_map_blocks = context->num_map_blocks;
-    if (!num_map_blocks) {
+    num_ptr_blocks = context->num_ptr_blocks;
+    if (!num_ptr_blocks) {
         return 0;
     }
 
-    // Write out the map blocks themselves to disk. Needs to be done in reverse
-    // as map blocks themselves hold pointers to other map blocks.
-    map_blocks = context->afs_map_blocks;
-    for (i = num_map_blocks-1; i >= 0; i--) {
-        // The last map block needs to have an invalid pointer
+    // Write out the ptr blocks themselves to disk. Needs to be done in reverse
+    // as ptr blocks themselves hold pointers to other ptr blocks.
+    ptr_blocks = context->afs_ptr_blocks;
+    for (i = num_ptr_blocks-1; i >= 0; i--) {
+        // The last ptr block needs to have an invalid pointer
         // to the next.
-        if (i == num_map_blocks-1) {
-            map_blocks[i].next_map_block = AFS_INVALID_BLOCK;
+        if (i == num_ptr_blocks-1) {
+            ptr_blocks[i].next_ptr_block = AFS_INVALID_BLOCK;
         }
 
-        // Calculate hash of the map blocks.
-        hash_sha1((uint8_t*)(map_blocks + i) + SHA128_SZ, sizeof(*map_blocks) - SHA128_SZ, map_block_digest);
-        memcpy(map_blocks[i].hash, map_block_digest, sizeof(map_blocks[i].hash));
+        // Calculate hash of the ptr blocks.
+        hash_sha1((uint8_t*)(ptr_blocks + i) + SHA128_SZ, sizeof(*ptr_blocks) - SHA128_SZ, ptr_block_digest);
+        memcpy(ptr_blocks[i].hash, ptr_block_digest, sizeof(ptr_blocks[i].hash));
 
         // Write to disk and save pointer.
         block_num = acquire_block(fs, context);
         afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
-        ret = write_page(map_blocks + i, context->bdev, block_num, false);
-        afs_assert(!ret, done, "could not write map block [%d:%llu]", ret, i);
+        ret = write_page(ptr_blocks + i, context->bdev, block_num, false);
+        afs_assert(!ret, done, "could not write ptr block [%d:%llu]", ret, i);
         
         if (i == 0) {
-            sb->next_map_block = block_num;
+            sb->first_ptr_block = block_num;
         } else {
-            map_blocks[i-1].next_map_block = block_num;
+            ptr_blocks[i-1].next_ptr_block = block_num;
         }
     }
-    afs_debug("map blocks written");
+    afs_debug("pointer blocks written");
     ret = 0;
 
 done:
@@ -579,7 +578,7 @@ int
 write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
 {
     const uint32_t sb_block = 0;
-    struct afs_map_block *map_blocks = NULL;
+    struct afs_ptr_block *ptr_blocks = NULL;
     int ret = 0;
 
     // Reserve space for the super block location.
@@ -589,20 +588,20 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     ret = afs_create_map(context);
     afs_assert(!ret, map_err, "could not create Artifice map [%d]", ret);
 
-    // Build the Artifice Map Table.
-    ret = afs_create_map_tables(context);
-    afs_assert(!ret, table_err, "could not create Artifice map table [%d]", ret);
-
-    // Allocate the Artifice Map Blocks.
-    map_blocks = kmalloc(context->num_map_blocks * sizeof(*map_blocks), GFP_KERNEL);
-    afs_assert_action(map_blocks, ret = -ENOMEM, block_err, "could not allocate map_blocks [%d]", ret);
-    memset(map_blocks, 0, context->num_map_blocks * sizeof(*map_blocks));
-    context->afs_map_blocks = map_blocks;
-
     // Build the Artifice Map Blocks.
-    sb->next_map_block = AFS_INVALID_BLOCK;
-    ret = write_map_blocks(sb, fs, context);
-    afs_assert(!ret, block_err, "could not write map blocks [%d]", ret);
+    ret = afs_create_map_blocks(context);
+    afs_assert(!ret, map_block_err, "could not create Artifice map blocks [%d]", ret);
+
+    // Allocate the Artifice Pointer Blocks.
+    ptr_blocks = kmalloc(context->num_ptr_blocks * sizeof(*ptr_blocks), GFP_KERNEL);
+    afs_assert_action(ptr_blocks, ret = -ENOMEM, ptr_block_err, "could not allocate ptr_blocks [%d]", ret);
+    memset(ptr_blocks, 0, context->num_ptr_blocks * sizeof(*ptr_blocks));
+    context->afs_ptr_blocks = ptr_blocks;
+
+    // Build the Artifice Pointer Blocks.
+    sb->first_ptr_block = AFS_INVALID_BLOCK;
+    ret = write_ptr_blocks(sb, fs, context);
+    afs_assert(!ret, ptr_block_err, "could not write pointer blocks [%d]", ret);
 
     // 1. Take note of the instance size.
     // 2. Calculate the hash of the provided passphrase.
@@ -617,17 +616,17 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
     afs_debug("super block written to disk [block: %u]", sb_block);
 
-    // We don't need the map tables anymore.
-    vfree(context->afs_map_tables);
+    // We don't need the map blocks anymore.
+    vfree(context->afs_map_blocks);
     return 0;
 
 sb_err:
-    kfree(context->afs_map_blocks);
+    kfree(context->afs_ptr_blocks);
 
-block_err:
-    vfree(context->afs_map_tables);
+ptr_block_err:
+    vfree(context->afs_map_blocks);
 
-table_err:
+map_block_err:
     vfree(context->afs_map);
 
 map_err:
@@ -656,32 +655,32 @@ rebuild_allocation_vector(struct afs_private *context)
     for (i = 0; i < num_entries; i++) {
         map_tuple = (struct afs_map_tuple*)(afs_map + (i * map_entry_sz));
         for (j = 0; j < num_carrier_blocks; j++) {
-            allocation_set(context, map_tuple->carrier_block_pointer);
+            allocation_set(context, map_tuple->carrier_block_ptr);
             map_tuple += 1;
         }
     }
 }
 
 /**
- * Initialize the entires into the map blocks.
+ * Initialize the entires into the pointer blocks.
  */
 static int
-rebuild_map_blocks(struct afs_private *context)
+rebuild_ptr_blocks(struct afs_private *context)
 {
-    struct afs_map_block *afs_map_blocks = NULL;
-    uint32_t num_map_blocks;
+    struct afs_ptr_block *afs_ptr_blocks = NULL;
+    uint32_t num_ptr_blocks;
     uint32_t block_num;
     uint32_t i;
     int ret;
 
-    // Acquire pointer to map blocks.
-    afs_map_blocks = context->afs_map_blocks;
+    // Acquire pointer to pointer blocks.
+    afs_ptr_blocks = context->afs_ptr_blocks;
 
-    num_map_blocks = context->num_map_blocks;
-    for (i = 0; i < num_map_blocks; i++) {
-        block_num = (i == 0)? context->super_block.next_map_block: afs_map_blocks[i].next_map_block;
-        ret = read_page(afs_map_blocks + i, context->bdev, block_num, false);
-        afs_assert(!ret, done, "could not read map block [%d:%u]", ret, block_num);
+    num_ptr_blocks = context->num_ptr_blocks;
+    for (i = 0; i < num_ptr_blocks; i++) {
+        block_num = (i == 0)? context->super_block.first_ptr_block: afs_ptr_blocks[i].next_ptr_block;
+        ret = read_page(afs_ptr_blocks + i, context->bdev, block_num, false);
+        afs_assert(!ret, done, "could not read pointer block [%d:%u]", ret, block_num);
     }
     ret = 0;
 
@@ -698,7 +697,7 @@ int
 find_super_block(struct afs_super_block *sb, struct afs_private *context)
 {
     const uint32_t sb_block = 0;
-    struct afs_map_block *map_blocks = NULL;
+    struct afs_ptr_block *ptr_blocks = NULL;
     uint8_t sb_digest[SHA256_SZ];
     int ret = 0;
 
@@ -725,26 +724,26 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     afs_assert(!ret, err, "could not create artifice map [%d]", ret);
 
     ret = afs_fill_map(sb, context);
-    afs_assert(!ret, fill_err, "could not fill artifice map [%d]", ret);
+    afs_assert(!ret, map_fill_err, "could not fill artifice map [%d]", ret);
     rebuild_allocation_vector(context);
     afs_debug("Artifice map rebuilt");
 
-    // Create the Artifice Map Blocks. These are required for when
-    // we need to re-write the map tables.
-    map_blocks = kmalloc(context->num_map_blocks * sizeof(*map_blocks), GFP_KERNEL);
-    afs_assert_action(map_blocks, ret = -ENOMEM, fill_err, "could not allocate map_blocks [%d]", ret);
-    context->afs_map_blocks = map_blocks;
+    // Create the Artifice Pointer Blocks. These are required for when
+    // we need to re-write the map blocks.
+    ptr_blocks = kmalloc(context->num_ptr_blocks * sizeof(*ptr_blocks), GFP_KERNEL);
+    afs_assert_action(ptr_blocks, ret = -ENOMEM, map_fill_err, "could not allocate ptr_blocks [%d]", ret);
+    context->afs_ptr_blocks = ptr_blocks;
 
-    ret = rebuild_map_blocks(context);
-    afs_assert(!ret, block_err, "could not rebuild Artifice map blocks [%d]", ret);
-    afs_debug("Artifice map block rebuilt");
+    ret = rebuild_ptr_blocks(context);
+    afs_assert(!ret, ptr_block_err, "could not rebuild Artifice pointer blocks [%d]", ret);
+    afs_debug("Artifice pointer blocks rebuilt");
 
     return 0;
 
-block_err:
+ptr_block_err:
     kfree(context->afs_map_blocks);
 
-fill_err:
+map_fill_err:
     vfree(context->afs_map);
 
 err:
@@ -907,14 +906,14 @@ __afs_read_block(struct afs_private *context, void *data, uint32_t block)
     map_entry_hash = map_entry + (context->num_carrier_blocks * sizeof(*map_entry_tuple));
     map_entry_entropy = map_entry_hash + SHA128_SZ;
 
-    if (map_entry_tuple[0].carrier_block_pointer == AFS_INVALID_BLOCK) {
+    if (map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
         // Zero-fill an unmapped block.
         memset(data, 0, AFS_BLOCK_SIZE);
     } else {
         // TODO: Use Reed-Solomon to rebuild block.
         for (i = 0; i < context->num_carrier_blocks; i++) {
-            ret = read_page(data, context->bdev, map_entry_tuple[i].carrier_block_pointer, false);
-            afs_assert_action(!ret, ret = -EIO, done, "could not read page at block [%u]", map_entry_tuple[i].carrier_block_pointer);
+            ret = read_page(data, context->bdev, map_entry_tuple[i].carrier_block_ptr, false);
+            afs_assert_action(!ret, ret = -EIO, done, "could not read page at block [%u]", map_entry_tuple[i].carrier_block_ptr);
         }
 
         // Confirm hash matches.
@@ -1012,7 +1011,7 @@ int afs_write_request(struct afs_private *context, struct bio *bio)
     // If this write is a modification, then we perform a read-modify-write.
     // Otherwise, a new block is allocated and written to.
     memset(raw_block, 0, AFS_BLOCK_SIZE);
-    if (map_entry_tuple[0].carrier_block_pointer != AFS_INVALID_BLOCK) {
+    if (map_entry_tuple[0].carrier_block_ptr != AFS_INVALID_BLOCK) {
         modification = true;
         ret = __afs_read_block(context, raw_block, block_num);
         afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
@@ -1036,11 +1035,11 @@ int afs_write_request(struct afs_private *context, struct bio *bio)
     // Issue the writes.
     for (i = 0; i < context->num_carrier_blocks; i++) {
         if (modification) {
-            block_num = map_entry_tuple[i].carrier_block_pointer;
+            block_num = map_entry_tuple[i].carrier_block_ptr;
         } else {
             block_num = acquire_block(&context->passive_fs, context);
             afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
-            map_entry_tuple[i].carrier_block_pointer = block_num;
+            map_entry_tuple[i].carrier_block_ptr = block_num;
         }
         ret = write_page(raw_block, context->bdev, block_num, false);
         afs_assert_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
@@ -1054,10 +1053,10 @@ int afs_write_request(struct afs_private *context, struct bio *bio)
 
 reset_entry:
     for (i = 0; i < context->num_carrier_blocks; i++) {
-        if (map_entry_tuple[i].carrier_block_pointer != AFS_INVALID_BLOCK) {
-            allocation_free(context, map_entry_tuple[i].carrier_block_pointer);
+        if (map_entry_tuple[i].carrier_block_ptr != AFS_INVALID_BLOCK) {
+            allocation_free(context, map_entry_tuple[i].carrier_block_ptr);
         }
-        map_entry_tuple[i].carrier_block_pointer = AFS_INVALID_BLOCK;
+        map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
 
 err:
