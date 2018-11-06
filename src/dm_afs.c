@@ -127,21 +127,16 @@ static void
 __work_afs_map(struct work_struct *work)
 {
     struct afs_private *context;
-    struct bio *bio;
     int ret;
 
     context = container_of(work, struct afs_private, map_work);
-    spin_lock(&context->bio_lock);
-    bio = context->bio;
-    spin_unlock(&context->bio_lock);
-
-    switch(bio_op(bio)) {
+    switch(bio_op(context->bio)) {
         case REQ_OP_READ:
-            ret = afs_read_request(context, bio);
+            ret = afs_read_request(context, context->bio);
             break;
 
         case REQ_OP_WRITE:
-            ret = afs_write_request(context, bio);
+            ret = afs_write_request(context, context->bio);
             break;
 
         case REQ_OP_FLUSH:
@@ -155,14 +150,12 @@ __work_afs_map(struct work_struct *work)
             ret = -EINVAL;
             afs_debug("What the hell!");
     }
-    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(bio));
+    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(context->bio));
 
 done:
-    bio_endio(bio);
-    spin_lock(&context->bio_lock);
+    bio_endio(context->bio);
     context->bio = NULL;
-    wake_up_process(context->current_process);
-    spin_unlock(&context->bio_lock);
+    wake_up_interruptible(&context->bio_waitq);
 }
 
 /**
@@ -212,7 +205,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->map_queue = create_singlethread_workqueue("afs_map queue");
     afs_assert_action(!IS_ERR(context->map_queue), ret = PTR_ERR(context->map_queue), wq_err, "could not create wq [%d]", ret);
     INIT_WORK(&context->map_work, __work_afs_map);
-    spin_lock_init(&context->bio_lock);
+    init_waitqueue_head(&context->bio_waitq);
 
     args = &context->instance_args;
     ret = parse_afs_args(args, argc, argv);
@@ -382,18 +375,12 @@ afs_map(struct dm_target *ti, struct bio *bio)
     struct afs_private *context = ti->private;
     uint32_t sector_offset;
     uint32_t max_sector_count;
+    int ret;
 
-    set_current_state(TASK_INTERRUPTIBLE);
-    spin_lock(&context->bio_lock);
-    context->current_process = current;
-    while (context->bio) {
-        spin_unlock(&context->bio_lock);
-        schedule();
-        spin_lock(&context->bio_lock);
-    }
+    do {
+        ret = wait_event_interruptible(context->bio_waitq, context->bio == NULL);
+    } while (ret == -ERESTARTSYS);
     context->bio = bio;
-    set_current_state(TASK_RUNNING);
-    spin_unlock(&context->bio_lock);
 
     // We only support bio's with a maximum length of 8 sectors (4KB).
     // Moreover, we only support processing a single block per bio. 

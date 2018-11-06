@@ -13,6 +13,7 @@
 #include <linux/types.h>
 #include <linux/device-mapper.h>
 #include <linux/spinlock_types.h>
+#include <linux/wait.h>
 
 #ifndef DM_AFS_H
 #define DM_AFS_H
@@ -230,7 +231,7 @@ struct __attribute__((aligned(4096))) afs_private {
     struct work_struct map_work;
     struct workqueue_struct *map_queue;
     struct bio *bio;
-    spinlock_t bio_lock;
+    wait_queue_head_t bio_waitq;
     struct task_struct *current_process;
 
     // Configuration information.
