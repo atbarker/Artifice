@@ -18,10 +18,10 @@
  * @device  Block device to look at.
  * @return  FS_XXXX/FS_ERR.
  */
-static int8_t 
-detect_fs(struct block_device *device, struct afs_passive_fs *fs)
+static int8_t
+detect_fs(struct block_device* device, struct afs_passive_fs* fs)
 {
-    uint8_t *page = NULL;
+    uint8_t* page = NULL;
     int8_t ret;
 
     page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
@@ -41,6 +41,8 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
     }
     kfree(page);
 
+    int lol;
+
     afs_debug("detected %d", ret);
     return ret;
 
@@ -58,7 +60,7 @@ alloc_err:
  * keep a NULL.
  */
 static int32_t
-parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
+parse_afs_args(struct afs_args* args, unsigned int argc, char* argv[])
 {
     const uint32_t BASE_10 = 10;
     const int8_t TYPE = 0;
@@ -71,8 +73,8 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
 
     // These three are always required.
     afs_assert(!kstrtou8(argv[TYPE], BASE_10, &args->instance_type), err, "instance type not integer");
-    strncpy(args->passphrase, argv[PASSPHRASE], PASSPHRASE_SZ-1);
-    strncpy(args->passive_dev, argv[DISK], PASSIVE_DEV_SZ-1);
+    strncpy(args->passphrase, argv[PASSPHRASE], PASSPHRASE_SZ - 1);
+    strncpy(args->passive_dev, argv[DISK], PASSIVE_DEV_SZ - 1);
     afs_debug("Type: %d", args->instance_type);
     afs_debug("Passphrase: %s", args->passphrase);
     afs_debug("Device: %s", args->passive_dev);
@@ -82,10 +84,10 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     for (i = DISK + 1; i < argc; i++) {
         if (!strcmp(argv[i], "--entropy")) {
             afs_assert(++i < argc, err, "missing value [entropy source]");
-            strncpy(args->entropy_dir, argv[i], ENTROPY_DIR_SZ-1);
+            strncpy(args->entropy_dir, argv[i], ENTROPY_DIR_SZ - 1);
         } else if (!strcmp(argv[i], "--shadow_passphrase")) {
             afs_assert(++i < argc, err, "missing value [shadow passphrase]");
-            strncpy(args->shadow_passphrase, argv[i], PASSPHRASE_SZ-1);
+            strncpy(args->shadow_passphrase, argv[i], PASSPHRASE_SZ - 1);
         } else {
             afs_assert(0, err, "unknown argument");
         }
@@ -96,23 +98,23 @@ parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
     // Now that we have all the arguments, we need to make sure
     // that they semantically make sense.
     switch (args->instance_type) {
-        case TYPE_CREATE:
-            afs_assert(args->entropy_dir[0] != 0, err, "entropy source not provided");
-            afs_assert(args->shadow_passphrase[0] == 0, err, "shadow passphrase provided");
-            break;
+    case TYPE_CREATE:
+        afs_assert(args->entropy_dir[0] != 0, err, "entropy source not provided");
+        afs_assert(args->shadow_passphrase[0] == 0, err, "shadow passphrase provided");
+        break;
 
-        case TYPE_MOUNT:
-            afs_assert(args->entropy_dir[0] == 0, err, "entropy source provided");
-            afs_assert(args->shadow_passphrase[0] == 0, err, "shadow passphrase provided");
-            break;
-        
-        case TYPE_SHADOW:
-            afs_assert(args->entropy_dir[0] != 0, err, "entropy source not provided");
-            afs_assert(args->shadow_passphrase[0] != 0, err, "shadow passphrase not provided");
-            break;
-        
-        default:
-            afs_assert(0, err, "unknown type of instance chosen");
+    case TYPE_MOUNT:
+        afs_assert(args->entropy_dir[0] == 0, err, "entropy source provided");
+        afs_assert(args->shadow_passphrase[0] == 0, err, "shadow passphrase provided");
+        break;
+
+    case TYPE_SHADOW:
+        afs_assert(args->entropy_dir[0] != 0, err, "entropy source not provided");
+        afs_assert(args->shadow_passphrase[0] != 0, err, "shadow passphrase not provided");
+        break;
+
+    default:
+        afs_assert(0, err, "unknown type of instance chosen");
     }
     return 0;
 
@@ -124,31 +126,31 @@ err:
  * Callback scheduled thread for the map function.
  */
 static void
-__work_afs_map(struct work_struct *work)
+__work_afs_map(struct work_struct* work)
 {
-    struct afs_private *context;
+    struct afs_private* context;
     int ret;
 
     context = container_of(work, struct afs_private, map_work);
-    switch(bio_op(context->bio)) {
-        case REQ_OP_READ:
-            ret = afs_read_request(context, context->bio);
-            break;
+    switch (bio_op(context->bio)) {
+    case REQ_OP_READ:
+        ret = afs_read_request(context, context->bio);
+        break;
 
-        case REQ_OP_WRITE:
-            ret = afs_write_request(context, context->bio);
-            break;
+    case REQ_OP_WRITE:
+        ret = afs_write_request(context, context->bio);
+        break;
 
-        case REQ_OP_FLUSH:
-            // We are anyway writing everything to disk directly,
-            // so this is like a nop.
-            ret = 0;
-            break;
+    case REQ_OP_FLUSH:
+        // We are anyway writing everything to disk directly,
+        // so this is like a nop.
+        ret = 0;
+        break;
 
-        default:
-            // This case should never be encountered.
-            ret = -EINVAL;
-            afs_debug("What the hell!");
+    default:
+        // This case should never be encountered.
+        ret = -EINVAL;
+        afs_debug("What the hell!");
     }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(context->bio));
 
@@ -177,12 +179,12 @@ done:
  * @return <0 Error.
  */
 static int
-afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+afs_ctr(struct dm_target* ti, unsigned int argc, char** argv)
 {
-    struct afs_private *context = NULL;
-    struct afs_args *args = NULL;
-    struct afs_passive_fs *fs = NULL;
-    struct afs_super_block *sb = NULL;
+    struct afs_private* context = NULL;
+    struct afs_args* args = NULL;
+    struct afs_passive_fs* fs = NULL;
+    struct afs_super_block* sb = NULL;
     int i, ret;
     int8_t detected_fs;
     uint64_t instance_size;
@@ -211,7 +213,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     ret = parse_afs_args(args, argc, argv);
     afs_assert(!ret, args_err, "unable to parse arguments");
 
-    // Acquire the block device based on the args. This gives us a 
+    // Acquire the block device based on the args. This gives us a
     // wrapper on top of the kernel block device structure.
     ret = dm_get_device(ti, args->passive_dev, dm_table_get_mode(ti->table), &context->passive_dev);
     afs_assert(!ret, args_err, "could not find given disk [%s]", args->passive_dev);
@@ -220,31 +222,31 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     fs = &context->passive_fs;
     detected_fs = detect_fs(context->bdev, fs);
     switch (detected_fs) {
-        case FS_FAT32:
-            afs_debug("detected FAT32");
-            break;
-        
-        case FS_NTFS:
-            afs_debug("detected NTFS");
-            break;
-        
-        case FS_EXT4:
-            afs_debug("detected EXT4");
-            break;
-        
-        case FS_ERR:
-            // TODO: Change.
-            // afs_assert_action(0, ret = -ENOENT, fs_err, "unknown file system");
-            break;
-        
-        default:
-            afs_assert_action(0, ret = -ENXIO, fs_err, "seems like all hell broke loose");
+    case FS_FAT32:
+        afs_debug("detected FAT32");
+        break;
+
+    case FS_NTFS:
+        afs_debug("detected NTFS");
+        break;
+
+    case FS_EXT4:
+        afs_debug("detected EXT4");
+        break;
+
+    case FS_ERR:
+        // TODO: Change.
+        // afs_assert_action(0, ret = -ENOENT, fs_err, "unknown file system");
+        break;
+
+    default:
+        afs_assert_action(0, ret = -ENXIO, fs_err, "seems like all hell broke loose");
     }
 
     // This is all just for testing.
     // BEGIN.
-    fs->block_list = kmalloc(65536 * sizeof(*fs->block_list), GFP_KERNEL);
-    fs->list_len = 65536;
+    fs->block_list = vmalloc(1048576 * sizeof(*fs->block_list));
+    fs->list_len = 1048576;
 
     for (i = 0; i < fs->list_len; i++) {
         fs->block_list[i] = i;
@@ -260,23 +262,23 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     sb = &context->super_block;
     switch (args->instance_type) {
-        case TYPE_CREATE:
-            // TODO: Acquire carrier block count from RS parameters.
-            build_configuration(context, 4);
-            ret = write_super_block(sb, fs, context);
-            afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
-            break;
-        
-        case TYPE_MOUNT:
-            ret = find_super_block(sb, context);
-            afs_assert(!ret, sb_err, "could not find super block [%d]", ret);
-            break;
-        
-        case TYPE_SHADOW:
-            // Create nested instance.
-            break;
+    case TYPE_CREATE:
+        // TODO: Acquire carrier block count from RS parameters.
+        build_configuration(context, 4);
+        ret = write_super_block(sb, fs, context);
+        afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
+        break;
+
+    case TYPE_MOUNT:
+        ret = find_super_block(sb, context);
+        afs_assert(!ret, sb_err, "could not find super block [%d]", ret);
+        break;
+
+    case TYPE_SHADOW:
+        // Create nested instance.
+        break;
     }
-    
+
     afs_debug("constructor completed");
     ti->private = context;
     return 0;
@@ -306,11 +308,11 @@ err:
  * destroyed.
  *
  * @ti  Target instance to be destroyed.
- */ 
-static void 
-afs_dtr(struct dm_target *ti)
+ */
+static void
+afs_dtr(struct dm_target* ti)
 {
-    struct afs_private *context = ti->private;
+    struct afs_private* context = ti->private;
     int err;
 
     // Update the Artifice map on the disk.
@@ -335,11 +337,11 @@ afs_dtr(struct dm_target *ti)
     bit_vector_free(context->allocation_vec);
 
     // Free the block list for the passive FS.
-    kfree(context->passive_fs.block_list);
+    vfree(context->passive_fs.block_list);
 
     // Put the device back.
     dm_put_device(ti, context->passive_dev);
-    
+
     // Destroy the map queue.
     destroy_workqueue(context->map_queue);
 
@@ -370,9 +372,9 @@ afs_dtr(struct dm_target *ti)
  *                      be resubmitted.
  */
 static int
-afs_map(struct dm_target *ti, struct bio *bio)
-{  
-    struct afs_private *context = ti->private;
+afs_map(struct dm_target* ti, struct bio* bio)
+{
+    struct afs_private* context = ti->private;
     uint32_t sector_offset;
     uint32_t max_sector_count;
     int ret;
@@ -383,7 +385,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
     context->bio = bio;
 
     // We only support bio's with a maximum length of 8 sectors (4KB).
-    // Moreover, we only support processing a single block per bio. 
+    // Moreover, we only support processing a single block per bio.
     // Hence, a request such as (length: 4KB, sector: 1) crosses
     // a block boundary and involves two blocks. For all such requests,
     // we truncate the bio to within the single page.
@@ -394,19 +396,19 @@ afs_map(struct dm_target *ti, struct bio *bio)
         dm_accept_partial_bio(bio, max_sector_count);
     }
 
-    switch(bio_op(bio)) {
-        case REQ_OP_READ:
-        case REQ_OP_WRITE:
-        case REQ_OP_FLUSH:
-            queue_work(context->map_queue, &context->map_work);
-            return DM_MAPIO_SUBMITTED;
-            break;
+    switch (bio_op(bio)) {
+    case REQ_OP_READ:
+    case REQ_OP_WRITE:
+    case REQ_OP_FLUSH:
+        queue_work(context->map_queue, &context->map_work);
+        return DM_MAPIO_SUBMITTED;
+        break;
 
-        default:
-            afs_debug("unknown operation");
-            context->bio = NULL;
-            bio_endio(bio);
-            return DM_MAPIO_KILL;
+    default:
+        afs_debug("unknown operation");
+        context->bio = NULL;
+        bio_endio(bio);
+        return DM_MAPIO_KILL;
     }
 }
 
@@ -414,7 +416,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
 
 static struct target_type afs_target = {
     .name = DM_AFS_NAME,
-    .version = {DM_AFS_MAJOR_VER, DM_AFS_MINOR_VER, DM_AFS_PATCH_VER},
+    .version = { DM_AFS_MAJOR_VER, DM_AFS_MINOR_VER, DM_AFS_PATCH_VER },
     .module = THIS_MODULE,
     .ctr = afs_ctr,
     .dtr = afs_dtr,
@@ -429,9 +431,9 @@ static struct target_type afs_target = {
  * @return  0   Target registered, no errors.
  * @return  <0  Target registration failed.
  */
-static __init int 
+static __init int
 afs_init(void)
-{   
+{
     int ret;
 
     ret = dm_register_target(&afs_target);

@@ -17,7 +17,7 @@
 bit_vector_t*
 bit_vector_create(uint64_t length)
 {
-    bit_vector_t *vector;
+    bit_vector_t* vector;
     uint64_t temp_length;
 
     temp_length = length;
@@ -42,8 +42,7 @@ bit_vector_create(uint64_t length)
  *
  * @param   vector      The bit vector to free
  */
-void
-bit_vector_free(bit_vector_t *vector)
+void bit_vector_free(bit_vector_t* vector)
 {
     vfree(vector->array);
     kfree(vector);
@@ -60,8 +59,7 @@ bit_vector_free(bit_vector_t *vector)
  *  EINVAL: vector is NULL.
  *  EINVAL: index is beyond vector length.
  */
-int
-bit_vector_set(bit_vector_t *vector, uint64_t index)
+int bit_vector_set(bit_vector_t* vector, uint64_t index)
 {
     uint8_t or_bits;
 
@@ -86,8 +84,7 @@ bit_vector_set(bit_vector_t *vector, uint64_t index)
  *  EINVAL: vector is NULL.
  *  EINVAL: index is beyond vector length.
  */
-int
-bit_vector_clear(bit_vector_t *vector, uint64_t index)
+int bit_vector_clear(bit_vector_t* vector, uint64_t index)
 {
     uint8_t and_bits;
 
@@ -113,8 +110,7 @@ bit_vector_clear(bit_vector_t *vector, uint64_t index)
  *  EINVAL: vector is NULL.
  *  EINVAL: index is beyond vector length.
  */
-int
-bit_vector_get(bit_vector_t *vector, uint64_t index)
+int bit_vector_get(bit_vector_t* vector, uint64_t index)
 {
     int8_t return_bits;
     int8_t and_bits;

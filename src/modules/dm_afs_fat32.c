@@ -4,66 +4,65 @@
  * Author: Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
-#include <dm_afs_modules.h>
 #include <dm_afs.h>
-#include <linux/kernel.h>
+#include <dm_afs_modules.h>
 #include <linux/errno.h>
-#include <linux/types.h>
+#include <linux/kernel.h>
 #include <linux/slab.h>
+#include <linux/types.h>
 
 // All the information about a FAT volume.
 struct fat_volume {
-    void		*fat_map;               // FAT mapped into memory.
-    uint32_t    *empty_clusters;        // List of empty clusters (blocks).
-    uint32_t 	num_data_clusters;      // Number of data cluster on the disk.
-    off_t 	    data_start_off;         // Byte offset for the second cluster.
-    size_t 	    num_alloc_files;        // Number of allocated files.
-    size_t 	    max_allocated_files;    // Number of allocatable files.
-    char 	    oem_name[8+1];          // Boot sector information.
-    uint32_t    num_empty_clusters;
+    void* fat_map;              // FAT mapped into memory.
+    uint32_t* empty_clusters;   // List of empty clusters (blocks).
+    uint32_t num_data_clusters; // Number of data cluster on the disk.
+    off_t data_start_off;       // Byte offset for the second cluster.
+    size_t num_alloc_files;     // Number of allocated files.
+    size_t max_allocated_files; // Number of allocatable files.
+    char oem_name[8 + 1];       // Boot sector information.
+    uint32_t num_empty_clusters;
 
     // Data from the DOS 2.0 parameter block.
-    uint16_t    bytes_sector;           // Bytes in a sector.
-    uint16_t    sector_order;           // Sector order.
-    uint8_t     sec_cluster;            // Sectors in cluster.
-    uint8_t     sec_cluster_order;      // Sector cluster order.
-    uint16_t    cluster_order;          // Cluster order.
-    uint16_t    reserved;               // Reserved sectors.
-    uint8_t     tables;                 // Number of fat tables.
-    uint16_t    root_entries;           // Max root entries.
-    uint8_t     media_desc;             // Media description.
-    uint32_t    total_sec;              // Total number of sectors.
-    uint32_t    sec_fat;                // Sectors per FAT.
+    uint16_t bytes_sector;     // Bytes in a sector.
+    uint16_t sector_order;     // Sector order.
+    uint8_t sec_cluster;       // Sectors in cluster.
+    uint8_t sec_cluster_order; // Sector cluster order.
+    uint16_t cluster_order;    // Cluster order.
+    uint16_t reserved;         // Reserved sectors.
+    uint8_t tables;            // Number of fat tables.
+    uint16_t root_entries;     // Max root entries.
+    uint8_t media_desc;        // Media description.
+    uint32_t total_sec;        // Total number of sectors.
+    uint32_t sec_fat;          // Sectors per FAT.
 
     // Data from DOS 3.0 block.
-    uint16_t    sec_track;              // Sectors per track.
-    uint16_t    num_heads;              // Number of heads.
-    uint32_t    hidden_sec;             // Number of hidden sectors.
+    uint16_t sec_track;  // Sectors per track.
+    uint16_t num_heads;  // Number of heads.
+    uint32_t hidden_sec; // Number of hidden sectors.
 
     // FAT32 extended.
-    uint16_t    driv_desc;              // Drive description.
-    uint16_t    version;                // Drive version.
-    uint32_t    root_dir_start;         // Start of the root directory.
-    uint16_t    fs_info_sec;            // Info sector offset.
-    uint16_t    alt_boot_sec;           // Alternate boot sector.
+    uint16_t driv_desc;      // Drive description.
+    uint16_t version;        // Drive version.
+    uint32_t root_dir_start; // Start of the root directory.
+    uint16_t fs_info_sec;    // Info sector offset.
+    uint16_t alt_boot_sec;   // Alternate boot sector.
 
     // NonFAT32 extended.
-    uint8_t     phys_driv_num;          // Physical drive number.
-    uint8_t     ext_boot_sig;           // Boot signature.
-    uint32_t    vol_id;                 // Volume id.
-    char        volume_label[11+1];     // Volume label.
-    char        fs_type[8+1];           // FS type.
-
+    uint8_t phys_driv_num;     // Physical drive number.
+    uint8_t ext_boot_sig;      // Boot signature.
+    uint32_t vol_id;           // Volume id.
+    char volume_label[11 + 1]; // Volume label.
+    char fs_type[8 + 1];       // FS type.
 };
 
 // Extended BIOS parameter block for FAT32.
 struct __attribute__((packed)) fat32_ebpb {
-    __le32  sec_fat;            // Sectors per fat.
-    __le16  drive_desc;         // Drive description.
-    __le16  version;            // Version.
-    __le32  root_start_clust;   // Starting cluster for the root dir.
-    __le16  fs_info_sec;        // Info sector.
-    __le16  alt_boot_sec;       // Alternate boot sector.
+    __le32 sec_fat;          // Sectors per fat.
+    __le16 drive_desc;       // Drive description.
+    __le16 version;          // Version.
+    __le32 root_start_clust; // Starting cluster for the root dir.
+    __le16 fs_info_sec;      // Info sector.
+    __le16 alt_boot_sec;     // Alternate boot sector.
     uint8_t reserved[12];
 };
 
@@ -72,31 +71,31 @@ struct __attribute__((packed)) nonfat32_ebpb {
     uint8_t physical_drive_num;
     uint8_t reserved;
     uint8_t extended_boot_sig;
-    __le32  volume_id;
-    char    volume_label[11];
-    char    fs_type[8];
+    __le32 volume_id;
+    char volume_label[11];
+    char fs_type[8];
 };
 
 // FAT32 boot sector. Exactly how it appears on disk.
 struct fat_boot_sector {
-    uint8_t jump_insn[3];   // Bootloader jump instruction.
-    char    oem_name[8];    // Standard information.
+    uint8_t jump_insn[3]; // Bootloader jump instruction.
+    char oem_name[8];     // Standard information.
 
     // Dos 2.0 parameter block (13 bytes).
-    __le16  bytes_sec;      // Bytes per sec.
-    uint8_t sec_cluster;    // Sectors per cluster.
-    __le16  res_sec;        // Reserved sectors.
-    uint8_t num_tables;		// Number of allocation tables.
-    __le16  max_root_ent;   // Maximum root entries.
-    __le16  total_sectors;  // Total sectors on disk.
-    uint8_t media_desc;     // Media descriptor.
-    __le16  sec_fat;        // Sectors per fat.
+    __le16 bytes_sec;     // Bytes per sec.
+    uint8_t sec_cluster;  // Sectors per cluster.
+    __le16 res_sec;       // Reserved sectors.
+    uint8_t num_tables;   // Number of allocation tables.
+    __le16 max_root_ent;  // Maximum root entries.
+    __le16 total_sectors; // Total sectors on disk.
+    uint8_t media_desc;   // Media descriptor.
+    __le16 sec_fat;       // Sectors per fat.
 
     // Dos 3.31 parameter block (12 bytes).
-    __le16  sec_track;      //sectors on each track
-    __le16  num_heads;      //number of heads
-    __le32  hidden_sec;     //number of hidden sectors
-    __le32  total_sec_32;   //total sectors (32 bit number)
+    __le16 sec_track;    //sectors on each track
+    __le16 num_heads;    //number of heads
+    __le32 hidden_sec;   //number of hidden sectors
+    __le32 total_sec_32; //total sectors (32 bit number)
 
     // BIOS parameter block - only FAT32.
     union __attribute__((packed)) {
@@ -112,17 +111,17 @@ struct fat_boot_sector {
  * Reads in boot parameter block as seen in DOS 2.0.
  */
 static int
-fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
+fat_read_dos_2_0_bpb(struct fat_volume* vol, const struct fat_boot_sector* boot_sec)
 {
     vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
     vol->sector_order = bsr(vol->bytes_sector);
-    afs_assert(is_power_of_2(vol->bytes_sector) && vol->sector_order >= 5 && vol->sector_order <= 12, 
-               out_invalid, "sector order mismatch [%d]", vol->sector_order);
+    afs_assert(is_power_of_2(vol->bytes_sector) && vol->sector_order >= 5 && vol->sector_order <= 12,
+        out_invalid, "sector order mismatch [%d]", vol->sector_order);
 
     vol->sec_cluster = boot_sec->sec_cluster;
     vol->sec_cluster_order = bsr(vol->sec_cluster);
     afs_assert(is_power_of_2(vol->sec_cluster) && vol->sec_cluster_order <= 7, out_invalid,
-               "sector cluster order mismatch [%d]", vol->sec_cluster_order);
+        "sector cluster order mismatch [%d]", vol->sec_cluster_order);
 
     vol->cluster_order = vol->sector_order + vol->sec_cluster_order;
     vol->reserved = le16_to_cpu(boot_sec->res_sec);
@@ -153,7 +152,7 @@ out_invalid:
  * @return      status
  */
 static int
-fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
+fat_read_dos_3_31_bpb(struct fat_volume* vol, const struct fat_boot_sector* boot_sec)
 {
     vol->sec_track = le16_to_cpu(boot_sec->sec_track);
     vol->num_heads = le16_to_cpu(boot_sec->num_heads);
@@ -171,7 +170,7 @@ fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot
  * Non fat32 extended boot parameter block helper.
  */
 static int
-fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
+fat_read_nonfat32_ebpb(struct fat_volume* vol, const struct nonfat32_ebpb* ebpb)
 {
     vol->phys_driv_num = ebpb->physical_drive_num;
     vol->ext_boot_sig = ebpb->extended_boot_sig;
@@ -187,7 +186,7 @@ fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
  * FAT32 extended boot parameter block helper.
  */
 static int
-fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb)
+fat_read_fat32_ebpb(struct fat_volume* vol, const struct fat32_ebpb* ebpb)
 {
     if (le32_to_cpu(ebpb->sec_fat) != 0) {
         vol->sec_fat = le32_to_cpu(ebpb->sec_fat);
@@ -232,9 +231,9 @@ out_invalid:
  * @return  status.
  */
 static int
-read_boot_sector(struct fat_volume *vol, const void *data)
+read_boot_sector(struct fat_volume* vol, const void* data)
 {
-    struct fat_boot_sector *boot_sec = NULL;
+    struct fat_boot_sector* boot_sec = NULL;
     int ret;
     uint32_t num_data_sectors;
 
@@ -286,30 +285,30 @@ out_invalid:
  * @return  status [0 == success | !0 == fail]
  */
 static int
-fat_map(struct fat_volume *vol, void *data, struct block_device *device)
+fat_map(struct fat_volume* vol, void* data, struct block_device* device)
 {
     size_t fat_size_bytes;
     size_t fat_aligned_size_bytes;
     off_t fat_offset;
     off_t fat_aligned_offset;
-    uint32_t *p;
-    uint32_t *empty_clusters;
+    uint32_t* p;
+    uint32_t* empty_clusters;
     int i;
     int status;
     int cluster_number;
     sector_t start_sector;
-    void *fat_data;
-    struct page *page = NULL;
+    void* fat_data;
+    struct page* page = NULL;
     struct afs_io fatio;
     uint32_t page_size;
     uint32_t page_number;
 
     page_size = 1 << PAGE_SHIFT;
     fat_offset = (off_t)vol->reserved << vol->sector_order;
-    fat_aligned_offset = fat_offset & ~(page_size -1);
+    fat_aligned_offset = fat_offset & ~(page_size - 1);
     fat_size_bytes = (size_t)vol->sec_fat << vol->sector_order;
     fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
-    page_number = fat_aligned_size_bytes/512;
+    page_number = fat_aligned_size_bytes / 512;
 
     afs_debug("FAT aligned size in bytes: %zu ", fat_aligned_size_bytes);
     afs_debug("FAT aligned offset: %d ", (int)fat_aligned_offset);
@@ -322,7 +321,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
         fat_data = page_address(page);
         fatio.bdev = device;
         fatio.io_page = page;
-        fatio.io_sector = fat_aligned_offset/512;
+        fatio.io_sector = fat_aligned_offset / 512;
         fatio.io_size = fat_aligned_size_bytes;
         fatio.type = IO_READ;
         status = afs_blkdev_io(&fatio);
@@ -338,7 +337,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     memset((void*)empty_clusters, 0, fat_size_bytes);
 
     for (i = 0; i < vol->num_data_clusters; i++) {
-        afs_debug("block %d: %d",i, p[i]);
+        afs_debug("block %d: %d", i, p[i]);
         if (p[i] == 0) {
             empty_clusters[cluster_number] = i;
             cluster_number++;
@@ -358,10 +357,9 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
  * @fs      The file system information to be filled in.
  * @return  boolean.
  */
-bool
-afs_fat32_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs)
+bool afs_fat32_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs)
 {
-    struct fat_volume *vol = NULL;
+    struct fat_volume* vol = NULL;
     int ret;
 
     // Allocate memory for volume.
@@ -375,14 +373,13 @@ afs_fat32_detect(const void *data, struct block_device *device, struct afs_passi
         goto vol_err;
     }
 
-    ret = fat_map(vol, (void *)data, device);
+    ret = fat_map(vol, (void*)data, device);
     if (ret) {
         afs_debug("Failed to map FAT");
         goto vol_err;
     }
-    vol->data_start_off =    (off_t)(vol->tables * vol->sec_fat + vol->reserved +
-                                    (vol->root_entries >> (vol->sector_order - 5)))
-                                    << vol->sector_order;
+    vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + (vol->root_entries >> (vol->sector_order - 5)))
+        << vol->sector_order;
 
     vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved);
 
