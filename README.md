@@ -14,6 +14,18 @@ $ sudo rmmod dm_afs
 Please look at the Makefile targets `debug_new`, `debug_access` and `debug_end` for information on how to setup a dm-target.
 ```
 
+## Guidelines
+
+All code pushed to the repository is formatted using `clang-format`. Style guide parameters are as follows:
+
+```
+{
+    BasedOnStyle: WebKit, 
+    AlignTrailingComments: true, 
+    AllowShortIfStatementsOnASingleLine: true
+}
+```
+
 ## Design
 
 The design portion of this markdown is not intended to be reference information. It won't make sense unless you read from start to end.
