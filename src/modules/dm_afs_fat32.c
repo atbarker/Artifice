@@ -357,7 +357,8 @@ fat_map(struct fat_volume* vol, void* data, struct block_device* device)
  * @fs      The file system information to be filled in.
  * @return  boolean.
  */
-bool afs_fat32_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs)
+bool
+afs_fat32_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs)
 {
     struct fat_volume* vol = NULL;
     int ret;

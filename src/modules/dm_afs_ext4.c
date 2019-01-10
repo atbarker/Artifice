@@ -13,7 +13,8 @@
  * @fs      The file system information to be filled in.
  * @return  boolean.
  */
-bool afs_ext4_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs)
+bool
+afs_ext4_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs)
 {
     return false;
 }

@@ -13,7 +13,8 @@
 /**
  * Set the usage of a block in the allocation vector.
  */
-bool allocation_set(struct afs_private* context, uint32_t index)
+bool
+allocation_set(struct afs_private* context, uint32_t index)
 {
     spin_lock(&context->allocation_lock);
     if (bit_vector_get(context->allocation_vec, index)) {
@@ -29,7 +30,8 @@ bool allocation_set(struct afs_private* context, uint32_t index)
 /**
  * Clear the usage of a block in the allocation vector.
  */
-void allocation_free(struct afs_private* context, uint32_t index)
+void
+allocation_free(struct afs_private* context, uint32_t index)
 {
     spin_lock(&context->allocation_lock);
     bit_vector_clear(context->allocation_vec, index);
@@ -71,7 +73,8 @@ __callback_blkdev_io(struct bio* bio)
  * @return  0       Successfully performed the I/O.
  * @return  <0      Error.
  */
-int afs_blkdev_io(struct afs_io* request)
+int
+afs_blkdev_io(struct afs_io* request)
 {
     const int page_offset = 0;
     int ret;
@@ -125,7 +128,8 @@ alloc_err:
 /**
  * Read a single page.
  */
-int read_page(void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc)
+int
+read_page(void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc)
 {
     struct afs_io request;
     struct page* page_structure;
@@ -156,7 +160,8 @@ done:
 /**
  * Write a single page.
  */
-int write_page(const void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc)
+int
+write_page(const void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc)
 {
     struct afs_io request;
     struct page* page_structure;
@@ -187,7 +192,8 @@ done:
 /**
  * Build the configuration for an instance.
  */
-void build_configuration(struct afs_private* context, uint8_t num_carrier_blocks)
+void
+build_configuration(struct afs_private* context, uint8_t num_carrier_blocks)
 {
     context->num_carrier_blocks = num_carrier_blocks;
     context->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * context->num_carrier_blocks);
@@ -221,7 +227,8 @@ void build_configuration(struct afs_private* context, uint8_t num_carrier_blocks
  * Create the Artifice map and initialize it to
  * invalids.
  */
-int afs_create_map(struct afs_private* context)
+int
+afs_create_map(struct afs_private* context)
 {
     struct afs_map_tuple* map_tuple = NULL;
     uint8_t* map_entries = NULL;
@@ -261,7 +268,8 @@ done:
  * Fill an Artifice map with values from the
  * metadata.
  */
-int afs_fill_map(struct afs_super_block* sb, struct afs_private* context)
+int
+afs_fill_map(struct afs_super_block* sb, struct afs_private* context)
 {
     struct afs_ptr_block* ptr_block = NULL;
     uint8_t* afs_map = NULL;
@@ -369,7 +377,8 @@ err:
 /**
  * Create the Artifice map blocks.
  */
-int afs_create_map_blocks(struct afs_private* context)
+int
+afs_create_map_blocks(struct afs_private* context)
 {
     uint8_t* ptr = NULL;
     uint8_t* afs_map = NULL;
@@ -435,7 +444,8 @@ block_err:
 /**
  * Write map blocks to pointer blocks.
  */
-int write_map_blocks(struct afs_private* context, bool update)
+int
+write_map_blocks(struct afs_private* context, bool update)
 {
     struct afs_super_block* sb = NULL;
     struct afs_passive_fs* fs = NULL;
@@ -509,7 +519,8 @@ done:
 /**
  * Write out the ptr blocks to disk.
  */
-int write_ptr_blocks(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context)
+int
+write_ptr_blocks(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context)
 {
     struct afs_ptr_block* ptr_blocks = NULL;
     uint8_t ptr_block_digest[SHA1_SZ];
@@ -565,7 +576,8 @@ done:
  * 
  * TODO: Change sb_block location.
  */
-int write_super_block(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context)
+int
+write_super_block(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context)
 {
     const uint32_t sb_block = 0;
     struct afs_ptr_block* ptr_blocks = NULL;
@@ -683,7 +695,8 @@ done:
  *
  * TODO: Change sb_block location.
  */
-int find_super_block(struct afs_super_block* sb, struct afs_private* context)
+int
+find_super_block(struct afs_super_block* sb, struct afs_private* context)
 {
     const uint32_t sb_block = 0;
     struct afs_ptr_block* ptr_blocks = NULL;
@@ -761,7 +774,8 @@ acquire_block(struct afs_passive_fs* fs, struct afs_private* context)
  * 
  * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
  */
-int hash_sha1(const void* data, const uint32_t data_len, uint8_t* digest)
+int
+hash_sha1(const void* data, const uint32_t data_len, uint8_t* digest)
 {
     const char* alg_name = "sha1";
     struct crypto_shash* tfm;
@@ -794,7 +808,8 @@ tfm_done:
  *
  * @digest Array to return digest into. Needs to be pre-allocated 32 bytes.
  */
-int hash_sha256(const void* data, const uint32_t data_len, uint8_t* digest)
+int
+hash_sha256(const void* data, const uint32_t data_len, uint8_t* digest)
 {
     const char* alg_name = "sha256";
     struct crypto_shash* tfm;
@@ -827,7 +842,8 @@ tfm_done:
  *
  * @digest Array to return digest into. Needs to be pre-allocated 64 bytes.
  */
-int hash_sha512(const void* data, const uint32_t data_len, uint8_t* digest)
+int
+hash_sha512(const void* data, const uint32_t data_len, uint8_t* digest)
 {
     const char* alg_name = "sha512";
     struct crypto_shash* tfm;
@@ -918,7 +934,8 @@ done:
 /**
  * Map a read request from userspace.
  */
-int afs_read_request(struct afs_private* context, struct bio* bio)
+int
+afs_read_request(struct afs_private* context, struct bio* bio)
 {
     struct bio_vec bv;
     struct bvec_iter iter;
@@ -965,7 +982,8 @@ done:
 /**
  * Map a write request from userspace.
  */
-int afs_write_request(struct afs_private* context, struct bio* bio)
+int
+afs_write_request(struct afs_private* context, struct bio* bio)
 {
     struct bio_vec bv;
     struct bvec_iter iter;
