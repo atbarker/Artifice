@@ -11,7 +11,7 @@ $ make
 $ sudo insmod dm-afs.ko afs_debug_mode=1
 $ sudo rmmod dm_afs
 
-Please look at the Makefile targets `debug_new`, `debug_access` and `debug_end` for information on how to setup a dm-target.
+Please look at the Makefile targets `debug_create`, `debug_mount` and `debug_end` for information on how to setup a dm-target.
 ```
 
 ## Guidelines
@@ -27,6 +27,8 @@ All code pushed to the repository is formatted using `clang-format`. Style guide
     PointerAlignment: Right
 }
 ```
+
+Code which has not been formatted with these options will be rejected for a merge.
 
 ## Design
 
@@ -54,15 +56,19 @@ Since the writes are simple mappings, theoretically, you could use _any_ file sy
 
 On the other hand, we need discrete support for the passive file system. This is where `Artifice Modules` come into play. A modules task, given a physical block device, is to figure out whether or not a particular fule system exists on the physical block device. Moreover, if a module detects that a certain file system is present, then it needs to provide pointers to the free blocks in the file system to be used by Artifice. If a module cannot detect the presence of a particular file system on a physical block device, then it simply returns a `false` and does not need to fill up free block information.
 
-Currently, we plan to add modules to support `FAT32`, `EXT4` and `NTFS`.
+Currently, we plan to add modules to support `FAT32`, `EXT4` and `NTFS`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear.
 
-### Entropy Blocks
+### How do we keep mapped data safe, and unrecognizable: Entropy Blocks
 
-Encryption only goes so far in keeping the data safe. Unfortunately, encrypted data is still visible and makes a user suseptible to a rubber-hose attack. To prevent the data from even being detected, we use `entropy blocks`.
+Since Artifice is mapping I/O from the active to the passive file system, the data which is being mapped would be clearly visible if one were to begin inspecting the physical device (`/dev/sdb`) directly. This presents a problem, since the existence of this data proves the existence of the Artifice subsystem. 
 
-When a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). The idea is that each block which is mapped through Artifice is XOR'ed with some `entropy block` (which will belong to one of the files in the `entropy directory`) and without these entropy blocks, there is no way left to reconstruct the original data.
+We can encrypt this data so that it looks random, however, that leads us to the problem of key management. Managing different keys for each data block is not possible, and using a single key for the encryption of all data blocks is a security hazard. In the case of a rubber-hose attack, all the data stands to be compromised. Hence, to provide obfuscation and security of the data, we use `entropy blocks`.
 
-When Artifice is first started, it reads the `entropy directory` and stores the name for each file into a hash table. For each data block that is mapped, a single `entropy file` is used. To reduce space consumption (since we need to map a lot of data blocks), an `8` byte hash of the filename is stored instead of the filename itself. This hash also acts as the key into the entropy hash table.
+When a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data is XOR'ed with a random block within the `entropy file`. For consequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is XOR'ed again to recover the data. WIthout access to this entropy information, it is impossible to recreate the data.
+
+This is the main selling point for the use of `entropy blocks`. The fact is, a user can store the entropy files on a portable flash drive, and in case of an emergency, discard this flash drive. Now, even if their passphrase was to be compromised and an adversary was able to figure out the names of the entropy files, the adversary will still not have access to those files. And without access to those files, the adversary will not have access to the data.
+
+However, filenames can be rather large and we need to preserve as much space as possible. Hence, we provide an optimization: When Artifice is first started, it reads the `entropy directory` and stores the name for each file into a hash table. To reduce space consumption, an `8` byte hash of the filename is stored instead of the filename itself. This hash also acts as the key into the entropy hash table.
 
 ### Carrier Blocks
 
