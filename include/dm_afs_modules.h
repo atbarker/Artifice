@@ -10,8 +10,8 @@
 #define DM_AFS_MODULES_H
 
 // File system detection functions.
-bool afs_fat32_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs);
-bool afs_ext4_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs);
-bool afs_ntfs_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs);
+bool afs_fat32_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs);
+bool afs_ext4_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs);
+bool afs_ntfs_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs);
 
 #endif /* DM_AFS_MODULES_H */

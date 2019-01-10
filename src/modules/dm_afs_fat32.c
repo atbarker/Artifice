@@ -13,8 +13,8 @@
 
 // All the information about a FAT volume.
 struct fat_volume {
-    void* fat_map;              // FAT mapped into memory.
-    uint32_t* empty_clusters;   // List of empty clusters (blocks).
+    void *fat_map;              // FAT mapped into memory.
+    uint32_t *empty_clusters;   // List of empty clusters (blocks).
     uint32_t num_data_clusters; // Number of data cluster on the disk.
     off_t data_start_off;       // Byte offset for the second cluster.
     size_t num_alloc_files;     // Number of allocated files.
@@ -111,7 +111,7 @@ struct fat_boot_sector {
  * Reads in boot parameter block as seen in DOS 2.0.
  */
 static int
-fat_read_dos_2_0_bpb(struct fat_volume* vol, const struct fat_boot_sector* boot_sec)
+fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
 {
     vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
     vol->sector_order = bsr(vol->bytes_sector);
@@ -152,7 +152,7 @@ out_invalid:
  * @return      status
  */
 static int
-fat_read_dos_3_31_bpb(struct fat_volume* vol, const struct fat_boot_sector* boot_sec)
+fat_read_dos_3_31_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
 {
     vol->sec_track = le16_to_cpu(boot_sec->sec_track);
     vol->num_heads = le16_to_cpu(boot_sec->num_heads);
@@ -170,7 +170,7 @@ fat_read_dos_3_31_bpb(struct fat_volume* vol, const struct fat_boot_sector* boot
  * Non fat32 extended boot parameter block helper.
  */
 static int
-fat_read_nonfat32_ebpb(struct fat_volume* vol, const struct nonfat32_ebpb* ebpb)
+fat_read_nonfat32_ebpb(struct fat_volume *vol, const struct nonfat32_ebpb *ebpb)
 {
     vol->phys_driv_num = ebpb->physical_drive_num;
     vol->ext_boot_sig = ebpb->extended_boot_sig;
@@ -186,7 +186,7 @@ fat_read_nonfat32_ebpb(struct fat_volume* vol, const struct nonfat32_ebpb* ebpb)
  * FAT32 extended boot parameter block helper.
  */
 static int
-fat_read_fat32_ebpb(struct fat_volume* vol, const struct fat32_ebpb* ebpb)
+fat_read_fat32_ebpb(struct fat_volume *vol, const struct fat32_ebpb *ebpb)
 {
     if (le32_to_cpu(ebpb->sec_fat) != 0) {
         vol->sec_fat = le32_to_cpu(ebpb->sec_fat);
@@ -231,9 +231,9 @@ out_invalid:
  * @return  status.
  */
 static int
-read_boot_sector(struct fat_volume* vol, const void* data)
+read_boot_sector(struct fat_volume *vol, const void *data)
 {
-    struct fat_boot_sector* boot_sec = NULL;
+    struct fat_boot_sector *boot_sec = NULL;
     int ret;
     uint32_t num_data_sectors;
 
@@ -285,20 +285,20 @@ out_invalid:
  * @return  status [0 == success | !0 == fail]
  */
 static int
-fat_map(struct fat_volume* vol, void* data, struct block_device* device)
+fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 {
     size_t fat_size_bytes;
     size_t fat_aligned_size_bytes;
     off_t fat_offset;
     off_t fat_aligned_offset;
-    uint32_t* p;
-    uint32_t* empty_clusters;
+    uint32_t *p;
+    uint32_t *empty_clusters;
     int i;
     int status;
     int cluster_number;
     sector_t start_sector;
-    void* fat_data;
-    struct page* page = NULL;
+    void *fat_data;
+    struct page *page = NULL;
     struct afs_io fatio;
     uint32_t page_size;
     uint32_t page_number;
@@ -329,12 +329,12 @@ fat_map(struct fat_volume* vol, void* data, struct block_device* device)
     }
     vol->fat_map = data;
 
-    p = (int*)data;
+    p = (int *)data;
     afs_debug("p: %p", p);
 
     cluster_number = 0;
     empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
-    memset((void*)empty_clusters, 0, fat_size_bytes);
+    memset((void *)empty_clusters, 0, fat_size_bytes);
 
     for (i = 0; i < vol->num_data_clusters; i++) {
         afs_debug("block %d: %d", i, p[i]);
@@ -358,9 +358,9 @@ fat_map(struct fat_volume* vol, void* data, struct block_device* device)
  * @return  boolean.
  */
 bool
-afs_fat32_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs)
+afs_fat32_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs)
 {
-    struct fat_volume* vol = NULL;
+    struct fat_volume *vol = NULL;
     int ret;
 
     // Allocate memory for volume.
@@ -374,7 +374,7 @@ afs_fat32_detect(const void* data, struct block_device* device, struct afs_passi
         goto vol_err;
     }
 
-    ret = fat_map(vol, (void*)data, device);
+    ret = fat_map(vol, (void *)data, device);
     if (ret) {
         afs_debug("Failed to map FAT");
         goto vol_err;

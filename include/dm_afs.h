@@ -190,8 +190,8 @@ struct __attribute__((packed)) afs_map_tuple {
 
 // Artifice I/O
 struct afs_io {
-    struct block_device* bdev; // Block Device to issue I/O on.
-    struct page* io_page;      // Kernel Page(s) used for transfer.
+    struct block_device *bdev; // Block Device to issue I/O on.
+    struct page *io_page;      // Kernel Page(s) used for transfer.
     sector_t io_sector;        // Disk sector used for transfer.
     uint32_t io_size;          // Size of I/O transfer.
     enum afs_io_type type;     // Read or write.
@@ -199,7 +199,7 @@ struct afs_io {
 
 // Passive file system information.
 struct afs_passive_fs {
-    uint32_t* block_list;      // List of empty blocks.
+    uint32_t *block_list;      // List of empty blocks.
     uint32_t list_len;         // Length of that list.
     uint8_t sectors_per_block; // Sectors in a block.
     uint32_t total_blocks;     // Total number of blocks in the FS.
@@ -225,14 +225,14 @@ struct __attribute__((aligned(4096))) afs_private {
     struct afs_super_block super_block;
     struct afs_passive_fs passive_fs;
     struct afs_args instance_args;
-    struct dm_dev* passive_dev;
-    struct block_device* bdev;
+    struct dm_dev *passive_dev;
+    struct block_device *bdev;
     uint64_t instance_size;
     struct work_struct map_work;
-    struct workqueue_struct* map_queue;
-    struct bio* bio;
+    struct workqueue_struct *map_queue;
+    struct bio *bio;
     wait_queue_head_t bio_waitq;
-    struct task_struct* current_process;
+    struct task_struct *current_process;
 
     // Configuration information.
     uint8_t num_carrier_blocks;
@@ -245,90 +245,90 @@ struct __attribute__((aligned(4096))) afs_private {
 
     // Free list allocation vector.
     spinlock_t allocation_lock;
-    bit_vector_t* allocation_vec;
+    bit_vector_t *allocation_vec;
 
     // Map information.
-    uint8_t* afs_map;
-    uint8_t* afs_map_blocks;
-    struct afs_ptr_block* afs_ptr_blocks;
+    uint8_t *afs_map;
+    uint8_t *afs_map_blocks;
+    struct afs_ptr_block *afs_ptr_blocks;
 };
 
 /**
  * Read or write to a block device.
  */
-int afs_blkdev_io(struct afs_io* request);
+int afs_blkdev_io(struct afs_io *request);
 
 /**
  * Read a single page.
  */
-int read_page(void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc);
+int read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
 
 /**
  * Write a single page.
  */
-int write_page(const void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc);
+int write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
 
 /**
  * Acquire a free block from the free list.
  */
-uint32_t acquire_block(struct afs_passive_fs* fs, struct afs_private* context);
+uint32_t acquire_block(struct afs_passive_fs *fs, struct afs_private *context);
 
 /**
  * Set the usage of a block in the allocation vector.
  */
-bool allocation_set(struct afs_private* context, uint32_t index);
+bool allocation_set(struct afs_private *context, uint32_t index);
 
 /**
  * Clear the usage of a block in the allocation vector.
  */
-void allocation_free(struct afs_private* context, uint32_t index);
+void allocation_free(struct afs_private *context, uint32_t index);
 
 /**
  * Get the state of a block in the allocation vector.
  */
-uint8_t allocation_get(struct afs_private* context, uint32_t index);
+uint8_t allocation_get(struct afs_private *context, uint32_t index);
 
 /**
  * Build the configuration for an instance.
  */
-void build_configuration(struct afs_private* context, uint8_t num_carrier_blocks);
+void build_configuration(struct afs_private *context, uint8_t num_carrier_blocks);
 
 /**
  * Create the Artifice map and initialize it to
  * invalids.
  */
-int afs_create_map(struct afs_private* context);
+int afs_create_map(struct afs_private *context);
 
 /**
  * Fill an Artifice map with values from the
  * metadata.
  */
-int afs_fill_map(struct afs_super_block* sb, struct afs_private* context);
+int afs_fill_map(struct afs_super_block *sb, struct afs_private *context);
 
 /**
  * Create the Artifice map blocks.
  */
-int afs_create_map_blocks(struct afs_private* context);
+int afs_create_map_blocks(struct afs_private *context);
 
 /**
  * Write map blocks to pointer blocks.
  */
-int write_map_blocks(struct afs_private* context, bool update);
+int write_map_blocks(struct afs_private *context, bool update);
 
 /**
  * Write out the pointer blocks to disk.
  */
-int write_ptr_blocks(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context);
+int write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context);
 
 /**
  * Write the super block onto the disk.
  */
-int write_super_block(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context);
+int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context);
 
 /**
  * Find the super block on the disk.
  */
-int find_super_block(struct afs_super_block* sb, struct afs_private* context);
+int find_super_block(struct afs_super_block *sb, struct afs_private *context);
 
 /**
  * Bit scan reverse.
@@ -338,26 +338,26 @@ uint64_t bsr(uint64_t n);
 /**
  * Acquire a SHA1 hash of given data.
  */
-int hash_sha1(const void* data, const uint32_t data_len, uint8_t* digest);
+int hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
  * Acquire a SHA256 hash of given data.
  */
-int hash_sha256(const void* data, const uint32_t data_len, uint8_t* digest);
+int hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
  * Acquire a SHA512 hash of given data.
  */
-int hash_sha512(const void* data, const uint32_t data_len, uint8_t* digest);
+int hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
  * Map a read request from userspace.
  */
-int afs_read_request(struct afs_private* context, struct bio* bio);
+int afs_read_request(struct afs_private *context, struct bio *bio);
 
 /**
  * Map a write request from userspace.
  */
-int afs_write_request(struct afs_private* context, struct bio* bio);
+int afs_write_request(struct afs_private *context, struct bio *bio);
 
 #endif /* DM_AFS_H */

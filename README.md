@@ -23,7 +23,8 @@ All code pushed to the repository is formatted using `clang-format`. Style guide
     BasedOnStyle: WebKit,
     AlignTrailingComments: true,
     AllowShortIfStatementsOnASingleLine: true,
-    AlwaysBreakAfterDefinitionReturnType: true
+    AlwaysBreakAfterDefinitionReturnType: true,
+    PointerAlignment: Right
 }
 ```
 

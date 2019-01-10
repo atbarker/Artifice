@@ -14,7 +14,7 @@
  * Set the usage of a block in the allocation vector.
  */
 bool
-allocation_set(struct afs_private* context, uint32_t index)
+allocation_set(struct afs_private *context, uint32_t index)
 {
     spin_lock(&context->allocation_lock);
     if (bit_vector_get(context->allocation_vec, index)) {
@@ -31,7 +31,7 @@ allocation_set(struct afs_private* context, uint32_t index)
  * Clear the usage of a block in the allocation vector.
  */
 void
-allocation_free(struct afs_private* context, uint32_t index)
+allocation_free(struct afs_private *context, uint32_t index)
 {
     spin_lock(&context->allocation_lock);
     bit_vector_clear(context->allocation_vec, index);
@@ -42,7 +42,7 @@ allocation_free(struct afs_private* context, uint32_t index)
  * Get the state of a block in the allocation vector.
  */
 uint8_t
-allocation_get(struct afs_private* context, uint32_t index)
+allocation_get(struct afs_private *context, uint32_t index)
 {
     uint8_t bit;
 
@@ -58,9 +58,9 @@ allocation_get(struct afs_private* context, uint32_t index)
  * of an IO transfer to a block device.
  */
 static void
-__callback_blkdev_io(struct bio* bio)
+__callback_blkdev_io(struct bio *bio)
 {
-    struct completion* event = bio->bi_private;
+    struct completion *event = bio->bi_private;
 
     //afs_debug("completed event: %p\n", event);
     complete(event);
@@ -74,11 +74,11 @@ __callback_blkdev_io(struct bio* bio)
  * @return  <0      Error.
  */
 int
-afs_blkdev_io(struct afs_io* request)
+afs_blkdev_io(struct afs_io *request)
 {
     const int page_offset = 0;
     int ret;
-    struct bio* bio = NULL;
+    struct bio *bio = NULL;
     struct completion event;
 
     // Any IO to a block device in the kernel is done using bio.
@@ -129,10 +129,10 @@ alloc_err:
  * Read a single page.
  */
 int
-read_page(void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc)
+read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc)
 {
     struct afs_io request;
-    struct page* page_structure;
+    struct page *page_structure;
     uint64_t sector_num;
     int ret;
 
@@ -161,10 +161,10 @@ done:
  * Write a single page.
  */
 int
-write_page(const void* page, struct block_device* bdev, uint32_t block_num, bool used_vmalloc)
+write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc)
 {
     struct afs_io request;
-    struct page* page_structure;
+    struct page *page_structure;
     uint64_t sector_num;
     int ret;
 
@@ -193,7 +193,7 @@ done:
  * Build the configuration for an instance.
  */
 void
-build_configuration(struct afs_private* context, uint8_t num_carrier_blocks)
+build_configuration(struct afs_private *context, uint8_t num_carrier_blocks)
 {
     context->num_carrier_blocks = num_carrier_blocks;
     context->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * context->num_carrier_blocks);
@@ -228,10 +228,10 @@ build_configuration(struct afs_private* context, uint8_t num_carrier_blocks)
  * invalids.
  */
 int
-afs_create_map(struct afs_private* context)
+afs_create_map(struct afs_private *context)
 {
-    struct afs_map_tuple* map_tuple = NULL;
-    uint8_t* map_entries = NULL;
+    struct afs_map_tuple *map_tuple = NULL;
+    uint8_t *map_entries = NULL;
     uint8_t map_entry_sz;
     uint32_t num_blocks;
     uint32_t i, j;
@@ -246,7 +246,7 @@ afs_create_map(struct afs_private* context)
     afs_debug("allocated Artifice map");
 
     for (i = 0; i < num_blocks; i++) {
-        map_tuple = (struct afs_map_tuple*)(map_entries + (i * map_entry_sz));
+        map_tuple = (struct afs_map_tuple *)(map_entries + (i * map_entry_sz));
         for (j = 0; j < context->num_carrier_blocks; j++) {
             map_tuple->carrier_block_ptr = AFS_INVALID_BLOCK;
             map_tuple->entropy_block_ptr = AFS_INVALID_BLOCK;
@@ -269,14 +269,14 @@ done:
  * metadata.
  */
 int
-afs_fill_map(struct afs_super_block* sb, struct afs_private* context)
+afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
 {
-    struct afs_ptr_block* ptr_block = NULL;
-    uint8_t* afs_map = NULL;
-    uint8_t* map_block = NULL;
-    uint8_t* map_block_hash = NULL;
-    uint8_t* map_block_unused = NULL;
-    uint8_t* map_block_entries = NULL;
+    struct afs_ptr_block *ptr_block = NULL;
+    uint8_t *afs_map = NULL;
+    uint8_t *map_block = NULL;
+    uint8_t *map_block_hash = NULL;
+    uint8_t *map_block_unused = NULL;
+    uint8_t *map_block_entries = NULL;
     uint8_t map_entry_sz;
     uint8_t num_map_entries_per_block;
     uint32_t next_block;
@@ -378,14 +378,14 @@ err:
  * Create the Artifice map blocks.
  */
 int
-afs_create_map_blocks(struct afs_private* context)
+afs_create_map_blocks(struct afs_private *context)
 {
-    uint8_t* ptr = NULL;
-    uint8_t* afs_map = NULL;
-    uint8_t* map_blocks = NULL;
-    uint8_t* hash = NULL;
-    uint8_t* unused_space = NULL;
-    uint8_t* entries_start = NULL;
+    uint8_t *ptr = NULL;
+    uint8_t *afs_map = NULL;
+    uint8_t *map_blocks = NULL;
+    uint8_t *hash = NULL;
+    uint8_t *unused_space = NULL;
+    uint8_t *entries_start = NULL;
     uint8_t map_entry_sz;
     uint8_t num_map_entries_per_block;
     uint32_t num_map_blocks;
@@ -445,12 +445,12 @@ block_err:
  * Write map blocks to pointer blocks.
  */
 int
-write_map_blocks(struct afs_private* context, bool update)
+write_map_blocks(struct afs_private *context, bool update)
 {
-    struct afs_super_block* sb = NULL;
-    struct afs_passive_fs* fs = NULL;
-    struct afs_ptr_block* afs_ptr_blocks = NULL;
-    uint8_t* afs_map_blocks = NULL;
+    struct afs_super_block *sb = NULL;
+    struct afs_passive_fs *fs = NULL;
+    struct afs_ptr_block *afs_ptr_blocks = NULL;
+    uint8_t *afs_map_blocks = NULL;
     uint32_t num_map_blocks;
     uint32_t num_ptr_blocks;
     uint32_t blocks_written;
@@ -520,9 +520,9 @@ done:
  * Write out the ptr blocks to disk.
  */
 int
-write_ptr_blocks(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context)
+write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
 {
-    struct afs_ptr_block* ptr_blocks = NULL;
+    struct afs_ptr_block *ptr_blocks = NULL;
     uint8_t ptr_block_digest[SHA1_SZ];
     uint32_t num_ptr_blocks;
     uint32_t block_num;
@@ -549,7 +549,7 @@ write_ptr_blocks(struct afs_super_block* sb, struct afs_passive_fs* fs, struct a
         }
 
         // Calculate hash of the ptr blocks.
-        hash_sha1((uint8_t*)(ptr_blocks + i) + SHA128_SZ, sizeof(*ptr_blocks) - SHA128_SZ, ptr_block_digest);
+        hash_sha1((uint8_t *)(ptr_blocks + i) + SHA128_SZ, sizeof(*ptr_blocks) - SHA128_SZ, ptr_block_digest);
         memcpy(ptr_blocks[i].hash, ptr_block_digest, sizeof(ptr_blocks[i].hash));
 
         // Write to disk and save pointer.
@@ -577,10 +577,10 @@ done:
  * TODO: Change sb_block location.
  */
 int
-write_super_block(struct afs_super_block* sb, struct afs_passive_fs* fs, struct afs_private* context)
+write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
 {
     const uint32_t sb_block = 0;
-    struct afs_ptr_block* ptr_blocks = NULL;
+    struct afs_ptr_block *ptr_blocks = NULL;
     int ret = 0;
 
     // Reserve space for the super block location.
@@ -613,7 +613,7 @@ write_super_block(struct afs_super_block* sb, struct afs_passive_fs* fs, struct 
     sb->instance_size = context->instance_size;
     hash_sha1(context->instance_args.passphrase, PASSPHRASE_SZ, sb->hash);
     strncpy(sb->entropy_dir, context->instance_args.entropy_dir, ENTROPY_DIR_SZ);
-    hash_sha256((uint8_t*)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
+    hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
     ret = write_page(sb, context->bdev, sb_block, false);
     afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
     afs_debug("super block written to disk [block: %u]", sb_block);
@@ -640,10 +640,10 @@ map_err:
  * rebuild the allocation vector.
  */
 static void
-rebuild_allocation_vector(struct afs_private* context)
+rebuild_allocation_vector(struct afs_private *context)
 {
-    struct afs_map_tuple* map_tuple = NULL;
-    uint8_t* afs_map = NULL;
+    struct afs_map_tuple *map_tuple = NULL;
+    uint8_t *afs_map = NULL;
     uint8_t num_carrier_blocks;
     uint8_t map_entry_sz;
     uint32_t num_entries;
@@ -655,7 +655,7 @@ rebuild_allocation_vector(struct afs_private* context)
     map_entry_sz = context->map_entry_sz;
 
     for (i = 0; i < num_entries; i++) {
-        map_tuple = (struct afs_map_tuple*)(afs_map + (i * map_entry_sz));
+        map_tuple = (struct afs_map_tuple *)(afs_map + (i * map_entry_sz));
         for (j = 0; j < num_carrier_blocks; j++) {
             allocation_set(context, map_tuple->carrier_block_ptr);
             map_tuple += 1;
@@ -667,9 +667,9 @@ rebuild_allocation_vector(struct afs_private* context)
  * Initialize the entires into the pointer blocks.
  */
 static int
-rebuild_ptr_blocks(struct afs_private* context)
+rebuild_ptr_blocks(struct afs_private *context)
 {
-    struct afs_ptr_block* afs_ptr_blocks = NULL;
+    struct afs_ptr_block *afs_ptr_blocks = NULL;
     uint32_t num_ptr_blocks;
     uint32_t block_num;
     uint32_t i;
@@ -696,10 +696,10 @@ done:
  * TODO: Change sb_block location.
  */
 int
-find_super_block(struct afs_super_block* sb, struct afs_private* context)
+find_super_block(struct afs_super_block *sb, struct afs_private *context)
 {
     const uint32_t sb_block = 0;
-    struct afs_ptr_block* ptr_blocks = NULL;
+    struct afs_ptr_block *ptr_blocks = NULL;
     uint8_t sb_digest[SHA256_SZ];
     int ret = 0;
 
@@ -711,7 +711,7 @@ find_super_block(struct afs_super_block* sb, struct afs_private* context)
     afs_assert(!ret, err, "could not read super block page [%d]", ret);
 
     // Check for corruption.
-    hash_sha256((uint8_t*)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
+    hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
     ret = memcmp(sb->sb_hash, sb_digest, SHA256_SZ);
     afs_assert_action(!ret, ret = -ENOENT, err, "super block corrupted");
 
@@ -756,7 +756,7 @@ err:
  * Acquire a free block from the free list.
  */
 uint32_t
-acquire_block(struct afs_passive_fs* fs, struct afs_private* context)
+acquire_block(struct afs_passive_fs *fs, struct afs_private *context)
 {
     static uint32_t block_num = 0;
 
@@ -775,11 +775,11 @@ acquire_block(struct afs_passive_fs* fs, struct afs_private* context)
  * @digest Array to return digest into. Needs to be pre-allocated 20 bytes.
  */
 int
-hash_sha1(const void* data, const uint32_t data_len, uint8_t* digest)
+hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest)
 {
-    const char* alg_name = "sha1";
-    struct crypto_shash* tfm;
-    struct shash_desc* desc;
+    const char *alg_name = "sha1";
+    struct crypto_shash *tfm;
+    struct shash_desc *desc;
     int ret;
 
     tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
@@ -809,11 +809,11 @@ tfm_done:
  * @digest Array to return digest into. Needs to be pre-allocated 32 bytes.
  */
 int
-hash_sha256(const void* data, const uint32_t data_len, uint8_t* digest)
+hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest)
 {
-    const char* alg_name = "sha256";
-    struct crypto_shash* tfm;
-    struct shash_desc* desc;
+    const char *alg_name = "sha256";
+    struct crypto_shash *tfm;
+    struct shash_desc *desc;
     int ret;
 
     tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
@@ -843,11 +843,11 @@ tfm_done:
  * @digest Array to return digest into. Needs to be pre-allocated 64 bytes.
  */
 int
-hash_sha512(const void* data, const uint32_t data_len, uint8_t* digest)
+hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest)
 {
-    const char* alg_name = "sha512";
-    struct crypto_shash* tfm;
-    struct shash_desc* desc;
+    const char *alg_name = "sha512";
+    struct crypto_shash *tfm;
+    struct shash_desc *desc;
     int ret;
 
     tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
@@ -886,8 +886,8 @@ bsr(uint64_t n)
 /**
  * Get a pointer to a map entry in the Artifice map.
  */
-static inline uint8_t*
-afs_get_map_entry(struct afs_private* context, uint32_t index)
+static inline uint8_t *
+afs_get_map_entry(struct afs_private *context, uint32_t index)
 {
     return context->afs_map + (index * context->map_entry_sz);
 }
@@ -896,17 +896,17 @@ afs_get_map_entry(struct afs_private* context, uint32_t index)
  * Read a block from the map.
  */
 static int
-__afs_read_block(struct afs_private* context, void* data, uint32_t block)
+__afs_read_block(struct afs_private *context, void *data, uint32_t block)
 {
-    struct afs_map_tuple* map_entry_tuple = NULL;
-    uint8_t* map_entry = NULL;
-    uint8_t* map_entry_hash = NULL;
-    uint8_t* map_entry_entropy = NULL;
+    struct afs_map_tuple *map_entry_tuple = NULL;
+    uint8_t *map_entry = NULL;
+    uint8_t *map_entry_hash = NULL;
+    uint8_t *map_entry_entropy = NULL;
     uint8_t digest[SHA1_SZ];
     int ret, i;
 
     map_entry = afs_get_map_entry(context, block);
-    map_entry_tuple = (struct afs_map_tuple*)map_entry;
+    map_entry_tuple = (struct afs_map_tuple *)map_entry;
     map_entry_hash = map_entry + (context->num_carrier_blocks * sizeof(*map_entry_tuple));
     map_entry_entropy = map_entry_hash + SHA128_SZ;
 
@@ -935,12 +935,12 @@ done:
  * Map a read request from userspace.
  */
 int
-afs_read_request(struct afs_private* context, struct bio* bio)
+afs_read_request(struct afs_private *context, struct bio *bio)
 {
     struct bio_vec bv;
     struct bvec_iter iter;
-    uint8_t* raw_block = NULL;
-    uint8_t* bio_data = NULL;
+    uint8_t *raw_block = NULL;
+    uint8_t *bio_data = NULL;
     uint32_t req_size;
     uint32_t block_num;
     uint32_t sector_offset;
@@ -983,16 +983,16 @@ done:
  * Map a write request from userspace.
  */
 int
-afs_write_request(struct afs_private* context, struct bio* bio)
+afs_write_request(struct afs_private *context, struct bio *bio)
 {
     struct bio_vec bv;
     struct bvec_iter iter;
-    struct afs_map_tuple* map_entry_tuple = NULL;
-    uint8_t* map_entry = NULL;
-    uint8_t* map_entry_hash = NULL;
-    uint8_t* map_entry_entropy = NULL;
-    uint8_t* raw_block = NULL;
-    uint8_t* bio_data = NULL;
+    struct afs_map_tuple *map_entry_tuple = NULL;
+    uint8_t *map_entry = NULL;
+    uint8_t *map_entry_hash = NULL;
+    uint8_t *map_entry_entropy = NULL;
+    uint8_t *raw_block = NULL;
+    uint8_t *bio_data = NULL;
     uint8_t digest[SHA1_SZ];
     uint32_t req_size;
     uint32_t block_num;
@@ -1008,7 +1008,7 @@ afs_write_request(struct afs_private* context, struct bio* bio)
     afs_assert_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     map_entry = afs_get_map_entry(context, block_num);
-    map_entry_tuple = (struct afs_map_tuple*)map_entry;
+    map_entry_tuple = (struct afs_map_tuple *)map_entry;
     map_entry_hash = map_entry + (context->num_carrier_blocks * sizeof(*map_entry_tuple));
     map_entry_entropy = map_entry_hash + SHA128_SZ;
     afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);

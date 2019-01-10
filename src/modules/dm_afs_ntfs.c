@@ -14,7 +14,7 @@
  * @return  boolean.
  */
 bool
-afs_ntfs_detect(const void* data, struct block_device* device, struct afs_passive_fs* fs)
+afs_ntfs_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs)
 {
     return false;
 }

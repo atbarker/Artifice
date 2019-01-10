@@ -33,7 +33,7 @@ typedef u64 uint64_t;
 
 // Main structure for data structure.
 typedef struct _bit_vector_t {
-    uint8_t* array;
+    uint8_t *array;
     uint64_t length;
 } bit_vector_t;
 
@@ -41,30 +41,30 @@ typedef struct _bit_vector_t {
  * Create and initialize a bit vector with its default values
  * depending on the type.
  */
-bit_vector_t*
+bit_vector_t *
 bit_vector_create(uint64_t length);
 
 /**
  * Clear all the memory being utilized by the bit vector.
  */
-void bit_vector_free(bit_vector_t* vector);
+void bit_vector_free(bit_vector_t *vector);
 
 /**
  * Set a specific bit in the bit vector. Like any array, the index
  * begins from 0.
  */
-int bit_vector_set(bit_vector_t* vector, uint64_t index);
+int bit_vector_set(bit_vector_t *vector, uint64_t index);
 
 /**
  * Clear a specific bit in the bit vector. Like any array, the index
  * begins from 0.
  */
-int bit_vector_clear(bit_vector_t* vector, uint64_t index);
+int bit_vector_clear(bit_vector_t *vector, uint64_t index);
 
 /**
  * Acquire the state of a bit in the bit vector. Like any array, the index
  * begins from 0.
  */
-int bit_vector_get(bit_vector_t* vector, uint64_t index);
+int bit_vector_get(bit_vector_t *vector, uint64_t index);
 
 #endif /* _BIT_VECTOR_H_ */

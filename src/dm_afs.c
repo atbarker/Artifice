@@ -19,9 +19,9 @@
  * @return  FS_XXXX/FS_ERR.
  */
 static int8_t
-detect_fs(struct block_device* device, struct afs_passive_fs* fs)
+detect_fs(struct block_device *device, struct afs_passive_fs *fs)
 {
-    uint8_t* page = NULL;
+    uint8_t *page = NULL;
     int8_t ret;
 
     page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
@@ -60,7 +60,7 @@ alloc_err:
  * keep a NULL.
  */
 static int32_t
-parse_afs_args(struct afs_args* args, unsigned int argc, char* argv[])
+parse_afs_args(struct afs_args *args, unsigned int argc, char *argv[])
 {
     const uint32_t BASE_10 = 10;
     const int8_t TYPE = 0;
@@ -126,9 +126,9 @@ err:
  * Callback scheduled thread for the map function.
  */
 static void
-__work_afs_map(struct work_struct* work)
+__work_afs_map(struct work_struct *work)
 {
-    struct afs_private* context;
+    struct afs_private *context;
     int ret;
 
     context = container_of(work, struct afs_private, map_work);
@@ -179,12 +179,12 @@ done:
  * @return <0 Error.
  */
 static int
-afs_ctr(struct dm_target* ti, unsigned int argc, char** argv)
+afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
-    struct afs_private* context = NULL;
-    struct afs_args* args = NULL;
-    struct afs_passive_fs* fs = NULL;
-    struct afs_super_block* sb = NULL;
+    struct afs_private *context = NULL;
+    struct afs_args *args = NULL;
+    struct afs_passive_fs *fs = NULL;
+    struct afs_super_block *sb = NULL;
     int i, ret;
     int8_t detected_fs;
     uint64_t instance_size;
@@ -310,9 +310,9 @@ err:
  * @ti  Target instance to be destroyed.
  */
 static void
-afs_dtr(struct dm_target* ti)
+afs_dtr(struct dm_target *ti)
 {
-    struct afs_private* context = ti->private;
+    struct afs_private *context = ti->private;
     int err;
 
     // Update the Artifice map on the disk.
@@ -372,9 +372,9 @@ afs_dtr(struct dm_target* ti)
  *                      be resubmitted.
  */
 static int
-afs_map(struct dm_target* ti, struct bio* bio)
+afs_map(struct dm_target *ti, struct bio *bio)
 {
-    struct afs_private* context = ti->private;
+    struct afs_private *context = ti->private;
     uint32_t sector_offset;
     uint32_t max_sector_count;
     int ret;
