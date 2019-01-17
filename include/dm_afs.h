@@ -98,6 +98,8 @@ enum {
     AFS_INVALID_BLOCK = (((uint64_t)1 << 32) - 1),
     NUM_MAP_BLKS_IN_SB = 975,
     NUM_MAP_BLKS_IN_PB = 1019,
+    NUM_DEFAULT_CARRIER_BLKS = 4,
+    NUM_MAX_CARRIER_BLKS = 8,
 
     // Array sizes.
     PASSPHRASE_SZ = 64,
@@ -228,10 +230,7 @@ struct __attribute__((aligned(4096))) afs_private {
     struct dm_dev *passive_dev;
     struct block_device *bdev;
     uint64_t instance_size;
-    struct work_struct map_work;
     struct workqueue_struct *map_queue;
-    struct bio *bio;
-    wait_queue_head_t bio_waitq;
     struct task_struct *current_process;
 
     // Configuration information.
@@ -251,6 +250,17 @@ struct __attribute__((aligned(4096))) afs_private {
     uint8_t *afs_map;
     uint8_t *afs_map_blocks;
     struct afs_ptr_block *afs_ptr_blocks;
+};
+
+// A mapping request used to handle a single bio.
+struct __attribute__((aligned(4096))) afs_map_request {
+    uint8_t entropy_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
+    uint8_t read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
+    uint8_t write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
+    uint8_t data_block[AFS_BLOCK_SIZE];
+    struct afs_private *context;
+    struct bio *bio;
+    struct work_struct work_request;
 };
 
 /**
@@ -353,11 +363,11 @@ int hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest);
 /**
  * Map a read request from userspace.
  */
-int afs_read_request(struct afs_private *context, struct bio *bio);
+int afs_read_request(struct afs_map_request *req, struct bio *bio);
 
 /**
  * Map a write request from userspace.
  */
-int afs_write_request(struct afs_private *context, struct bio *bio);
+int afs_write_request(struct afs_map_request *req, struct bio *bio);
 
 #endif /* DM_AFS_H */

@@ -41,8 +41,6 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
     }
     kfree(page);
 
-    int lol;
-
     afs_debug("detected %d", ret);
     return ret;
 
@@ -123,44 +121,6 @@ err:
 }
 
 /**
- * Callback scheduled thread for the map function.
- */
-static void
-__work_afs_map(struct work_struct *work)
-{
-    struct afs_private *context;
-    int ret;
-
-    context = container_of(work, struct afs_private, map_work);
-    switch (bio_op(context->bio)) {
-    case REQ_OP_READ:
-        ret = afs_read_request(context, context->bio);
-        break;
-
-    case REQ_OP_WRITE:
-        ret = afs_write_request(context, context->bio);
-        break;
-
-    case REQ_OP_FLUSH:
-        // We are anyway writing everything to disk directly,
-        // so this is like a nop.
-        ret = 0;
-        break;
-
-    default:
-        // This case should never be encountered.
-        ret = -EINVAL;
-        afs_debug("What the hell!");
-    }
-    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(context->bio));
-
-done:
-    bio_endio(context->bio);
-    context->bio = NULL;
-    wake_up_interruptible(&context->bio_waitq);
-}
-
-/**
  * Constructor function for this target. The constructor
  * is called for each new instance of a device for this
  * target. To create a new device, 'dmsetup create' is used.
@@ -204,10 +164,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->current_process = current;
 
     // Initialize the work queues.
-    context->map_queue = create_singlethread_workqueue("afs_map queue");
+    context->map_queue = create_workqueue("afs_map queue");
     afs_assert_action(!IS_ERR(context->map_queue), ret = PTR_ERR(context->map_queue), wq_err, "could not create wq [%d]", ret);
-    INIT_WORK(&context->map_work, __work_afs_map);
-    init_waitqueue_head(&context->bio_waitq);
 
     args = &context->instance_args;
     ret = parse_afs_args(args, argc, argv);
@@ -351,6 +309,42 @@ afs_dtr(struct dm_target *ti)
 }
 
 /**
+ * Callback scheduled thread for the map function.
+ */
+static void
+__work_afs_map(struct work_struct *work)
+{
+    struct afs_map_request *req;
+    int ret;
+
+    req = container_of(work, struct afs_map_request, work_request);
+    switch (bio_op(req->bio)) {
+    case REQ_OP_READ:
+        ret = afs_read_request(req, req->bio);
+        break;
+
+    case REQ_OP_WRITE:
+        ret = afs_write_request(req, req->bio);
+        break;
+
+    case REQ_OP_FLUSH:
+        // For now, everything goes to disk directly. This is essentially a no-op.
+        ret = 0;
+        break;
+
+    default:
+        // This case should never be encountered.
+        ret = -EINVAL;
+        afs_debug("What the hell!");
+    }
+    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
+
+done:
+    bio_endio(req->bio);
+    kfree(req);
+}
+
+/**
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
  * we need to remap to our underlying device and then submit
@@ -375,14 +369,17 @@ static int
 afs_map(struct dm_target *ti, struct bio *bio)
 {
     struct afs_private *context = ti->private;
+    struct afs_map_request *req = NULL;
     uint32_t sector_offset;
     uint32_t max_sector_count;
     int ret;
 
-    do {
-        ret = wait_event_interruptible(context->bio_waitq, context->bio == NULL);
-    } while (ret == -ERESTARTSYS);
-    context->bio = bio;
+    // Build request.
+    req = kmalloc(sizeof(*req), GFP_KERNEL);
+    afs_assert_action(req, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
+    req->bio = bio;
+    req->context = context;
+    INIT_WORK(&req->work_request, __work_afs_map);
 
     // We only support bio's with a maximum length of 8 sectors (4KB).
     // Moreover, we only support processing a single block per bio.
@@ -400,16 +397,18 @@ afs_map(struct dm_target *ti, struct bio *bio)
     case REQ_OP_READ:
     case REQ_OP_WRITE:
     case REQ_OP_FLUSH:
-        queue_work(context->map_queue, &context->map_work);
-        return DM_MAPIO_SUBMITTED;
+        queue_work(context->map_queue, &req->work_request);
+        ret = DM_MAPIO_SUBMITTED;
         break;
 
     default:
         afs_debug("unknown operation");
-        context->bio = NULL;
         bio_endio(bio);
-        return DM_MAPIO_KILL;
+        ret = DM_MAPIO_KILL;
     }
+
+done:
+    return ret;
 }
 
 /** ----------------------------------------------------------- DO-NOT-CROSS ------------------------------------------------------------------- **/
