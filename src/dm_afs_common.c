@@ -646,6 +646,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
 {
     struct bio_vec bv;
     struct bvec_iter iter;
+    struct afs_private *context = NULL;
     uint8_t *bio_data = NULL;
     uint32_t req_size;
     uint32_t block_num;
@@ -653,6 +654,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
     uint32_t segment_offset;
     int ret;
 
+    context = req->context;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
@@ -706,12 +708,12 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     bool modification = false;
     int ret = 0, i;
 
+    context = req->context;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
     afs_assert_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
-    context = req->context;
     map_entry = afs_get_map_entry(context, block_num);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
     map_entry_hash = map_entry + (context->num_carrier_blocks * sizeof(*map_entry_tuple));

@@ -148,7 +148,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     int ret;
     int8_t detected_fs;
     uint64_t instance_size;
-    uint32_t i;
+    uint64_t i;
 
     // Make sure instance is large enough.
     instance_size = ti->len * AFS_SECTOR_SIZE;
@@ -165,7 +165,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->current_process = current;
 
     // Initialize the work queues.
-    context->map_queue = create_workqueue("afs_map queue");
+    context->map_queue = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 0, "afs_map queue");
     afs_assert_action(!IS_ERR(context->map_queue), ret = PTR_ERR(context->map_queue), wq_err, "could not create wq [%d]", ret);
 
     args = &context->instance_args;
