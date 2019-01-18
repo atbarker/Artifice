@@ -26,12 +26,12 @@ bit_vector_create(uint64_t length)
         return NULL;
     }
 
-    vector->array = vmalloc(BIT_VECTOR_BITS_TO_BYTES(temp_length) * sizeof *(vector->array));
+    vector->array = vmalloc(BIT_VECTOR_BITS_TO_BYTES(temp_length) * sizeof(*(vector->array)));
     if (!(vector->array)) {
         kfree(vector);
         return NULL;
     }
-    memset(vector->array, 0, BIT_VECTOR_BITS_TO_BYTES(temp_length) * sizeof *(vector->array));
+    memset(vector->array, 0, BIT_VECTOR_BITS_TO_BYTES(temp_length) * sizeof(*(vector->array)));
     vector->length = temp_length;
 
     return vector;
@@ -116,8 +116,8 @@ bit_vector_clear(bit_vector_t *vector, uint64_t index)
 int
 bit_vector_get(bit_vector_t *vector, uint64_t index)
 {
-    int8_t return_bits;
-    int8_t and_bits;
+    uint8_t return_bits;
+    uint8_t and_bits;
 
     if (!vector || index >= vector->length) {
         return -EINVAL;

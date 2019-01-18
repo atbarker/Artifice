@@ -14,7 +14,13 @@ AFS_LIBRARIES := src/lib/bit_vector.o
 
 # Kernel module.
 obj-m 	 := dm_afs.o
-dm_afs-y := src/dm_afs.o src/dm_afs_common.o $(AFS_LIBRARIES) $(AFS_MODULES)
+dm_afs-y := src/dm_afs.o            \
+			src/dm_afs_common.o     \
+			src/dm_afs_allocation.o \
+			src/dm_afs_crypto.o     \
+			src/dm_afs_io.o         \
+			$(AFS_LIBRARIES)        \
+			$(AFS_MODULES)
 
 default:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
@@ -36,16 +42,20 @@ reload:
 	@make load || true
 
 ######################################################################
-# Hack for easier loading and unloading
-# Make sure your VM has another disk and its mounted at /dev/sdb, with
-# a partition at /dev/sdb1.
+# Make sure your VM has another disk and its mounted at /dev/sdb.
+#
+# MY CONFIGURATION: /dev/sdb is 512MB.
+# Sectors:
+#	196608 = 096MB Artifice instance.
+#	524288 = 256MB Artifice instance (512MB disk not enough to map with 4 carrier blocks).
+
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 65536 artifice 0 pass /dev/sdb --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 196608 artifice 0 pass /dev/sdb --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 65536 artifice 1 pass /dev/sdb | sudo dmsetup create artifice
+	@echo 0 196608 artifice 1 pass /dev/sdb | sudo dmsetup create artifice
 
 debug_end:
 	@sudo dmsetup remove artifice || true

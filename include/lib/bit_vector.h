@@ -24,7 +24,7 @@ typedef u64 uint64_t;
 // Unit conversion.
 #define BIT_VECTOR_BITS_IN_BYTE 8
 #define BIT_VECTOR_BITS_TO_BYTES(b) ((b / BIT_VECTOR_BITS_IN_BYTE) + 1)
-#define BIT_VECTOR_BYTES_TO_BITS(b) (b * BIT_VECTOR_BITS_TO_BYTES)
+#define BIT_VECTOR_BYTES_TO_BITS(b) (b * BIT_VECTOR_BITS_TO_BYTES(b))
 
 // Unit indexes for byte arrays.
 //  Eg: For i==17, byte = 2 and bit = 1

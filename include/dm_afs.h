@@ -155,7 +155,7 @@ struct __attribute__((packed)) afs_map_tuple {
     uint16_t checksum;          // Checksum of this carrier block.
 };
 
-// afs_map_entry
+// struct afs_map_entry
 //
 // We cannot create a struct out of this since
 // the number of carrier blocks is user defined.
@@ -172,7 +172,7 @@ struct __attribute__((packed)) afs_map_tuple {
 // hash (16 bytes)
 // Entropy file name hash (8 bytes)
 
-// afs_map_block
+// struct afs_map_block
 //
 // We cannot create a struct out of this since
 // the size of an afs_map_entry is variable based
@@ -244,6 +244,7 @@ struct __attribute__((aligned(4096))) afs_private {
 
     // Free list allocation vector.
     spinlock_t allocation_lock;
+    spinlock_t vector_lock;
     bit_vector_t *allocation_vec;
 
     // Map information.

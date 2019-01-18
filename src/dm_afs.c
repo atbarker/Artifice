@@ -145,9 +145,10 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     struct afs_args *args = NULL;
     struct afs_passive_fs *fs = NULL;
     struct afs_super_block *sb = NULL;
-    int i, ret;
+    int ret;
     int8_t detected_fs;
     uint64_t instance_size;
+    uint32_t i;
 
     // Make sure instance is large enough.
     instance_size = ti->len * AFS_SECTOR_SIZE;
@@ -203,8 +204,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // This is all just for testing.
     // BEGIN.
-    fs->block_list = vmalloc(1048576 * sizeof(*fs->block_list));
-    fs->list_len = 1048576;
+    fs->block_list = vmalloc(131072 * sizeof(*fs->block_list));
+    fs->list_len = 131072;
 
     for (i = 0; i < fs->list_len; i++) {
         fs->block_list[i] = i;
@@ -213,9 +214,10 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // Allocate the free list allocation vector to be able
     // to map all possible blocks and mask the invalid block.
-    context->allocation_vec = bit_vector_create(((uint64_t)1 << 32) - 1);
+    context->allocation_vec = bit_vector_create((uint64_t)U32_MAX);
     afs_assert_action(context->allocation_vec, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
     spin_lock_init(&context->allocation_lock);
+    spin_lock_init(&context->vector_lock);
     allocation_set(context, AFS_INVALID_BLOCK);
 
     sb = &context->super_block;
@@ -245,7 +247,7 @@ sb_err:
     bit_vector_free(context->allocation_vec);
 
 vec_err:
-    kfree(fs->block_list);
+    vfree(fs->block_list);
 
 fs_err:
     dm_put_device(ti, context->passive_dev);
