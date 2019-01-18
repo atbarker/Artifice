@@ -11,11 +11,7 @@
 uint8_t
 allocation_get(struct afs_private *context, uint32_t index)
 {
-    int ret;
-
-    spin_lock(&context->vector_lock);
-    ret = bit_vector_get(context->allocation_vec, index);
-    spin_unlock(&context->vector_lock);
+    int ret = bit_vector_get(context->allocation_vec, index);
 
     // Make sure return code was valid.
     if (ret < 0) {
@@ -35,11 +31,10 @@ allocation_set(struct afs_private *context, uint32_t index)
     int ret;
 
     // Make sure index is not already taken.
-    afs_assert(!(allocation_get(context, index)), err, "index %d already set", index);
-
-    spin_lock(&context->vector_lock);
+    if (allocation_get(context, index)) {
+        return false;
+    }
     ret = bit_vector_set(context->allocation_vec, index);
-    spin_unlock(&context->vector_lock);
 
     // Make sure return code was valid.
     afs_assert(!ret, err, "bit_vector_set returned %d", ret);
@@ -55,11 +50,7 @@ err:
 void
 allocation_free(struct afs_private *context, uint32_t index)
 {
-    int ret;
-
-    spin_lock(&context->vector_lock);
-    ret = bit_vector_clear(context->allocation_vec, index);
-    spin_unlock(&context->vector_lock);
+    int ret = bit_vector_clear(context->allocation_vec, index);
 
     // Make sure return code was valid.
     if (ret) {

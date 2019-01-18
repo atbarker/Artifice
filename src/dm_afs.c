@@ -217,7 +217,6 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->allocation_vec = bit_vector_create((uint64_t)U32_MAX);
     afs_assert_action(context->allocation_vec, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
     spin_lock_init(&context->allocation_lock);
-    spin_lock_init(&context->vector_lock);
     allocation_set(context, AFS_INVALID_BLOCK);
 
     sb = &context->super_block;

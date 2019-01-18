@@ -3,6 +3,7 @@
  * Copyright: Yash Gupta
  * License: MIT Public License
  */
+#include <dm_afs.h>
 #include <lib/bit_vector.h>
 
 /**
@@ -33,6 +34,9 @@ bit_vector_create(uint64_t length)
     }
     memset(vector->array, 0, BIT_VECTOR_BITS_TO_BYTES(temp_length) * sizeof(*(vector->array)));
     vector->length = temp_length;
+
+    // Initialize spin lock.
+    spin_lock_init(&vector->lock);
 
     return vector;
 }
@@ -65,12 +69,15 @@ bit_vector_set(bit_vector_t *vector, uint64_t index)
 {
     uint8_t or_bits;
 
-    if (!vector || index >= vector->length) {
+    if (!vector || index > vector->length) {
+        afs_debug("vector: %p | index: %llu", vector, index);
         return -EINVAL;
     }
 
+    spin_lock(&vector->lock);
     or_bits = 1 << BIT_VECTOR_GET_BIT_INDEX(index);
     vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] |= or_bits;
+    spin_unlock(&vector->lock);
 
     return 0;
 }
@@ -91,12 +98,14 @@ bit_vector_clear(bit_vector_t *vector, uint64_t index)
 {
     uint8_t and_bits;
 
-    if (!vector || index >= vector->length) {
+    if (!vector || index > vector->length) {
         return -EINVAL;
     }
 
+    spin_lock(&vector->lock);
     and_bits = ~(1 << BIT_VECTOR_GET_BIT_INDEX(index));
     vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] &= and_bits;
+    spin_unlock(&vector->lock);
 
     return 0;
 }
@@ -119,11 +128,15 @@ bit_vector_get(bit_vector_t *vector, uint64_t index)
     uint8_t return_bits;
     uint8_t and_bits;
 
-    if (!vector || index >= vector->length) {
+    if (!vector || index > vector->length) {
+        afs_debug("vector: %p | index: %llu", vector, index);
         return -EINVAL;
     }
 
+    spin_lock(&vector->lock);
     and_bits = 1 << BIT_VECTOR_GET_BIT_INDEX(index);
     return_bits = vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] & and_bits;
+    spin_unlock(&vector->lock);
+
     return !!return_bits;
 }

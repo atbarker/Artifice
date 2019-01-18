@@ -5,6 +5,7 @@
  */
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include <linux/spinlock_types.h>
 #include <linux/string.h>
 #include <linux/types.h>
 
@@ -35,6 +36,7 @@ typedef u64 uint64_t;
 typedef struct _bit_vector_t {
     uint8_t *array;
     uint64_t length;
+    spinlock_t lock;
 } bit_vector_t;
 
 /**

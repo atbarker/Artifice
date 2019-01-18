@@ -95,7 +95,7 @@ enum {
     AFS_MIN_SIZE = 1 << 16,
     AFS_BLOCK_SIZE = 4096,
     AFS_SECTOR_SIZE = 512,
-    AFS_INVALID_BLOCK = (((uint64_t)1 << 32) - 1),
+    AFS_INVALID_BLOCK = U32_MAX,
     NUM_MAP_BLKS_IN_SB = 975,
     NUM_MAP_BLKS_IN_PB = 1019,
     NUM_DEFAULT_CARRIER_BLKS = 4,
@@ -244,7 +244,6 @@ struct __attribute__((aligned(4096))) afs_private {
 
     // Free list allocation vector.
     spinlock_t allocation_lock;
-    spinlock_t vector_lock;
     bit_vector_t *allocation_vec;
 
     // Map information.
