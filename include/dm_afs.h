@@ -2,6 +2,9 @@
  * Author: Yash Gupta <ygupta@ucsc.edu>, Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
  */
+#include <dm_afs_config.h>
+#include <dm_afs_format.h>
+#include <dm_afs_modules.h>
 #include <lib/bit_vector.h>
 #include <linux/bio.h>
 #include <linux/completion.h>
@@ -18,196 +21,8 @@
 #ifndef DM_AFS_H
 #define DM_AFS_H
 
-// Standard integer types.
-typedef s8 int8_t;
-typedef u8 uint8_t;
-typedef s16 int16_t;
-typedef u16 uint16_t;
-typedef s32 int32_t;
-typedef u32 uint32_t;
-typedef s64 int64_t;
-typedef u64 uint64_t;
-
 // Global variables
 extern int afs_debug_mode;
-
-// Metadata
-#define DM_AFS_NAME "artifice"
-#define DM_AFS_MAJOR_VER 0
-#define DM_AFS_MINOR_VER 1
-#define DM_AFS_PATCH_VER 0
-
-// Simple information.
-#define afs_info(fmt, ...)                                         \
-    ({                                                             \
-        printk(KERN_INFO "dm-afs-info: " fmt "\n", ##__VA_ARGS__); \
-    })
-
-// Debug information.
-#define afs_debug(fmt, ...)                                      \
-    ({                                                           \
-        if (afs_debug_mode) {                                    \
-            printk(KERN_DEBUG "dm-afs-debug: [%s:%d] " fmt "\n", \
-                __func__, __LINE__,                              \
-                ##__VA_ARGS__);                                  \
-        }                                                        \
-    })
-
-// Alert information.
-#define afs_alert(fmt, ...)                                  \
-    ({                                                       \
-        printk(KERN_ALERT "dm-afs-alert: [%s:%d] " fmt "\n", \
-            __func__, __LINE__,                              \
-            ##__VA_ARGS__);                                  \
-    })
-
-// Assert and jump.
-#define afs_assert(cond, label, fmt, args...) \
-    ({                                        \
-        if (!(cond)) {                        \
-            afs_alert(fmt, ##args);           \
-            goto label;                       \
-        }                                     \
-    })
-
-// Assert, perform an action, and jump.
-#define afs_assert_action(cond, action, label, fmt, args...) \
-    ({                                                       \
-        if (!(cond)) {                                       \
-            action;                                          \
-            afs_alert(fmt, ##args);                          \
-            goto label;                                      \
-        }                                                    \
-    })
-
-// Disk I/O flags
-enum afs_io_type {
-    IO_READ = 0,
-    IO_WRITE
-};
-
-/**
- * Collection of constants ranging from array sizes
- * to instance types.
- */
-enum {
-    // Configuration.
-    AFS_MIN_SIZE = 1 << 16,
-    AFS_BLOCK_SIZE = 4096,
-    AFS_SECTOR_SIZE = 512,
-    AFS_INVALID_BLOCK = U32_MAX,
-    NUM_MAP_BLKS_IN_SB = 975,
-    NUM_MAP_BLKS_IN_PB = 1019,
-    NUM_DEFAULT_CARRIER_BLKS = 4,
-    NUM_MAX_CARRIER_BLKS = 8,
-
-    // Array sizes.
-    PASSPHRASE_SZ = 64,
-    PASSIVE_DEV_SZ = 32,
-    ENTROPY_DIR_SZ = 64,
-    ENTROPY_HASH_SZ = 8,
-
-    // Hash algorithms
-    SHA1_SZ = 20,
-    SHA128_SZ = 16,
-    SHA256_SZ = 32,
-    SHA512_SZ = 64,
-
-    // Artifice type.
-    TYPE_CREATE = 0,
-    TYPE_MOUNT = 1,
-    TYPE_SHADOW = 2,
-
-    // File system support.
-    FS_FAT32 = 0,
-    FS_EXT4 = 1,
-    FS_NTFS = 2,
-    FS_ERR = -1
-};
-
-// Artifice super block.
-struct __attribute__((packed)) afs_super_block {
-    uint8_t sb_hash[SHA256_SZ];                  // Hash of the superblock.
-    uint8_t hash[SHA1_SZ];                       // Hash of the passphrase.
-    uint64_t instance_size;                      // Size of this Artifice instance.
-    uint8_t reserved[4];                         // TODO: Replace with RS information.
-    char entropy_dir[ENTROPY_DIR_SZ];            // Entropy directory for this instance.
-    char shadow_passphrase[PASSPHRASE_SZ];       // In case this instance is a nested instance.
-    uint32_t map_block_ptrs[NUM_MAP_BLKS_IN_SB]; // The super block stores the pointers to the first 975 map blocks.
-    uint32_t first_ptr_block;                    // Pointer to the first pointer block in the chain.
-};
-
-// Artifice pointer block.
-struct __attribute__((packed)) afs_ptr_block {
-    // Each pointer block is 4KB. With 32 bit pointers,
-    // we can store 1019 pointers to map blocks and
-    // a pointer to the next block.
-
-    uint8_t hash[SHA128_SZ];
-    uint32_t map_block_ptrs[NUM_MAP_BLKS_IN_PB];
-    uint32_t next_ptr_block;
-};
-
-// Artifice map tuple.
-struct __attribute__((packed)) afs_map_tuple {
-    uint32_t carrier_block_ptr; // Sector number from the free list.
-    uint32_t entropy_block_ptr; // Sector number from the entropy file.
-    uint16_t checksum;          // Checksum of this carrier block.
-};
-
-// struct afs_map_entry
-//
-// We cannot create a struct out of this since
-// the number of carrier blocks is user defined.
-//
-// Overall Size: 24 + (10 * num_carrier_blocks) bytes.
-//
-// Structure:
-// afs_map_tuple[0] (10 bytes)
-// afs_map_tuple[1] (10 bytes)
-// .
-// .
-// .
-// afs_map_tuple[num_carrier_blocks-1] (10 bytes)
-// hash (16 bytes)
-// Entropy file name hash (8 bytes)
-
-// struct afs_map_block
-//
-// We cannot create a struct out of this since
-// the size of an afs_map_entry is variable based
-// on user configuration.
-//
-// Overall Size: Exactly 4096 bytes.
-//
-// Structure:
-// hash (64 bytes)
-// unused space (unused_space_per_block bytes)
-// afs_map_entry[0] (map_entry_sz bytes)
-// afs_map_entry[1] (map_entry_sz bytes)
-// .
-// .
-// .
-// afs_map_entry[num_map_entries_per_block-1] (map_entry_sz bytes)
-
-// Artifice I/O
-struct afs_io {
-    struct block_device *bdev; // Block Device to issue I/O on.
-    struct page *io_page;      // Kernel Page(s) used for transfer.
-    sector_t io_sector;        // Disk sector used for transfer.
-    uint32_t io_size;          // Size of I/O transfer.
-    enum afs_io_type type;     // Read or write.
-};
-
-// Passive file system information.
-struct afs_passive_fs {
-    uint32_t *block_list;      // List of empty blocks.
-    uint32_t list_len;         // Length of that list.
-    uint8_t sectors_per_block; // Sectors in a block.
-    uint32_t total_blocks;     // Total number of blocks in the FS.
-    uint32_t data_start_off;   // Data start offset in the filesystem (bypass reserved blocks).
-    uint8_t blocks_in_tuple;   // Blocks in a tuple.
-};
 
 // A parsed structure of arguments received from the
 // user.
@@ -258,25 +73,11 @@ struct __attribute__((aligned(4096))) afs_map_request {
     uint8_t read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
     uint8_t write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
     uint8_t data_block[AFS_BLOCK_SIZE];
+    spinlock_t sync_lock;
     struct afs_private *context;
     struct bio *bio;
     struct work_struct work_request;
 };
-
-/**
- * Read or write to a block device.
- */
-int afs_blkdev_io(struct afs_io *request);
-
-/**
- * Read a single page.
- */
-int read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
-
-/**
- * Write a single page.
- */
-int write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
 
 /**
  * Acquire a free block from the free list.

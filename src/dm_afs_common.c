@@ -4,6 +4,7 @@
  */
 #include <crypto/hash.h>
 #include <dm_afs.h>
+#include <dm_afs_io.h>
 #include <dm_afs_modules.h>
 #include <linux/crypto.h>
 #include <linux/errno.h>

@@ -3,6 +3,7 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs.h>
+#include <dm_afs_io.h>
 #include <dm_afs_modules.h>
 
 /**
