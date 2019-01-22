@@ -34,28 +34,14 @@ struct afs_args {
     uint8_t instance_type;                 // Type of instance.
 };
 
-// Private data per instance. Do NOT change order
-// of variables.
-struct __attribute__((aligned(4096))) afs_private {
-    uint8_t raw_block_read[AFS_BLOCK_SIZE];
-    uint8_t raw_block_write[AFS_BLOCK_SIZE];
-    struct afs_super_block super_block;
-    struct afs_passive_fs passive_fs;
-    struct afs_args instance_args;
+// Private data per instance.
+struct afs_private {
     struct dm_dev *passive_dev;
     struct block_device *bdev;
-    uint64_t instance_size;
-    struct workqueue_struct *map_queue;
-    struct task_struct *current_process;
-
-    // Configuration information.
-    uint8_t num_carrier_blocks;
-    uint8_t map_entry_sz;
-    uint8_t unused_space_per_block;
-    uint8_t num_map_entries_per_block;
-    uint32_t num_blocks;
-    uint32_t num_map_blocks;
-    uint32_t num_ptr_blocks;
+    struct afs_config config;
+    struct afs_super_block __attribute__((aligned(4096))) super_block;
+    struct afs_passive_fs passive_fs;
+    struct afs_args args;
 
     // Free list allocation vector.
     spinlock_t allocation_lock;
@@ -65,39 +51,28 @@ struct __attribute__((aligned(4096))) afs_private {
     uint8_t *afs_map;
     uint8_t *afs_map_blocks;
     struct afs_ptr_block *afs_ptr_blocks;
-};
-
-// A mapping request used to handle a single bio.
-struct __attribute__((aligned(4096))) afs_map_request {
-    uint8_t entropy_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    uint8_t read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    uint8_t write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    uint8_t data_block[AFS_BLOCK_SIZE];
-    spinlock_t sync_lock;
-    struct afs_private *context;
-    struct bio *bio;
-    struct work_struct work_request;
+    struct workqueue_struct *map_queue;
 };
 
 /**
  * Acquire a free block from the free list.
  */
-uint32_t acquire_block(struct afs_passive_fs *fs, struct afs_private *context);
+uint32_t acquire_block(struct afs_passive_fs *fs, bit_vector_t *vec, spinlock_t *vec_lock);
 
 /**
  * Set the usage of a block in the allocation vector.
  */
-bool allocation_set(struct afs_private *context, uint32_t index);
+bool allocation_set(bit_vector_t *vec, uint32_t index);
 
 /**
  * Clear the usage of a block in the allocation vector.
  */
-void allocation_free(struct afs_private *context, uint32_t index);
+void allocation_free(bit_vector_t *vec, uint32_t index);
 
 /**
  * Get the state of a block in the allocation vector.
  */
-uint8_t allocation_get(struct afs_private *context, uint32_t index);
+uint8_t allocation_get(bit_vector_t *vec, uint32_t index);
 
 /**
  * Build the configuration for an instance.
@@ -142,11 +117,6 @@ int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, str
 int find_super_block(struct afs_super_block *sb, struct afs_private *context);
 
 /**
- * Bit scan reverse.
- */
-uint64_t bsr(uint64_t n);
-
-/**
  * Acquire a SHA1 hash of given data.
  */
 int hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest);
@@ -162,13 +132,16 @@ int hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest);
 int hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
- * Map a read request from userspace.
+ * Perform a reverse bit scan for an unsigned long.
  */
-int afs_read_request(struct afs_map_request *req, struct bio *bio);
+static inline uint64_t
+bsr(uint64_t n)
+{
+    __asm__("bsr %1,%0"
+            : "=r"(n)
+            : "rm"(n));
 
-/**
- * Map a write request from userspace.
- */
-int afs_write_request(struct afs_map_request *req, struct bio *bio);
+    return n;
+}
 
 #endif /* DM_AFS_H */

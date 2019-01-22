@@ -72,4 +72,15 @@ struct __attribute__((packed)) afs_map_tuple {
 // .
 // afs_map_entry[num_map_entries_per_block-1] (map_entry_sz bytes)
 
+struct afs_config {
+    uint8_t num_carrier_blocks;
+    uint8_t map_entry_sz;
+    uint8_t unused_space_per_block;
+    uint8_t num_map_entries_per_block;
+    uint32_t num_blocks;
+    uint32_t num_map_blocks;
+    uint32_t num_ptr_blocks;
+    uint64_t instance_size;
+};
+
 #endif /* DM_AFS_FORMAT_H */

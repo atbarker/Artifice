@@ -15,7 +15,8 @@ AFS_LIBRARIES := src/lib/bit_vector.o
 # Kernel module.
 obj-m 	 := dm_afs.o
 dm_afs-y := src/dm_afs.o            \
-			src/dm_afs_common.o     \
+			src/dm_afs_metadata.o   \
+			src/dm_afs_engine.o     \
 			src/dm_afs_allocation.o \
 			src/dm_afs_crypto.o     \
 			src/dm_afs_io.o         \

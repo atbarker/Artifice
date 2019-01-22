@@ -3,6 +3,7 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs.h>
+#include <dm_afs_engine.h>
 #include <dm_afs_io.h>
 #include <dm_afs_modules.h>
 
@@ -162,14 +163,13 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context = kmalloc(sizeof(*context), GFP_KERNEL);
     afs_assert_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);
     memset(context, 0, sizeof(*context));
-    context->instance_size = instance_size;
-    context->current_process = current;
+    context->config.instance_size = instance_size;
 
     // Initialize the work queues.
     context->map_queue = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 0, "afs_map queue");
     afs_assert_action(!IS_ERR(context->map_queue), ret = PTR_ERR(context->map_queue), wq_err, "could not create wq [%d]", ret);
 
-    args = &context->instance_args;
+    args = &context->args;
     ret = parse_afs_args(args, argc, argv);
     afs_assert(!ret, args_err, "unable to parse arguments");
 
@@ -218,7 +218,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->allocation_vec = bit_vector_create((uint64_t)U32_MAX);
     afs_assert_action(context->allocation_vec, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
     spin_lock_init(&context->allocation_lock);
-    allocation_set(context, AFS_INVALID_BLOCK);
+    allocation_set(context->allocation_vec, AFS_INVALID_BLOCK);
 
     sb = &context->super_block;
     switch (args->instance_type) {
@@ -379,8 +379,15 @@ afs_map(struct dm_target *ti, struct bio *bio)
     // Build request.
     req = kmalloc(sizeof(*req), GFP_KERNEL);
     afs_assert_action(req, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
+
     req->bio = bio;
-    req->context = context;
+    req->bdev = context->bdev;
+    req->map = context->afs_map;
+    req->config = &context->config;
+    req->fs = &context->passive_fs;
+    req->vec = context->allocation_vec;
+    req->vec_lock = &context->allocation_lock;
+    spin_lock_init(&req->sync_lock);
     INIT_WORK(&req->work_request, __work_afs_map);
 
     // We only support bio's with a maximum length of 8 sectors (4KB).
