@@ -36,6 +36,9 @@ struct afs_map_request {
     struct afs_config *config;
     struct afs_passive_fs *fs;
     struct afs_allocation_vector *vector;
+
+    // Write requests allocate a new page for a bio.
+    uint8_t *allocated_write_page;
 };
 
 // Map request queue.

@@ -145,7 +145,6 @@ __work_afs_map(struct work_struct *work)
 
     case REQ_OP_WRITE:
         ret = afs_write_request(req, req->bio);
-        bio_free_pages(req->bio);
         break;
 
     default:
@@ -161,16 +160,27 @@ __work_afs_map(struct work_struct *work)
 
 done:
     bio_endio(req->bio);
+
+    // Write requests may have an allocated page with them. This needs
+    // to be free'd AFTER the bio has been ended.
+    if (req->allocated_write_page) {
+        kfree(req->allocated_write_page);
+    }
+
     kfree(element);
 }
 
 /**
  * Allocate a new bio and copy in the contents from another
  * one.
+ * 
+ * NO-OP for read requests.
  */
 static struct bio *
-__clone_bio(struct bio *bio_src, bool end_bio_src)
+__clone_bio(struct bio *bio_src, uint8_t **allocated_page, bool end_bio_src)
 {
+    const int override = 0;
+
     struct bio_vec bv;
     struct bvec_iter iter;
     struct bio *bio_ret = NULL;
@@ -179,6 +189,11 @@ __clone_bio(struct bio *bio_src, bool end_bio_src)
     uint32_t sector_offset;
     uint32_t segment_offset;
     uint32_t req_size;
+
+    // Read requests are not cloned.
+    if (bio_op(bio_src) == REQ_OP_READ || override) {
+        return bio_src;
+    }
 
     bio_ret = bio_alloc(GFP_NOIO, 1);
     afs_assert(!IS_ERR(bio_ret), alloc_err, "could not allocate bio [%ld]", PTR_ERR(bio_ret));
@@ -218,6 +233,7 @@ __clone_bio(struct bio *bio_src, bool end_bio_src)
     if (end_bio_src) {
         bio_endio(bio_src);
     }
+    *allocated_page = page;
 
     return bio_ret;
 
@@ -255,7 +271,8 @@ alloc_err:
 static int
 afs_map(struct dm_target *ti, struct bio *bio)
 {
-    static int i = 0;
+    const int override = 0;
+
     struct afs_private *context = ti->private;
     struct afs_map_queue *map_element = NULL;
     struct afs_map_request *req = NULL;
@@ -263,6 +280,13 @@ afs_map(struct dm_target *ti, struct bio *bio)
     uint32_t max_sector_count;
     int ret;
     bool work_queued;
+
+    // Bypass Artifice completely.
+    if (override) {
+        bio_set_dev(bio, context->bdev);
+        submit_bio(bio);
+        return DM_MAPIO_SUBMITTED;
+    }
 
     // We only support bio's with a maximum length of 8 sectors (4KB).
     // Moreover, we only support processing a single block per bio.
@@ -289,33 +313,23 @@ afs_map(struct dm_target *ti, struct bio *bio)
     req->config = &context->config;
     req->fs = &context->passive_fs;
     req->vector = &context->vector;
+    req->allocated_write_page = NULL;
     atomic64_set(&req->state, REQ_STATE_TRANSMIT);
 
     switch (bio_op(bio)) {
     case REQ_OP_READ:
-        req->bio = bio;
-        afs_add_map_queue(&context->cache_queue, &context->cache_queue_lock, map_element);
-
-        // Defer bio to be completed later.
-        work_queued = queue_work(context->map_queue, &map_element->element_work_struct);
-        afs_debug("[%d] work_queued: %d", i++, work_queued);
-
-        ret = DM_MAPIO_SUBMITTED;
-        break;
-
     case REQ_OP_WRITE:
-        req->bio = __clone_bio(bio, true);
+        req->bio = __clone_bio(bio, &req->allocated_write_page, true);
         afs_assert_action(req->bio, (kfree(map_element), ret = DM_MAPIO_KILL), done, "could not clone bio");
         afs_add_map_queue(&context->cache_queue, &context->cache_queue_lock, map_element);
 
         // Defer bio to be completed later.
         work_queued = queue_work(context->map_queue, &map_element->element_work_struct);
-        afs_debug("[%d] work_queued: %d", i++, work_queued);
-
         ret = DM_MAPIO_SUBMITTED;
         break;
 
     case REQ_OP_FLUSH:
+        // TODO: Make sure the block number of this bio is not in the cache queue.
         bio_endio(bio);
         ret = DM_MAPIO_SUBMITTED;
         break;
@@ -374,7 +388,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->config.instance_size = instance_size;
 
     // Initialize the work queues.
-    context->map_queue = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 0, "afs_map queue");
+    context->map_queue = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "afs_map queue");
     afs_assert_action(!IS_ERR(context->map_queue), ret = PTR_ERR(context->map_queue), wq_err, "could not create wq [%d]", ret);
 
     args = &context->args;

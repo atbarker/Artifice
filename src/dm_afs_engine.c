@@ -53,7 +53,7 @@ afs_add_map_queue(struct afs_map_queue *queue, spinlock_t *queue_lock, struct af
             spin_unlock(queue_lock);
         } else {
             spin_unlock(queue_lock);
-            msleep(10);
+            msleep(1);
         }
     } while (found);
 }
