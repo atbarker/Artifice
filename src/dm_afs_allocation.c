@@ -9,9 +9,9 @@
  * Get the state of a block in the allocation vector.
  */
 uint8_t
-allocation_get(bit_vector_t *vec, uint32_t index)
+allocation_get(struct afs_allocation_vector *vector, uint32_t index)
 {
-    int ret = bit_vector_get(vec, index);
+    int ret = bit_vector_get(vector->vector, index);
 
     // Make sure return code was valid.
     if (ret < 0) {
@@ -26,15 +26,15 @@ allocation_get(bit_vector_t *vec, uint32_t index)
  * Set the usage of a block in the allocation vector.
  */
 bool
-allocation_set(bit_vector_t *vec, uint32_t index)
+allocation_set(struct afs_allocation_vector *vector, uint32_t index)
 {
     int ret;
 
     // Make sure index is not already taken.
-    if (allocation_get(vec, index)) {
+    if (allocation_get(vector, index)) {
         return false;
     }
-    ret = bit_vector_set(vec, index);
+    ret = bit_vector_set(vector->vector, index);
 
     // Make sure return code was valid.
     afs_assert(!ret, err, "bit_vector_set returned %d", ret);
@@ -48,9 +48,9 @@ err:
  * Clear the usage of a block in the allocation vector.
  */
 void
-allocation_free(bit_vector_t *vec, uint32_t index)
+allocation_free(struct afs_allocation_vector *vector, uint32_t index)
 {
-    int ret = bit_vector_clear(vec, index);
+    int ret = bit_vector_clear(vector->vector, index);
 
     // Make sure return code was valid.
     if (ret) {
@@ -62,21 +62,21 @@ allocation_free(bit_vector_t *vec, uint32_t index)
  * Acquire a free block from the free list.
  */
 uint32_t
-acquire_block(struct afs_passive_fs *fs, bit_vector_t *vec, spinlock_t *vec_lock)
+acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
 {
     static uint32_t block_num = 0;
     uint32_t current_num = block_num;
 
-    spin_lock(vec_lock);
+    spin_lock(&vector->lock);
     do {
-        if (allocation_set(vec, block_num)) {
+        if (allocation_set(vector, block_num)) {
             block_num = (block_num + 1) % fs->list_len;
-            spin_unlock(vec_lock);
+            spin_unlock(&vector->lock);
             return fs->block_list[block_num];
         }
         block_num = (block_num + 1) % fs->list_len;
     } while (block_num != current_num);
-    spin_unlock(vec_lock);
+    spin_unlock(&vector->lock);
 
     return AFS_INVALID_BLOCK;
 }

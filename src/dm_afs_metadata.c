@@ -129,7 +129,7 @@ afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
         // Read map block.
         ret = read_page(map_block, context->bdev, sb->map_block_ptrs[i], false);
         afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, entries_read % config->num_map_blocks);
-        allocation_set(context->allocation_vec, sb->map_block_ptrs[i]);
+        allocation_set(&context->vector, sb->map_block_ptrs[i]);
 
         // Offset into the block.
         map_block_hash = map_block;
@@ -154,14 +154,14 @@ afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
         next_block = (i == 0) ? sb->first_ptr_block : ptr_block->next_ptr_block;
         ret = read_page(ptr_block, context->bdev, next_block, false);
         afs_assert(!ret, read_err, "could not read pointer block [%d:%u]", ret, i);
-        allocation_set(context->allocation_vec, next_block);
+        allocation_set(&context->vector, next_block);
         // TODO: Calculate and verify hash of ptr_block.
 
         for (j = 0; j < NUM_MAP_BLKS_IN_PB; i++) {
             // Read map block.
             ret = read_page(map_block, context->bdev, ptr_block->map_block_ptrs[j], false);
             afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, entries_read % config->num_map_blocks);
-            allocation_set(context->allocation_vec, ptr_block->map_block_ptrs[j]);
+            allocation_set(&context->vector, ptr_block->map_block_ptrs[j]);
 
             // Offset into the block.
             map_block_hash = map_block;
@@ -306,7 +306,7 @@ write_map_blocks(struct afs_private *context, bool update)
         }
 
         if (!update) {
-            block_num = acquire_block(fs, context->allocation_vec, &context->allocation_lock);
+            block_num = acquire_block(fs, &context->vector);
             afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
             sb->map_block_ptrs[i] = block_num;
         } else {
@@ -328,7 +328,7 @@ write_map_blocks(struct afs_private *context, bool update)
             }
 
             if (!update) {
-                block_num = acquire_block(fs, context->allocation_vec, &context->allocation_lock);
+                block_num = acquire_block(fs, &context->vector);
                 afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
                 afs_ptr_blocks[i].map_block_ptrs[j] = block_num;
             } else {
@@ -384,7 +384,7 @@ write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
         memcpy(ptr_blocks[i].hash, ptr_block_digest, sizeof(ptr_blocks[i].hash));
 
         // Write to disk and save pointer.
-        block_num = acquire_block(fs, context->allocation_vec, &context->allocation_lock);
+        block_num = acquire_block(fs, &context->vector);
         afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
         ret = write_page(ptr_blocks + i, context->bdev, block_num, false);
         afs_assert(!ret, done, "could not write ptr block [%d:%llu]", ret, i);
@@ -416,7 +416,7 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     int ret = 0;
 
     // Reserve space for the super block location.
-    allocation_set(context->allocation_vec, sb_block);
+    allocation_set(&context->vector, sb_block);
 
     // Build the Artifice Map.
     ret = afs_create_map(context);
@@ -490,7 +490,7 @@ rebuild_allocation_vector(struct afs_private *context)
     for (i = 0; i < num_entries; i++) {
         map_tuple = (struct afs_map_tuple *)(afs_map + (i * map_entry_sz));
         for (j = 0; j < num_carrier_blocks; j++) {
-            allocation_set(context->allocation_vec, map_tuple->carrier_block_ptr);
+            allocation_set(&context->vector, map_tuple->carrier_block_ptr);
             map_tuple += 1;
         }
     }
@@ -539,7 +539,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     int ret = 0;
 
     // Mark super block location as reserved.
-    allocation_set(context->allocation_vec, sb_block);
+    allocation_set(&context->vector, sb_block);
 
     // Read in the super block from disk.
     ret = read_page(sb, context->bdev, sb_block, false);

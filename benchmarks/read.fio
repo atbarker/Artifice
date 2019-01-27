@@ -1,0 +1,13 @@
+; One Reader.
+
+[global]
+size=16m
+directory=/mnt
+invalidate=1
+
+[Reader]
+rw=randread
+iodepth=16
+ioengine=mmap
+thinktime=2
+direct=0

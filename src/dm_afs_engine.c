@@ -6,6 +6,57 @@
 #include <dm_afs_config.h>
 #include <dm_afs_engine.h>
 #include <dm_afs_io.h>
+#include <linux/delay.h>
+
+/**
+ * Add a map element to a map queue.
+ * 
+ * Search through the list to find if a bio with the same block
+ * number already exists. 
+ * 
+ * If it doesn't:
+ *  Simply add it to the tail of the list.
+ * 
+ * If it does:
+ *  Wait until the bio is finished processing and then add the new
+ *  bio.
+ */
+void
+afs_add_map_queue(struct afs_map_queue *queue, spinlock_t *queue_lock, struct afs_map_queue *element)
+{
+    struct afs_map_queue *tmp;
+    struct bio *bio;
+    struct bio *tmp_bio;
+    uint32_t block_num;
+    uint32_t tmp_block_num;
+    bool found;
+
+    bio = element->req.bio;
+    block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+
+    do {
+        found = false;
+
+        spin_lock(queue_lock);
+        list_for_each_entry(tmp, &queue->list, list)
+        {
+            tmp_bio = tmp->req.bio;
+            tmp_block_num = (tmp_bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+            if (block_num == tmp_block_num) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            list_add_tail(&element->list, &queue->list);
+            spin_unlock(queue_lock);
+        } else {
+            spin_unlock(queue_lock);
+            msleep(10);
+        }
+    } while (found);
+}
 
 /**
  * Get a pointer to a map entry in the Artifice map.
@@ -176,7 +227,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         memcpy(req->write_blocks[i], req->data_block, AFS_BLOCK_SIZE);
 
         // Allocate new block, or use old one.
-        block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vec, req->vec_lock);
+        block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
         afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
 
@@ -193,7 +244,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 reset_entry:
     for (i = 0; i < config->num_carrier_blocks; i++) {
         if (map_entry_tuple[i].carrier_block_ptr != AFS_INVALID_BLOCK) {
-            allocation_free(req->vec, map_entry_tuple[i].carrier_block_ptr);
+            allocation_free(req->vector, map_entry_tuple[i].carrier_block_ptr);
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }

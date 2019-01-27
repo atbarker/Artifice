@@ -123,6 +123,214 @@ err:
 }
 
 /**
+ * Callback scheduled thread for the map function.
+ */
+static void
+__work_afs_map(struct work_struct *work)
+{
+    static int i = 0;
+    struct afs_map_queue *element = NULL;
+    struct afs_map_request *req = NULL;
+    int ret;
+
+    afs_debug("Processing %d", i++);
+    element = container_of(work, struct afs_map_queue, element_work_struct);
+    atomic64_set(&element->req.state, REQ_STATE_PROCESSING);
+
+    req = &element->req;
+    switch (bio_op(req->bio)) {
+    case REQ_OP_READ:
+        ret = afs_read_request(req, req->bio);
+        break;
+
+    case REQ_OP_WRITE:
+        ret = afs_write_request(req, req->bio);
+        bio_free_pages(req->bio);
+        break;
+
+    default:
+        ret = -EINVAL;
+        afs_debug("This case should never be encountered!");
+    }
+    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
+    atomic64_set(&req->state, REQ_STATE_COMPLETED);
+
+    spin_lock(element->queue_lock);
+    list_del(&element->list);
+    spin_unlock(element->queue_lock);
+
+done:
+    bio_endio(req->bio);
+    kfree(element);
+}
+
+/**
+ * Allocate a new bio and copy in the contents from another
+ * one.
+ */
+static struct bio *
+__clone_bio(struct bio *bio_src, bool end_bio_src)
+{
+    struct bio_vec bv;
+    struct bvec_iter iter;
+    struct bio *bio_ret = NULL;
+    uint8_t *page = NULL;
+    uint8_t *bio_data = NULL;
+    uint32_t sector_offset;
+    uint32_t segment_offset;
+    uint32_t req_size;
+
+    bio_ret = bio_alloc(GFP_NOIO, 1);
+    afs_assert(!IS_ERR(bio_ret), alloc_err, "could not allocate bio [%ld]", PTR_ERR(bio_ret));
+
+    page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
+    afs_assert(page, page_err, "could not allocate page [%d]", -ENOMEM);
+
+    // Copy in the data from the segments.
+    sector_offset = bio_src->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+    req_size = bio_sectors(bio_src) * AFS_SECTOR_SIZE;
+    afs_assert(req_size <= AFS_BLOCK_SIZE, size_err, "cannot handle requested size [%u]", req_size);
+
+    segment_offset = 0;
+    bio_for_each_segment(bv, bio_src, iter)
+    {
+        bio_data = kmap(bv.bv_page);
+        if (bv.bv_len <= (req_size - segment_offset)) {
+            memcpy(page + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, bv.bv_len);
+        } else {
+            memcpy(page + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, req_size - segment_offset);
+            kunmap(bv.bv_page);
+            break;
+        }
+        segment_offset += bv.bv_len;
+        kunmap(bv.bv_page);
+    }
+
+    bio_add_page(bio_ret, virt_to_page(page), req_size, sector_offset * AFS_SECTOR_SIZE);
+    bio_ret->bi_opf = bio_src->bi_opf;
+    bio_ret->bi_iter.bi_sector = bio_src->bi_iter.bi_sector;
+    bio_ret->bi_iter.bi_size = req_size;
+    bio_ret->bi_iter.bi_idx = 0;
+    bio_ret->bi_iter.bi_done = 0;
+    bio_ret->bi_iter.bi_bvec_done = 0;
+
+    // End bio if specified.
+    if (end_bio_src) {
+        bio_endio(bio_src);
+    }
+
+    return bio_ret;
+
+size_err:
+    kfree(page);
+
+page_err:
+    bio_endio(bio_ret);
+
+alloc_err:
+    return NULL;
+}
+
+/**
+ * Map function for this target. This is the heart and soul
+ * of the device mapper. We receive block I/O requests which
+ * we need to remap to our underlying device and then submit
+ * the request. This function is essentially called for any I/O 
+ * on a device for this target.
+ * 
+ * The map function is called extensively for each I/O
+ * issued upon the device mapper target. For performance 
+ * consideration, the map function is verbose only for debug builds.
+ * 
+ * @ti  Target instance for the device.
+ * @bio The block I/O request to be processed.
+ * 
+ * @return  device-mapper code
+ *  DM_MAPIO_SUBMITTED: dm_afs has submitted the bio request.
+ *  DM_MAPIO_REMAPPED:  dm_afs has remapped the request and device-mapper
+ *                      needs to submit it.
+ *  DM_MAPIO_REQUEUE:   dm_afs encountered a problem and the bio needs to
+ *                      be resubmitted.
+ */
+static int
+afs_map(struct dm_target *ti, struct bio *bio)
+{
+    static int i = 0;
+    struct afs_private *context = ti->private;
+    struct afs_map_queue *map_element = NULL;
+    struct afs_map_request *req = NULL;
+    uint32_t sector_offset;
+    uint32_t max_sector_count;
+    int ret;
+    bool work_queued;
+
+    // We only support bio's with a maximum length of 8 sectors (4KB).
+    // Moreover, we only support processing a single block per bio.
+    // Hence, a request such as (length: 4KB, sector: 1) crosses
+    // a block boundary and involves two blocks. For all such requests,
+    // we truncate the bio to within the single page.
+
+    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+    max_sector_count = (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE) - sector_offset;
+    if (bio_sectors(bio) > max_sector_count) {
+        dm_accept_partial_bio(bio, max_sector_count);
+    }
+
+    // Build request.
+    map_element = kmalloc(sizeof(*map_element), GFP_KERNEL);
+    afs_assert_action(map_element, (bio_endio(bio), ret = DM_MAPIO_KILL), done, "could not allocate memory for request");
+    INIT_WORK(&map_element->element_work_struct, __work_afs_map);
+    map_element->queue = &context->cache_queue;
+    map_element->queue_lock = &context->cache_queue_lock;
+
+    req = &map_element->req;
+    req->bdev = context->bdev;
+    req->map = context->afs_map;
+    req->config = &context->config;
+    req->fs = &context->passive_fs;
+    req->vector = &context->vector;
+    atomic64_set(&req->state, REQ_STATE_TRANSMIT);
+
+    switch (bio_op(bio)) {
+    case REQ_OP_READ:
+        req->bio = bio;
+        afs_add_map_queue(&context->cache_queue, &context->cache_queue_lock, map_element);
+
+        // Defer bio to be completed later.
+        work_queued = queue_work(context->map_queue, &map_element->element_work_struct);
+        afs_debug("[%d] work_queued: %d", i++, work_queued);
+
+        ret = DM_MAPIO_SUBMITTED;
+        break;
+
+    case REQ_OP_WRITE:
+        req->bio = __clone_bio(bio, true);
+        afs_assert_action(req->bio, (kfree(map_element), ret = DM_MAPIO_KILL), done, "could not clone bio");
+        afs_add_map_queue(&context->cache_queue, &context->cache_queue_lock, map_element);
+
+        // Defer bio to be completed later.
+        work_queued = queue_work(context->map_queue, &map_element->element_work_struct);
+        afs_debug("[%d] work_queued: %d", i++, work_queued);
+
+        ret = DM_MAPIO_SUBMITTED;
+        break;
+
+    case REQ_OP_FLUSH:
+        bio_endio(bio);
+        ret = DM_MAPIO_SUBMITTED;
+        break;
+
+    default:
+        afs_debug("unknown operation");
+        bio_endio(bio);
+        ret = DM_MAPIO_KILL;
+    }
+
+done:
+    return ret;
+}
+
+/**
  * Constructor function for this target. The constructor
  * is called for each new instance of a device for this
  * target. To create a new device, 'dmsetup create' is used.
@@ -215,10 +423,10 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // Allocate the free list allocation vector to be able
     // to map all possible blocks and mask the invalid block.
-    context->allocation_vec = bit_vector_create((uint64_t)U32_MAX);
-    afs_assert_action(context->allocation_vec, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
-    spin_lock_init(&context->allocation_lock);
-    allocation_set(context->allocation_vec, AFS_INVALID_BLOCK);
+    context->vector.vector = bit_vector_create((uint64_t)U32_MAX);
+    afs_assert_action(context->vector.vector, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
+    spin_lock_init(&context->vector.lock);
+    allocation_set(&context->vector, AFS_INVALID_BLOCK);
 
     sb = &context->super_block;
     switch (args->instance_type) {
@@ -239,12 +447,16 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         break;
     }
 
+    // We are now ready to process map requests.
+    INIT_LIST_HEAD(&context->cache_queue.list);
+    spin_lock_init(&context->cache_queue_lock);
+
     afs_debug("constructor completed");
     ti->private = context;
     return 0;
 
 sb_err:
-    bit_vector_free(context->allocation_vec);
+    bit_vector_free(context->vector.vector);
 
 vec_err:
     vfree(fs->block_list);
@@ -294,7 +506,7 @@ afs_dtr(struct dm_target *ti)
     vfree(context->afs_map);
 
     // Free the bit vector allocation.
-    bit_vector_free(context->allocation_vec);
+    bit_vector_free(context->vector.vector);
 
     // Free the block list for the passive FS.
     vfree(context->passive_fs.block_list);
@@ -308,116 +520,6 @@ afs_dtr(struct dm_target *ti)
     // Free storage used by context.
     kfree(context);
     afs_debug("destructor completed");
-}
-
-/**
- * Callback scheduled thread for the map function.
- */
-static void
-__work_afs_map(struct work_struct *work)
-{
-    struct afs_map_request *req;
-    int ret;
-
-    req = container_of(work, struct afs_map_request, work_request);
-    switch (bio_op(req->bio)) {
-    case REQ_OP_READ:
-        ret = afs_read_request(req, req->bio);
-        break;
-
-    case REQ_OP_WRITE:
-        ret = afs_write_request(req, req->bio);
-        break;
-
-    case REQ_OP_FLUSH:
-        // For now, everything goes to disk directly. This is essentially a no-op.
-        ret = 0;
-        break;
-
-    default:
-        // This case should never be encountered.
-        ret = -EINVAL;
-        afs_debug("What the hell!");
-    }
-    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
-
-done:
-    bio_endio(req->bio);
-    kfree(req);
-}
-
-/**
- * Map function for this target. This is the heart and soul
- * of the device mapper. We receive block I/O requests which
- * we need to remap to our underlying device and then submit
- * the request. This function is essentially called for any I/O 
- * on a device for this target.
- * 
- * The map function is called extensively for each I/O
- * issued upon the device mapper target. For performance 
- * consideration, the map function is verbose only for debug builds.
- * 
- * @ti  Target instance for the device.
- * @bio The block I/O request to be processed.
- * 
- * @return  device-mapper code
- *  DM_MAPIO_SUBMITTED: dm_afs has submitted the bio request.
- *  DM_MAPIO_REMAPPED:  dm_afs has remapped the request and device-mapper
- *                      needs to submit it.
- *  DM_MAPIO_REQUEUE:   dm_afs encountered a problem and the bio needs to
- *                      be resubmitted.
- */
-static int
-afs_map(struct dm_target *ti, struct bio *bio)
-{
-    struct afs_private *context = ti->private;
-    struct afs_map_request *req = NULL;
-    uint32_t sector_offset;
-    uint32_t max_sector_count;
-    int ret;
-
-    // Build request.
-    req = kmalloc(sizeof(*req), GFP_KERNEL);
-    afs_assert_action(req, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
-
-    req->bio = bio;
-    req->bdev = context->bdev;
-    req->map = context->afs_map;
-    req->config = &context->config;
-    req->fs = &context->passive_fs;
-    req->vec = context->allocation_vec;
-    req->vec_lock = &context->allocation_lock;
-    spin_lock_init(&req->sync_lock);
-    INIT_WORK(&req->work_request, __work_afs_map);
-
-    // We only support bio's with a maximum length of 8 sectors (4KB).
-    // Moreover, we only support processing a single block per bio.
-    // Hence, a request such as (length: 4KB, sector: 1) crosses
-    // a block boundary and involves two blocks. For all such requests,
-    // we truncate the bio to within the single page.
-
-    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
-    max_sector_count = (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE) - sector_offset;
-    if (bio_sectors(bio) > max_sector_count) {
-        dm_accept_partial_bio(bio, max_sector_count);
-    }
-
-    switch (bio_op(bio)) {
-    case REQ_OP_READ:
-    case REQ_OP_WRITE:
-    case REQ_OP_FLUSH:
-        queue_work(context->map_queue, &req->work_request);
-        ret = DM_MAPIO_SUBMITTED;
-        break;
-
-    default:
-        afs_debug("unknown operation");
-        bio_endio(bio);
-        ret = DM_MAPIO_KILL;
-    }
-
-done:
-    return ret;
 }
 
 /** ----------------------------------------------------------- DO-NOT-CROSS ------------------------------------------------------------------- **/

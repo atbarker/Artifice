@@ -57,7 +57,7 @@ afs_blkdev_io(struct afs_io *request)
     default:
         afs_assert_action(0, ret = -EINVAL, invalid_type, "invalid IO type [%d]", request->type);
     }
-    bio->bi_opf |= REQ_SYNC;
+    // bio->bi_opf |= REQ_SYNC;
     // TODO: Perhaps make ASYNC for performance considerations?
 
     bio_set_dev(bio, request->bdev);

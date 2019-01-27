@@ -3,6 +3,7 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs_config.h>
+#include <dm_afs_engine.h>
 #include <dm_afs_format.h>
 #include <dm_afs_modules.h>
 #include <lib/bit_vector.h>
@@ -42,37 +43,19 @@ struct afs_private {
     struct afs_super_block __attribute__((aligned(4096))) super_block;
     struct afs_passive_fs passive_fs;
     struct afs_args args;
+    struct afs_allocation_vector vector;
 
-    // Free list allocation vector.
-    spinlock_t allocation_lock;
-    bit_vector_t *allocation_vec;
+    // For better performance, writes are directed to a queueing
+    // engine.
+    struct workqueue_struct *map_queue;
+    struct afs_map_queue cache_queue;
+    spinlock_t cache_queue_lock;
 
     // Map information.
     uint8_t *afs_map;
     uint8_t *afs_map_blocks;
     struct afs_ptr_block *afs_ptr_blocks;
-    struct workqueue_struct *map_queue;
 };
-
-/**
- * Acquire a free block from the free list.
- */
-uint32_t acquire_block(struct afs_passive_fs *fs, bit_vector_t *vec, spinlock_t *vec_lock);
-
-/**
- * Set the usage of a block in the allocation vector.
- */
-bool allocation_set(bit_vector_t *vec, uint32_t index);
-
-/**
- * Clear the usage of a block in the allocation vector.
- */
-void allocation_free(bit_vector_t *vec, uint32_t index);
-
-/**
- * Get the state of a block in the allocation vector.
- */
-uint8_t allocation_get(bit_vector_t *vec, uint32_t index);
 
 /**
  * Build the configuration for an instance.
