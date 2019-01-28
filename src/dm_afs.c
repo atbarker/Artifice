@@ -6,6 +6,7 @@
 #include <dm_afs_engine.h>
 #include <dm_afs_io.h>
 #include <dm_afs_modules.h>
+#include <linux/delay.h>
 
 /**
  * A procedure to detect the existing file system on a block
