@@ -1,0 +1,285 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "rs.h"
+#include <sys/random.h>
+
+struct config{
+	int num_data;
+	int num_entropy;
+	int num_carrier;
+	int polynomial_deg;
+	int k;
+	int n;
+	int total_blocks;
+	int encode_blocks;
+	int block_portion;
+	int padding;
+	int block_size;
+	int final_padding;
+};
+
+void hexDump (char *desc, void *addr, int len) {
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
+
+    // Output description if given.
+    if (desc != NULL)
+        printf ("%s:\n", desc);
+
+    if (len == 0) {
+        printf("  ZERO LENGTH\n");
+        return;
+    }
+    if (len < 0) {
+        printf("  NEGATIVE LENGTH: %i\n",len);
+        return;
+    }
+
+    // Process every byte in the data.
+    for (i = 0; i < len; i++) {
+        // Multiple of 16 means new line (with line offset).
+
+        if ((i % 16) == 0) {
+            // Just don't print ASCII for the zeroth line.
+            if (i != 0)
+                printf ("  %s\n", buff);
+
+            // Output the offset.
+            printf ("  %04x ", i);
+        }
+
+        // Now the hex code for the specific character.
+        printf (" %02x", pc[i]);
+
+        // And store a printable ASCII character for later.
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e))
+            buff[i % 16] = '.';
+        else
+            buff[i % 16] = pc[i];
+        buff[(i % 16) + 1] = '\0';
+    }
+
+    // Pad out last line if not exactly 16 characters.
+    while ((i % 16) != 0) {
+        printf ("   ");
+        i++;
+    }
+
+    // And print the final ASCII bit.
+    printf ("  %s\n", buff);
+}
+
+int initialize(struct config* configuration, int num_data, int num_entropy, int num_carrier){
+	configuration->total_blocks = num_data + num_entropy + num_carrier;
+	configuration->num_data = num_data;
+	configuration->num_entropy = num_entropy;
+	configuration->num_carrier = num_carrier;
+	//the amount of padding in each encoding block
+	configuration->padding = 255 % configuration->total_blocks;
+	//the amount of space in an encoding block for each data/entropy/carrier block
+	configuration->block_portion = 255 / configuration->total_blocks;
+	//the amount of space in the 255 symbol encode block to be used
+	configuration->n = configuration->total_blocks * configuration->block_portion;
+	//data + entropy symbols
+	configuration->k = configuration->block_portion * (num_data + num_entropy);
+	//how big is our FS block size
+	configuration->block_size = 4096;
+	//how many encoding blocks do we need?
+	configuration->encode_blocks = configuration->block_size / configuration->block_portion;
+	//how much padding is needed for the last one
+	configuration->final_padding = configuration->block_size % configuration->block_portion;
+	//if an additional block is needed then we add to the number of encoding blocks
+	if ((configuration->block_size % configuration->block_portion) != 0){
+		configuration->encode_blocks++;
+	}
+	init_rs(configuration->k);
+	return 0;
+}
+
+int printConfig(struct config* conf){
+	printf("num_data %d\n", conf->num_data);
+	printf("num_entropy %d\n", conf->num_data);
+	printf("num_carrier %d\n", conf->num_data);
+	printf("polynomial_deg %d\n", 0);
+	printf("k %d\n", conf->k);
+	printf("n %d\n", conf->n);
+	printf("total blocks %d\n", conf->total_blocks);
+	printf("encode blocks %d\n", conf->encode_blocks);
+	printf("block_portion %d\n", conf->block_portion);
+	printf("padding %d\n", conf->padding);
+	printf("block_size %d\n", conf->block_size);
+	printf("final_padding %d\n", conf->final_padding);
+	return 0;
+}
+
+int encode(struct config* info, unsigned char* data, unsigned char* entropy, unsigned char* carrier){
+	int i, j;
+	int count = 0;
+	int data_count = 0;
+	int entropy_count = 0;
+	int carrier_count = 0;
+	unsigned char* encode_buffer = malloc(255);
+
+	//handle all but the last encoding block, that one will likely have some sort of padding
+	for(i = 0; i < info->encode_blocks-1; i++){
+		memset(encode_buffer, 0, 255);
+		for(j = 0; j < info->num_data; j++){	
+			memcpy(&encode_buffer[count], &data[data_count], info->block_portion);
+			count += info->block_portion;	
+			data_count += info->block_portion;
+		}
+		
+		for(j = 0; j < info->num_entropy; j++){
+			memcpy(&encode_buffer[count], &entropy[entropy_count], info->block_portion);
+			count += info->block_portion;
+			entropy_count += info->block_portion;
+		}
+
+		encode_rs(encode_buffer, info->k, &encode_buffer[info->k], 255-info->k);
+		memcpy(&carrier[carrier_count], &encode_buffer[info->k], info->num_carrier * info->block_portion);
+		carrier_count += info->block_portion * info->num_carrier;
+		count = 0;
+		//printf("block %d\n", i);
+		//hexDump("encoding buffer", encode_buffer, 255);
+	}
+
+	//handle the last block
+	memset(encode_buffer, 0, 255);
+	for(i = 0; i < info->num_data; i++){
+		memcpy(&encode_buffer[count], &data[data_count], info->final_padding);
+		count += info->final_padding;
+	}
+	for(i = 0; i < info->num_entropy; i++){
+		memcpy(&encode_buffer[count], &entropy[entropy_count], info->final_padding * info->num_entropy);
+		count += info->final_padding * info->num_entropy;
+	}
+	encode_rs(encode_buffer, info->k, &encode_buffer[info->k], 255-info->k);
+	hexDump("encode buffer", encode_buffer, 255);
+	memcpy(&carrier[carrier_count], &encode_buffer[info->k], info->num_carrier * info->final_padding);
+	//cleanup
+	free(encode_buffer);
+	return 0;
+}
+
+
+//if a block is all zeros then it is considered erased
+int decode(struct config* info, int erasures, int* err_loc, unsigned char* data, unsigned char* entropy, unsigned char* carrier){
+	int i, j;
+	int count = 0;
+	int data_count = 0;
+	int entropy_count = 0;
+	int carrier_count = 0;
+	int errs = 0;
+	unsigned char* decode_buffer = malloc(255);
+	//TODO this is hard coded
+	int last_err_loc[85];
+
+	//handle all but the last encoding block
+	for(i = 0; i < info->encode_blocks-1; i++){
+		memset(decode_buffer, 0, 255);
+		count = info->block_portion * info->num_data;
+		//TODO only read in the entropy if needed and supplied
+		//TODO is it faster to read the entropy or reconstruct more of the data?
+	        for(j = 0; j < info->num_entropy; j++){
+			memcpy(&decode_buffer[count], &entropy[entropy_count], info->block_portion);
+			count += info->block_portion;
+			entropy_count += info->block_portion;
+		}
+		memcpy(&decode_buffer[info->k], &carrier[carrier_count], info->num_carrier * info->block_portion);
+		carrier_count += info->block_portion * info->num_carrier;
+		
+		errs = eras_dec_rs(decode_buffer, err_loc, info->k, erasures);
+		if(errs == -1){
+			//error out and return -1
+			printf("Decode failed: %d\n", errs);
+			return -1;
+		}
+
+		//new stuff
+		for(j = 0; j< info->num_data; j++){
+			memcpy(&data[data_count], &decode_buffer[info->block_portion * j], info->block_portion);
+			data_count += info->block_portion;		
+		}
+		count = 0;
+		//printf("erasures %d, block %d\n", errs, i);
+		//hexDump("decode buffer", decode_buffer, 255);
+	}
+	memset(decode_buffer, 0, 255);
+	count = info->num_data * info->final_padding;
+
+	//different error locations
+	//TODO check the number of erasures before decoding
+	j = 0;
+	for(i = 0; i < 85; i++){
+	      	if( i < info->num_data * info->final_padding){
+		    last_err_loc[i] = i;
+		}else{
+		    last_err_loc[i] = j + info->k + (info->num_carrier * info-> final_padding);
+		    j++;
+		}
+	}
+
+	//handle the last encoding block
+	for(i = 0; i < info->num_entropy; i++){
+                memcpy(&decode_buffer[count], &entropy[entropy_count], info->final_padding);
+                count += info->final_padding;
+        }
+	memcpy(&decode_buffer[info->k], &carrier[carrier_count], info->num_carrier * info->final_padding);
+	//hexDump("encoding block", decode_buffer, 255);
+	//hexDump("error locations", last_err_loc, 4*85);
+	errs = eras_dec_rs(decode_buffer, last_err_loc, info->k, erasures);
+	//hexDump("decoded block", decode_buffer, 255);
+	if(errs == -1){
+		printf("problem found %d\n", errs);
+	}
+	for(i = 0; i < info->num_data; i++){
+		memcpy(&data[data_count], &decode_buffer[count], info->final_padding);
+		data_count += info->block_portion;
+		count += info->final_padding;
+	}
+
+	free(decode_buffer);
+	return 0;
+}
+
+int main(void){
+	//initialize the variables
+	init_rs(223);
+	struct config *conf = malloc(sizeof(struct config));
+	/*unsigned char *data = malloc(255);
+	getrandom(data, 128, 0);
+	hexDump("data", data, 255);
+	encode_rs(data, 223, &data[223], 32);
+	hexDump("Encoded data", data, 255);
+	memset(data, 0, 6);
+	hexDump("erased data", data, 255);
+	int *erased_pos = malloc(6);
+	for(int i = 0; i < 6; i++){
+		erased_pos[i] = i;
+	}
+	int errs = eras_dec_rs(data, erased_pos, 223, 6);
+	printf("Errors: %d\n", errs);
+	hexDump("decoded data", data, 255);*/
+	unsigned char *data = malloc(4096);
+	unsigned char *entropy = malloc(4096);
+	unsigned char *carrier = malloc(4096);
+	initialize(conf, 1, 1, 1);
+	printConfig(conf);
+	getrandom(data, 4096, 0);
+	//hexDump("raw data", data, 4096);
+	getrandom(entropy, 4096, 0);
+	//hexDump("entropy", data, 4096);
+	memset(carrier, 0, 4096);
+	int err = encode(conf, data, entropy, carrier);
+	//hexDump("carrier", carrier, 4096);
+	memset(data, 0, 4096);
+	int err_loc[85];
+	for(int i = 0; i < 85; i++){
+		err_loc[i] = i;
+	}
+	int errs = decode(conf, 85, err_loc, data, entropy, carrier);
+	//hexDump("data", data, 4096);
+	return 0;
+}
