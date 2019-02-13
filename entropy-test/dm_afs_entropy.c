@@ -1,6 +1,4 @@
 #include "dm_afs_entropy.h"
-#include <linux/slab.h>
-#include <linux/vmalloc.h>
 #include <linux/random.h>
 #include <linux/fs.h>
 
