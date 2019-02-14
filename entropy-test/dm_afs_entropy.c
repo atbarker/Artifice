@@ -46,9 +46,9 @@ int insert_entropy_ht(char *filename){
 //sorcery
 //recursive list, ls $(find <path> -not -path '*/\.*' -type f)
 void scan_directory(char* directory_name, char** file_list){
-    char * envp[] = { "HOME=/", NULL};
-    char * argv[] = { "/bin/ls", "$(find -not -path '*/\\.*' -type f)", NULL};
-    call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
+    //char * envp[] = { "HOME=/", NULL};
+    //char * argv[] = { "/bin/ls", "$(find -not -path '*/\\.*' -type f)", NULL};
+    //call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
 }
 
 void build_entropy_ht(char* directory_name){
