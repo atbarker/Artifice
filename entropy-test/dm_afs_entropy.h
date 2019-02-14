@@ -3,10 +3,23 @@
 
 #include <linux/slab.h>
 
+//Hash table of size 2^16 with name dm_afs_ht
+#define HASH_TABLE_ORDER 16
+#define HASH_TABLE_NAME dm_afs_ht
+
+//entry in the hash table
+struct entropy_hash_entry{
+    uint64_t key;
+    char* filename;
+    struct hlist_node hash_list;
+};
+
 void build_entropy_ht(char* directory_name);
 
-void allocate_entropy(uint8_t* filename_hash, uint32_t block_pointer);
+void cleanup_entropy_ht(void);
 
-int read_entropy(uint8_t* filename_hash, uint32_t block_pointer, uint8_t* block);
+void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer);
+
+int read_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* block);
 
 #endif
