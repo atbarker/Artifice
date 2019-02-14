@@ -3,7 +3,7 @@
 #include <linux/fs.h>
 #include <linux/hashtable.h>
 #include <linux/hash.h>
-#include <linux/kmod.h>
+#include <linux/syscalls.h>
 
 //redefine our own hash table add to use the hash_64_generic function for 64 bit values
 //gave it protection via rcu just in case
@@ -45,6 +45,9 @@ int insert_entropy_ht(char *filename){
 
 //sorcery
 //recursive list, ls $(find <path> -not -path '*/\.*' -type f)
+//iterate_dir
+//hook into sys_getdents
+//just do the sys_call/get_fs/set_fs dance
 void scan_directory(char* directory_name, char** file_list){
     //char * envp[] = { "HOME=/", NULL};
     //char * argv[] = { "/bin/ls", "$(find -not -path '*/\\.*' -type f)", NULL};
