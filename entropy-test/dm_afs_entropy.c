@@ -3,6 +3,7 @@
 #include <linux/fs.h>
 #include <linux/hashtable.h>
 #include <linux/hash.h>
+#include <linux/kmod.h>
 
 //redefine our own hash table add to use the hash_64_generic function for 64 bit values
 //gave it protection via rcu just in case
@@ -42,8 +43,12 @@ int insert_entropy_ht(char *filename){
     return 0;
 }
 
+//sorcery
+//recursive list, ls $(find <path> -not -path '*/\.*' -type f)
 void scan_directory(char* directory_name, char** file_list){
-
+    char * envp[] = { "HOME=/", NULL};
+    char * argv[] = { "/bin/ls", "$(find -not -path '*/\\.*' -type f)", NULL};
+    call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
 }
 
 void build_entropy_ht(char* directory_name){
@@ -52,8 +57,6 @@ void build_entropy_ht(char* directory_name){
 
     //initialize hash table
     hash_init(HASH_TABLE_NAME);
-
-    scan_directory(directory_name, filename_list);    
 
     for(i = 0; i < file_count; i++){
         insert_entropy_ht(filename_list[i]);
@@ -102,5 +105,6 @@ int read_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* block)
     ret = vfs_read(file, block, BLOCK_LENGTH, &offset);
 
     //set_fs(oldfs);
+    file_close(file);
     return ret;
 }
