@@ -4,6 +4,7 @@
 #include <linux/hashtable.h>
 #include <linux/hash.h>
 #include <linux/syscalls.h>
+#include <asm/uaccess.h>
 
 //redefine our own hash table add to use the hash_64_generic function for 64 bit values
 //gave it protection via rcu just in case
@@ -49,9 +50,11 @@ int insert_entropy_ht(char *filename){
 //hook into sys_getdents
 //just do the sys_call/get_fs/set_fs dance
 void scan_directory(char* directory_name, char** file_list){
-    //char * envp[] = { "HOME=/", NULL};
-    //char * argv[] = { "/bin/ls", "$(find -not -path '*/\\.*' -type f)", NULL};
-    //call_usermodehelper(argv[0], argv, envp, UMH_WAIT_EXEC);
+    struct file *file;
+    loff_t pos = 0;
+    int fd;
+    mm_segment_t old_fs = get_fs();
+    set_fs(KERNEL_DS);
 }
 
 void build_entropy_ht(char* directory_name){
