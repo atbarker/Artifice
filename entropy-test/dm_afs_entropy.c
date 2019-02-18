@@ -52,7 +52,8 @@ int insert_entropy_ht(char *filename){
 void scan_directory(char* directory_name, char** file_list){
     struct file *file;
     loff_t pos = 0;
-    int fd;
+    //This code block is blasphemy, should only be used when no other option works.
+    /*int fd;
     struct linux_dirent __user *dirents;
     int count = 0;
     mm_segment_t old_fs = get_fs();
@@ -62,7 +63,7 @@ void scan_directory(char* directory_name, char** file_list){
         sys_getdents(fd, dirents, count); 
         sys_close(fd);
     }
-    set_fs(old_fs);
+    set_fs(old_fs);*/
 }
 
 void build_entropy_ht(char* directory_name){
