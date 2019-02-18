@@ -53,8 +53,16 @@ void scan_directory(char* directory_name, char** file_list){
     struct file *file;
     loff_t pos = 0;
     int fd;
+    struct linux_dirent __user *dirents;
+    int count = 0;
     mm_segment_t old_fs = get_fs();
     set_fs(KERNEL_DS);
+    fd = sys_open(directory_name, O_RDONLY, 0);
+    if (fd >= 0){
+        sys_getdents(fd, dirents, count); 
+        sys_close(fd);
+    }
+    set_fs(old_fs);
 }
 
 void build_entropy_ht(char* directory_name){
