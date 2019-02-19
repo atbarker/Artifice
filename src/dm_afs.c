@@ -158,15 +158,13 @@ afs_cleanq(struct work_struct *ws)
 static void
 afs_flightq(struct work_struct *ws)
 {
-    static int i = 0;
     struct afs_map_queue *element = NULL;
     struct afs_map_request *req = NULL;
     int ret;
 
-    afs_debug("Processing %d", i++);
     element = container_of(ws, struct afs_map_queue, req_ws);
-
     req = &element->req;
+
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
         ret = afs_read_request(req, req->bio);
@@ -223,12 +221,11 @@ afs_groundq(struct work_struct *ws)
         list_for_each_entry_safe(node, node_extra, &ground_eq->mq.list, list)
         {
             exists = afs_eq_req_exist(flight_eq, node->req.bio);
-            if (exists) {
-                continue;
+            if (!exists) {
+                element = node;
+                list_del(&node->list);
+                break;
             }
-
-            element = node;
-            list_del(&node->list);
         }
         spin_unlock(&ground_eq->mq_lock);
 
@@ -367,7 +364,6 @@ afs_map(struct dm_target *ti, struct bio *bio)
 {
     const int override = 0;
 
-    static int i = 0;
     struct afs_private *context = ti->private;
     struct afs_map_queue *map_element = NULL;
     struct afs_map_request *req = NULL;
@@ -415,7 +411,6 @@ afs_map(struct dm_target *ti, struct bio *bio)
         afs_eq_add(&context->ground_eq, map_element);
 
         // Defer bio to be completed later.
-        afs_debug("Queued %d", i++);
         queue_work(context->ground_wq, &context->ground_ws);
         ret = DM_MAPIO_SUBMITTED;
         break;
