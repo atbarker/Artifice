@@ -44,14 +44,29 @@ int insert_entropy_ht(char *filename){
     return 0;
 }
 
+//filldir
+static int dm_afs_filldir(struct dir_context *context, const char *name, int name_length, loff_t offset, u64 ino, unsigned d_type){
+    printk(KERN_DEBUG "Name: %s\n", name);
+    return 0;
+}
+
+//Probably should not need this
+/*static int dm_afs_iterate(struct file *filp, struct dir_context *context){
+    return 0;
+}*/
+
 //sorcery
 //recursive list, ls $(find <path> -not -path '*/\.*' -type f)
 //iterate_dir
 //hook into sys_getdents
 //just do the sys_call/get_fs/set_fs dance
 void scan_directory(char* directory_name, char** file_list){
-    struct file *file;
-    loff_t pos = 0;
+    struct file *file = NULL;
+    //loff_t pos = 0;
+    struct dir_context context = {
+        .actor = dm_afs_filldir,
+        .pos = 0		
+    };
     //This code block is blasphemy, should only be used when no other option works.
     /*int fd;
     struct linux_dirent __user *dirents;
@@ -64,6 +79,11 @@ void scan_directory(char* directory_name, char** file_list){
         sys_close(fd);
     }
     set_fs(old_fs);*/
+
+    file = filp_open(directory_name, O_RDONLY, 0);
+    if (file){
+        iterate_dir(file, &context);
+    }
 }
 
 void build_entropy_ht(char* directory_name){
