@@ -10,10 +10,12 @@
 #define DM_AFS_ENGINE_H
 
 enum {
-    REQ_STATE_TRANSMIT = 1 << 0,
-    REQ_STATE_PROCESSING = 1 << 1,
+    REQ_STATE_GROUND = 1 << 0,
+    REQ_STATE_FLIGHT = 1 << 1,
     REQ_STATE_COMPLETED = 1 << 2,
 };
+
+struct afs_engine_queue;
 
 // A mapping request used to handle a single bio.
 struct afs_map_request {
@@ -44,21 +46,27 @@ struct afs_map_request {
 // Map request queue.
 struct afs_map_queue {
     struct afs_map_request req;
-    struct work_struct element_work_struct;
+    struct work_struct req_ws;
+    struct work_struct *clean_ws;
 
-    // Overall queue.
-    struct afs_map_queue *queue;
-    spinlock_t *queue_lock;
+    // Save the engine queue this request exists on so that
+    // the queue may be accessed through it.
+    struct afs_engine_queue *eq;
 
-    // Queue connector.
+    // Intrusive linked list connector.
     struct list_head list;
+};
+
+// A map queue with its lock.
+struct afs_engine_queue {
+    struct afs_map_queue mq;
+    spinlock_t mq_lock;
 };
 
 /**
  * Map a read request from userspace.
  */
-int
-afs_read_request(struct afs_map_request *req, struct bio *bio);
+int afs_read_request(struct afs_map_request *req, struct bio *bio);
 
 /**
  * Map a write request from userspace.
@@ -66,8 +74,29 @@ afs_read_request(struct afs_map_request *req, struct bio *bio);
 int afs_write_request(struct afs_map_request *req, struct bio *bio);
 
 /**
- * Add a map element to a map queue.
+ * Initialize an engine queue.
  */
-void afs_add_map_queue(struct afs_map_queue *q, spinlock_t *q_lock, struct afs_map_queue *element);
+void afs_eq_init(struct afs_engine_queue *eq);
+
+/**
+ * Add an element to an engine queue.
+ */
+void afs_eq_add(struct afs_engine_queue *eq, struct afs_map_queue *element);
+
+/**
+ * Check if an engine queue is empty without locking.
+ */
+bool afs_eq_empty_unsafe(struct afs_engine_queue *eq);
+
+/**
+ * Check if an engine queue.
+ */
+bool afs_eq_empty(struct afs_engine_queue *eq);
+
+/**
+ * Check if an engine queue contains a request with a specified
+ * bio.
+ */
+bool afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio);
 
 #endif /* DM_AFS_ENGINE_H */

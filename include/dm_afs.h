@@ -45,11 +45,27 @@ struct afs_private {
     struct afs_args args;
     struct afs_allocation_vector vector;
 
-    // For better performance, writes are directed to a queueing
-    // engine.
-    struct workqueue_struct *map_queue;
-    struct afs_map_queue cache_queue;
-    spinlock_t cache_queue_lock;
+    // I/O requests are handled by a two level queueing system. Work
+    // structs for the flight queue are within the request structure
+    // itself.
+    //
+    // All requests provided to the map callback are added to the
+    // ground queue. A thread dequeues elements from the ground
+    // queue and adds them to the flight queue. Only requests which
+    // are part of the flight queue are being actively processed. In
+    // case a request for a certain block is already part of the
+    // flight queue, it is skipped over for selection in the ground
+    // queue until the request in the flight queue has been completed.
+    //
+    // After a request has been processed, a thread is called which
+    // cleans up the flight queue. This thread does not require its
+    // separate workqueue since the kernel workqueue is used for it.
+    struct afs_engine_queue ground_eq;
+    struct afs_engine_queue flight_eq;
+    struct workqueue_struct *ground_wq;
+    struct workqueue_struct *flight_wq;
+    struct work_struct ground_ws;
+    struct work_struct clean_ws;
 
     // Map information.
     uint8_t *afs_map;

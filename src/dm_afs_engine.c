@@ -9,53 +9,77 @@
 #include <linux/delay.h>
 
 /**
- * Add a map element to a map queue.
- * 
- * Search through the list to find if a bio with the same block
- * number already exists. 
- * 
- * If it doesn't:
- *  Simply add it to the tail of the list.
- * 
- * If it does:
- *  Wait until the bio is finished processing and then add the new
- *  bio.
+ * Initialize an engine queue.
  */
 void
-afs_add_map_queue(struct afs_map_queue *queue, spinlock_t *queue_lock, struct afs_map_queue *element)
+afs_eq_init(struct afs_engine_queue *eq)
 {
-    struct afs_map_queue *tmp;
-    struct bio *bio;
-    struct bio *tmp_bio;
+    INIT_LIST_HEAD(&eq->mq.list);
+    spin_lock_init(&eq->mq_lock);
+}
+
+/**
+ * Add a map element to a map queue.
+ */
+void
+afs_eq_add(struct afs_engine_queue *eq, struct afs_map_queue *element)
+{
+    spin_lock(&eq->mq_lock);
+    list_add_tail(&element->list, &eq->mq.list);
+    spin_unlock(&eq->mq_lock);
+}
+
+/**
+ * Check if an engine queue is empty without locking.
+ */
+bool
+afs_eq_empty_unsafe(struct afs_engine_queue *eq)
+{
+    return list_empty(&eq->mq.list);
+}
+
+/**
+ * Check if an engine queue is empty.
+ */
+bool
+afs_eq_empty(struct afs_engine_queue *eq)
+{
+    bool ret;
+
+    spin_lock(&eq->mq_lock);
+    ret = afs_eq_empty_unsafe(eq);
+    spin_unlock(&eq->mq_lock);
+
+    return ret;
+}
+
+/**
+ * Check if an engine queue contains a request with a specified
+ * bio.
+ */
+bool
+afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio)
+{
+    struct afs_map_request *ret = NULL;
+    struct afs_map_queue *node;
+    struct bio *node_bio;
     uint32_t block_num;
-    uint32_t tmp_block_num;
-    bool found;
+    uint32_t node_block_num;
 
-    bio = element->req.bio;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-
-    do {
-        found = false;
-
-        spin_lock(queue_lock);
-        list_for_each_entry(tmp, &queue->list, list)
-        {
-            tmp_bio = tmp->req.bio;
-            tmp_block_num = (tmp_bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-            if (block_num == tmp_block_num) {
-                found = true;
-                break;
-            }
+    spin_lock(&eq->mq_lock);
+    list_for_each_entry(node, &eq->mq.list, list)
+    {
+        node_bio = node->req.bio;
+        node_block_num = (node_bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+        if (block_num == node_block_num && atomic64_read(&node->req.state) == REQ_STATE_FLIGHT) {
+            ret = &node->req;
+            break;
         }
+    }
+    spin_unlock(&eq->mq_lock);
 
-        if (!found) {
-            list_add_tail(&element->list, &queue->list);
-            spin_unlock(queue_lock);
-        } else {
-            spin_unlock(queue_lock);
-            msleep(1);
-        }
-    } while (found);
+    return ret;
 }
 
 /**
