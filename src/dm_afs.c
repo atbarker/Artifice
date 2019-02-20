@@ -216,6 +216,18 @@ afs_groundq(struct work_struct *ws)
     while (!afs_eq_empty(ground_eq)) {
         element = NULL;
 
+        // TODO: Possible incorrect ordering.
+        // Suppose that we have two requests for the same block number.
+        // The request which we come across first is the first request to
+        // arrive since we add requests to the tail. It is possible that
+        // when we check the first request, there is contention and hence
+        // that request is not considered. However, when going through the
+        // rest of the requests, we come across the second request to that
+        // block number and now that block number is no longer contended.
+        // In this case, we will go ahead and process this request, thereby
+        // processing a request which came later first. This may result in
+        // data corruption, although the likelihood is quite low.
+
         spin_lock(&ground_eq->mq_lock);
         list_for_each_entry_safe (node, node_extra, &ground_eq->mq.list, list) {
             exists = afs_eq_req_exist(flight_eq, node->req.bio);
@@ -413,8 +425,9 @@ afs_map(struct dm_target *ti, struct bio *bio)
         break;
 
     case REQ_OP_FLUSH:
-        // TODO: Make sure the block number of this bio is not in the cache queue.
-        afs_debug("Flush Request");
+        while (afs_eq_req_exist(&context->flight_eq, bio) || afs_eq_req_exist(&context->ground_eq, bio)) {
+            msleep(1);
+        }
         bio_endio(bio);
         ret = DM_MAPIO_SUBMITTED;
         break;
@@ -553,6 +566,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
     // TODO: Make flight_wq multithreaded.
+    // For now, if you change the 1 to 0 (to let it run on an unbounded
+    // number of threads), you may get some data corruption.
     context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 

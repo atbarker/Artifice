@@ -60,7 +60,7 @@ afs_eq_empty(struct afs_engine_queue *eq)
 bool
 afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio)
 {
-    struct afs_map_request *ret = NULL;
+    bool ret = false;
     struct afs_map_queue *node;
     struct bio *node_bio;
     uint32_t block_num;
@@ -72,7 +72,7 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio)
         node_bio = node->req.bio;
         node_block_num = (node_bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
         if (block_num == node_block_num && atomic64_read(&node->req.state) == REQ_STATE_FLIGHT) {
-            ret = &node->req;
+            ret = true;
             break;
         }
     }
