@@ -24,9 +24,11 @@ All code pushed to the repository is formatted using `clang-format`. Style guide
     AlignTrailingComments: true,
     AllowShortIfStatementsOnASingleLine: true,
     AlwaysBreakAfterDefinitionReturnType: true,
-    PointerAlignment: Right
+    PointerAlignment: Right,
+    ForEachMacros: ['list_for_each_entry', 'list_for_each_entry_safe', 'bio_for_each_segment']
 }
 ```
+Add 'ForEachMacros' definitions as required in the code.
 
 Code which has not been formatted with these options will be rejected for a merge.
 

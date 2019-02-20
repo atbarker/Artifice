@@ -57,13 +57,13 @@ typedef u64 uint64_t;
     })
 
 // Assert, perform an action, and jump.
-#define afs_assert_action(cond, action, label, fmt, args...) \
-    ({                                                       \
-        if (!(cond)) {                                       \
-            action;                                          \
-            afs_alert(fmt, ##args);                          \
-            goto label;                                      \
-        }                                                    \
+#define afs_action(cond, action, label, fmt, args...) \
+    ({                                                \
+        if (!(cond)) {                                \
+            action;                                   \
+            afs_alert(fmt, ##args);                   \
+            goto label;                               \
+        }                                             \
     })
 
 /**

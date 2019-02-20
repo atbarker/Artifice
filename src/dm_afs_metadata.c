@@ -69,7 +69,7 @@ afs_create_map(struct afs_private *context)
 
     // Allocate all required map_entries.
     map_entries = vmalloc(num_blocks * map_entry_sz);
-    afs_assert_action(map_entries, ret = -ENOMEM, done, "could not allocate map entries [%d]", ret);
+    afs_action(map_entries, ret = -ENOMEM, done, "could not allocate map entries [%d]", ret);
     afs_debug("allocated Artifice map");
 
     for (i = 0; i < num_blocks; i++) {
@@ -121,7 +121,7 @@ afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
 
     map_block = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
     ptr_block = kmalloc(sizeof(*ptr_block), GFP_KERNEL);
-    afs_assert_action(map_block && ptr_block, ret = -ENOMEM, err, "could not allocate memory for map data [%d]", ret);
+    afs_action(map_block && ptr_block, ret = -ENOMEM, err, "could not allocate memory for map data [%d]", ret);
 
     // Read in everything from the super block first.
     entries_read = 0;
@@ -184,7 +184,7 @@ afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
         // then clearly we shouldn't even have any more pointer blocks
         // left.
     }
-    afs_assert_action(entries_read == config->num_blocks, ret = -EIO, read_err,
+    afs_action(entries_read == config->num_blocks, ret = -EIO, read_err,
         "read incorrect amount [%u:%u]", entries_read, config->num_blocks);
     afs_debug("pointer blocks' map blocks read");
 
@@ -232,7 +232,7 @@ afs_create_map_blocks(struct afs_private *context)
 
     // Allocate all required map_blocks.
     map_blocks = vmalloc(AFS_BLOCK_SIZE * num_map_blocks);
-    afs_assert_action(map_blocks, ret = -ENOMEM, block_err, "could not allocate map blocks [%d]", ret);
+    afs_action(map_blocks, ret = -ENOMEM, block_err, "could not allocate map blocks [%d]", ret);
     afs_debug("allocated Artifice map blocks");
 
     memset(map_blocks, 0, AFS_BLOCK_SIZE * num_map_blocks);
@@ -256,7 +256,7 @@ afs_create_map_blocks(struct afs_private *context)
         hash_sha512(entries_start, AFS_BLOCK_SIZE - SHA512_SZ - config->unused_space_per_block, hash);
         ptr += AFS_BLOCK_SIZE;
     }
-    afs_assert_action(entries_written == num_blocks, ret = -EIO, write_err,
+    afs_action(entries_written == num_blocks, ret = -EIO, write_err,
         "wrote incorrect amount [%u:%u]", entries_written, num_blocks);
     afs_debug("initialized Artifice map blocks");
 
@@ -307,7 +307,7 @@ write_map_blocks(struct afs_private *context, bool update)
 
         if (!update) {
             block_num = acquire_block(fs, &context->vector);
-            afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
+            afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
             sb->map_block_ptrs[i] = block_num;
         } else {
             block_num = sb->map_block_ptrs[i];
@@ -329,7 +329,7 @@ write_map_blocks(struct afs_private *context, bool update)
 
             if (!update) {
                 block_num = acquire_block(fs, &context->vector);
-                afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
+                afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
                 afs_ptr_blocks[i].map_block_ptrs[j] = block_num;
             } else {
                 block_num = afs_ptr_blocks[i].map_block_ptrs[j];
@@ -385,7 +385,7 @@ write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
 
         // Write to disk and save pointer.
         block_num = acquire_block(fs, &context->vector);
-        afs_assert_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
+        afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
         ret = write_page(ptr_blocks + i, context->bdev, block_num, false);
         afs_assert(!ret, done, "could not write ptr block [%d:%llu]", ret, i);
 
@@ -428,7 +428,7 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
 
     // Allocate the Artifice Pointer Blocks.
     ptr_blocks = kmalloc(config->num_ptr_blocks * sizeof(*ptr_blocks), GFP_KERNEL);
-    afs_assert_action(ptr_blocks, ret = -ENOMEM, ptr_block_err, "could not allocate ptr_blocks [%d]", ret);
+    afs_action(ptr_blocks, ret = -ENOMEM, ptr_block_err, "could not allocate ptr_blocks [%d]", ret);
     memset(ptr_blocks, 0, config->num_ptr_blocks * sizeof(*ptr_blocks));
     context->afs_ptr_blocks = ptr_blocks;
 
@@ -548,10 +548,10 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     // Check for corruption.
     hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
     ret = memcmp(sb->sb_hash, sb_digest, SHA256_SZ);
-    afs_assert_action(!ret, ret = -ENOENT, err, "super block corrupted");
+    afs_action(!ret, ret = -ENOENT, err, "super block corrupted");
 
     // Confirm size is same.
-    afs_assert_action(config->instance_size == sb->instance_size, ret = -EINVAL, err,
+    afs_action(config->instance_size == sb->instance_size, ret = -EINVAL, err,
         "incorrect size provided [%llu:%llu]", config->instance_size, sb->instance_size);
 
     // TODO: Acquire from RS params in SB.
@@ -568,7 +568,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     // Create the Artifice Pointer Blocks. These are required for when
     // we need to re-write the map blocks.
     ptr_blocks = kmalloc(config->num_ptr_blocks * sizeof(*ptr_blocks), GFP_KERNEL);
-    afs_assert_action(ptr_blocks, ret = -ENOMEM, map_fill_err, "could not allocate ptr_blocks [%d]", ret);
+    afs_action(ptr_blocks, ret = -ENOMEM, map_fill_err, "could not allocate ptr_blocks [%d]", ret);
     context->afs_ptr_blocks = ptr_blocks;
 
     ret = rebuild_ptr_blocks(context);

@@ -21,7 +21,7 @@ afs_blkdev_io(struct afs_io *request)
     struct bio *bio = NULL;
 
     bio = bio_alloc(GFP_NOIO, 1);
-    afs_assert_action(!IS_ERR(bio), ret = PTR_ERR(bio), alloc_err, "could not allocate bio [%d]", ret);
+    afs_action(!IS_ERR(bio), ret = PTR_ERR(bio), alloc_err, "could not allocate bio [%d]", ret);
 
     switch (request->type) {
     case IO_READ:
@@ -33,7 +33,7 @@ afs_blkdev_io(struct afs_io *request)
         break;
 
     default:
-        afs_assert_action(0, ret = -EINVAL, invalid_type, "invalid IO type [%d]", request->type);
+        afs_action(0, ret = -EINVAL, invalid_type, "invalid IO type [%d]", request->type);
     }
 
     bio_set_dev(bio, request->bdev);
@@ -62,7 +62,7 @@ read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_v
     int ret;
 
     // Make sure page is aligned.
-    afs_assert_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+    afs_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
     // Acquire page structure and sector offset.
     page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
@@ -94,7 +94,7 @@ write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool
     int ret;
 
     // Make sure page is aligned.
-    afs_assert_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+    afs_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
     // Acquire page structure and sector offset.
     page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);

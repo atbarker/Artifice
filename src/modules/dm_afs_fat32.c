@@ -1,5 +1,5 @@
 /*
- * TODO: Refactor with afs_assert and afs_assert_action.
+ * TODO: Refactor with afs_assert and afs_action.
  *
  * Author: Austen Barker <atbarker@ucsc.edu>
  * Copyright: UC Santa Cruz, SSRC
@@ -238,7 +238,7 @@ read_boot_sector(struct fat_volume *vol, const void *data)
     uint32_t num_data_sectors;
 
     boot_sec = kmalloc(512, GFP_KERNEL);
-    afs_assert_action(!IS_ERR(boot_sec), ret = PTR_ERR(boot_sec), out_invalid, "could not allocate boot_sec [%d]", ret);
+    afs_action(!IS_ERR(boot_sec), ret = PTR_ERR(boot_sec), out_invalid, "could not allocate boot_sec [%d]", ret);
 
     // Copy in basic information from the first 512 bytes.
     memcpy(boot_sec, data, 512);
@@ -365,7 +365,7 @@ afs_fat32_detect(const void *data, struct block_device *device, struct afs_passi
 
     // Allocate memory for volume.
     vol = kmalloc(sizeof(*vol), GFP_KERNEL);
-    afs_assert_action(!IS_ERR(vol), ret = PTR_ERR(vol), vol_err, "could not allocate vol [%d]", ret);
+    afs_action(!IS_ERR(vol), ret = PTR_ERR(vol), vol_err, "could not allocate vol [%d]", ret);
 
     // Read the boot sector.
     ret = read_boot_sector(vol, data);

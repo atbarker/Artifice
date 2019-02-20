@@ -24,10 +24,10 @@ hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest)
     int ret;
 
     tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
-    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
+    afs_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
 
     desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
-    afs_assert_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
+    afs_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
 
     desc->tfm = tfm;
     desc->flags = 0;
@@ -58,10 +58,10 @@ hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest)
     int ret;
 
     tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
-    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
+    afs_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
 
     desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
-    afs_assert_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
+    afs_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
 
     desc->tfm = tfm;
     desc->flags = 0;
@@ -92,10 +92,10 @@ hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest)
     int ret;
 
     tfm = crypto_alloc_shash(alg_name, 0, CRYPTO_ALG_ASYNC);
-    afs_assert_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
+    afs_action(!IS_ERR(tfm), ret = PTR_ERR(tfm), tfm_done, "could not allocate tfm [%d]", ret);
 
     desc = kmalloc(sizeof(*desc) + crypto_shash_descsize(tfm), GFP_KERNEL);
-    afs_assert_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
+    afs_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
 
     desc->tfm = tfm;
     desc->flags = 0;

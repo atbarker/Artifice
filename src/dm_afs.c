@@ -28,7 +28,7 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
     int8_t ret;
 
     page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
-    afs_assert_action(page, ret = -ENOMEM, alloc_err, "could not allocate page [%d]", ret);
+    afs_action(page, ret = -ENOMEM, alloc_err, "could not allocate page [%d]", ret);
     ret = read_page(page, device, 0, false);
     afs_assert(!ret, read_err, "could not read page [%d]", ret);
 
@@ -141,8 +141,7 @@ afs_cleanq(struct work_struct *ws)
     flight_eq = &context->flight_eq;
 
     spin_lock(&flight_eq->mq_lock);
-    list_for_each_entry_safe(node, node_extra, &flight_eq->mq.list, list)
-    {
+    list_for_each_entry_safe (node, node_extra, &flight_eq->mq.list, list) {
         state = atomic64_read(&node->req.state);
         if (state == REQ_STATE_COMPLETED) {
             list_del(&node->list);
@@ -218,8 +217,7 @@ afs_groundq(struct work_struct *ws)
         element = NULL;
 
         spin_lock(&ground_eq->mq_lock);
-        list_for_each_entry_safe(node, node_extra, &ground_eq->mq.list, list)
-        {
+        list_for_each_entry_safe (node, node_extra, &ground_eq->mq.list, list) {
             exists = afs_eq_req_exist(flight_eq, node->req.bio);
             if (!exists) {
                 element = node;
@@ -298,8 +296,7 @@ __clone_bio(struct bio *bio_src, uint8_t **allocated_page, bool end_bio_src)
     afs_assert(req_size <= AFS_BLOCK_SIZE, size_err, "cannot handle requested size [%u]", req_size);
 
     segment_offset = 0;
-    bio_for_each_segment(bv, bio_src, iter)
-    {
+    bio_for_each_segment (bv, bio_src, iter) {
         bio_data = kmap(bv.bv_page);
         if (bv.bv_len <= (req_size - segment_offset)) {
             memcpy(page + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, bv.bv_len);
@@ -392,7 +389,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
 
     // Build request.
     map_element = kmalloc(sizeof(*map_element), GFP_KERNEL);
-    afs_assert_action(map_element, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
+    afs_action(map_element, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
 
     req = &map_element->req;
     req->bdev = context->bdev;
@@ -407,7 +404,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
     case REQ_OP_READ:
     case REQ_OP_WRITE:
         req->bio = __clone_bio(bio, &req->allocated_write_page, true);
-        afs_assert_action(req->bio, ret = DM_MAPIO_KILL, done, "could not clone bio");
+        afs_action(req->bio, ret = DM_MAPIO_KILL, done, "could not clone bio");
         afs_eq_add(&context->ground_eq, map_element);
 
         // Defer bio to be completed later.
@@ -469,28 +466,18 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // Make sure instance is large enough.
     instance_size = ti->len * AFS_SECTOR_SIZE;
-    afs_assert_action(instance_size >= AFS_MIN_SIZE, ret = -EINVAL, err, "instance too small [%llu]", instance_size);
+    afs_action(instance_size >= AFS_MIN_SIZE, ret = -EINVAL, err, "instance too small [%llu]", instance_size);
 
     // Confirm our structure sizes.
-    afs_assert_action(sizeof(*sb) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "super block structure incorrect size [%lu]", sizeof(*sb));
-    afs_assert_action(sizeof(struct afs_ptr_block) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "pointer block structure incorrect size");
+    afs_action(sizeof(*sb) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "super block structure incorrect size [%lu]", sizeof(*sb));
+    afs_action(sizeof(struct afs_ptr_block) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "pointer block structure incorrect size");
 
     context = kmalloc(sizeof(*context), GFP_KERNEL);
-    afs_assert_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);
+    afs_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);
     memset(context, 0, sizeof(*context));
     context->config.instance_size = instance_size;
 
-    // Initialize the work queues.
-    context->ground_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Ground WQ");
-    afs_assert_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
-
-    // TODO: Make flight_wq multithreaded.
-    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Flight WQ");
-    afs_assert_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
-
-    INIT_WORK(&context->ground_ws, afs_groundq);
-    INIT_WORK(&context->clean_ws, afs_cleanq);
-
+    // Parge instance arguments.
     args = &context->args;
     ret = parse_afs_args(args, argc, argv);
     afs_assert(!ret, args_err, "unable to parse arguments");
@@ -518,11 +505,11 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     case FS_ERR:
         // TODO: Change.
-        // afs_assert_action(0, ret = -ENOENT, fs_err, "unknown file system");
+        // afs_action(0, ret = -ENOENT, fs_err, "unknown file system");
         break;
 
     default:
-        afs_assert_action(0, ret = -ENXIO, fs_err, "seems like all hell broke loose");
+        afs_action(0, ret = -ENXIO, fs_err, "seems like all hell broke loose");
     }
 
     // This is all just for testing.
@@ -538,7 +525,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     // Allocate the free list allocation vector to be able
     // to map all possible blocks and mask the invalid block.
     context->vector.vector = bit_vector_create((uint64_t)U32_MAX);
-    afs_assert_action(context->vector.vector, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
+    afs_action(context->vector.vector, ret = -ENOMEM, vec_err, "could not allocate allocation vector");
     spin_lock_init(&context->vector.lock);
     allocation_set(&context->vector, AFS_INVALID_BLOCK);
 
@@ -562,12 +549,29 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     }
 
     // We are now ready to process map requests.
+    context->ground_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Ground WQ");
+    afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
+
+    // TODO: Make flight_wq multithreaded.
+    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Flight WQ");
+    afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
+
+    INIT_WORK(&context->ground_ws, afs_groundq);
+    INIT_WORK(&context->clean_ws, afs_cleanq);
+
     afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
 
     afs_debug("constructor completed");
     ti->private = context;
     return 0;
+
+fwq_err:
+    destroy_workqueue(context->ground_wq);
+
+gwq_err:
+    kfree(context->afs_ptr_blocks);
+    vfree(context->afs_map);
 
 sb_err:
     bit_vector_free(context->vector.vector);
@@ -579,12 +583,6 @@ fs_err:
     dm_put_device(ti, context->passive_dev);
 
 args_err:
-    destroy_workqueue(context->flight_wq);
-
-fwq_err:
-    destroy_workqueue(context->ground_wq);
-
-gwq_err:
     kfree(context);
 
 err:
@@ -603,6 +601,11 @@ afs_dtr(struct dm_target *ti)
 {
     struct afs_private *context = ti->private;
     int err;
+
+    // Wait for all requests to have processed. DO NOT busy wait.
+    while (!afs_eq_empty(&context->flight_eq) || !afs_eq_empty(&context->ground_eq)) {
+        msleep(1);
+    }
 
     // Update the Artifice map on the disk.
     err = afs_create_map_blocks(context);
