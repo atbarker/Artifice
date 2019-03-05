@@ -120,6 +120,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
             afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", map_entry_tuple[i].carrier_block_ptr);
         }
 
+        // TODO: Read entropy blocks as well.
         // TODO: Use Reed-Solomon to rebuild data block.
         memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
 
@@ -226,6 +227,13 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
 
     // Copy from the segments.
+    // NOTE: We don't technically need this complicated way
+    // of copying, because write bio's are a single contiguous
+    // page (because writes are clones bio's). However, it does
+    // not hurt to keep it since it doesn't result in a performance
+    // degradation, and may help in future optimizations where we
+    // may have multiple pages in a write bio.
+
     segment_offset = 0;
     bio_for_each_segment (bv, bio, iter) {
         bio_data = kmap(bv.bv_page);
@@ -240,7 +248,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         kunmap(bv.bv_page);
     }
 
-    // TODO: Acquire shards of this data block.
+    // TODO: Read entropy blocks as well.
+    // TODO: Use Reed-Solomon to build shards of the data block.
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {

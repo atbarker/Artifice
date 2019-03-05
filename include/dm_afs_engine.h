@@ -43,7 +43,8 @@ struct afs_map_request {
     uint8_t *allocated_write_page;
 };
 
-// Map request queue.
+// Map request queue. This is an intrusive
+// linked list.
 struct afs_map_queue {
     struct afs_map_request req;
     struct work_struct req_ws;
