@@ -12,17 +12,39 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("AUSTEN BARKER");
 
 static int __init km_template_init(void){
-    uint8_t data[2][4096];
-    uint8_t entropy[2][4096];
-    uint8_t carrier[4][4096];
+    uint8_t *data[2];
+    uint8_t *zeroed_data[2];
+    uint8_t *entropy[2];
+    uint8_t *carrier[4];
     struct timespec time_spec1, time_spec2;
     struct config *conf = kmalloc(sizeof(struct config), GFP_KERNEL);
+    struct dm_afs_erasures *erasure = kmalloc(sizeof(struct dm_afs_erasures), GFP_KERNEL);
 
     printk(KERN_INFO "Inserting kernel module\n");
     initialize(conf, 2, 2, 4);
 
+    data[0] = kmalloc(4096, GFP_KERNEL);
+    data[1] = kmalloc(4096, GFP_KERNEL);
+    entropy[0] = kmalloc(4096, GFP_KERNEL);
+    entropy[1] = kmalloc(4096, GFP_KERNEL);
+    carrier[0] = kmalloc(4096, GFP_KERNEL);
+    carrier[1] = kmalloc(4096, GFP_KERNEL);
+    carrier[2] = kmalloc(4096, GFP_KERNEL);
+    carrier[3] = kmalloc(4096, GFP_KERNEL);
+    get_random_bytes(data[0], 4096);
+    get_random_bytes(data[1], 4096);
+    get_random_bytes(entropy[0], 4096);
+    get_random_bytes(entropy[1], 4096); 
+
+    memset(carrier[0], 0, 4096);
+    memset(carrier[1], 0, 4096);
+    memset(carrier[2], 0, 4096);
+    memset(carrier[3], 0, 4096);
 
 
+    dm_afs_encode(conf, data, entropy, carrier);
+
+    //dm_afs_decode(conf, erasures, data, entropy, carrier); 
     /*//getnstimeofday(&time_spec1);
     memcpy(encoding, data, 62);
     memcpy(&encoding[62], entropy, 62);
