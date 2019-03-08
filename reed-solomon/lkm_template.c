@@ -6,22 +6,24 @@
 #include <linux/vmalloc.h>
 #include <linux/time.h>
 #include <asm/fpu/api.h>
-//#include "rs.h"
-#include <linux/rslib.h>
+#include "rs.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("AUSTEN BARKER");
 
 static int __init km_template_init(void){
-    uint8_t data[62];
-    uint8_t entropy[62];
-    //uint8_t carrier[131];
-    uint8_t *encoding = kmalloc(255, GFP_KERNEL);
+    uint8_t data[2][4096];
+    uint8_t entropy[2][4096];
+    uint8_t carrier[4][4096];
     struct timespec time_spec1, time_spec2;
-    static struct rs_control *rs_decoder;
-    uint16_t *carrier = kmalloc(131, GFP_KERNEL);
-    /*init_rs(124);
-    //getnstimeofday(&time_spec1);
+    struct config *conf = kmalloc(sizeof(struct config), GFP_KERNEL);
+
+    printk(KERN_INFO "Inserting kernel module\n");
+    initialize(conf, 2, 2, 4);
+
+
+
+    /*//getnstimeofday(&time_spec1);
     memcpy(encoding, data, 62);
     memcpy(&encoding[62], entropy, 62);
     getnstimeofday(&time_spec1);
@@ -39,7 +41,8 @@ static int __init km_template_init(void){
     encode_rs8(rs_decoder, encoding, 223, carrier, 0);
     print_hex_dump(KERN_DEBUG, "encoding:", DUMP_PREFIX_OFFSET, 20, 1, (void*)encoding, 255, true);
     print_hex_dump(KERN_DEBUG, "carrier: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)carrier, 131, true);*/
-    printk(KERN_INFO "Inserting kernel module\n");
+
+    kfree(conf);
     return 0;
 }
 
