@@ -576,7 +576,7 @@ uint32_t dm_afs_decode(struct config* info, struct dm_afs_erasures* erasures, ui
 			memcpy(&decode_buffer[count], &carrier[j][carrier_count], info->block_portion);
 			count += info->block_portion;
 		}
-		//errs = decode(decode_buffer, err_loc, info->k, eras);
+		//errs = decode(decode_buffer, &decode_buffer[info->k], info->k, info->n - info->k, eras);
 		if(errs == -1){
 			//error out and return -1
 			printk(KERN_INFO "Decode failed: %d\n", errs);
