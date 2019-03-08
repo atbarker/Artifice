@@ -16,7 +16,7 @@ static int __init km_template_init(void){
     uint8_t *zeroed_data[2];
     uint8_t *entropy[2];
     uint8_t *carrier[4];
-    struct timespec time_spec1, time_spec2;
+    struct timespec timespec1, timespec2;
     struct config *conf = kmalloc(sizeof(struct config), GFP_KERNEL);
     struct dm_afs_erasures *erasure = kmalloc(sizeof(struct dm_afs_erasures), GFP_KERNEL);
 
@@ -41,8 +41,11 @@ static int __init km_template_init(void){
     memset(carrier[2], 0, 4096);
     memset(carrier[3], 0, 4096);
 
-
+    getnstimeofday(&timespec1);
     dm_afs_encode(conf, data, entropy, carrier);
+    getnstimeofday(&timespec2);
+    printk(KERN_INFO "\n Encode took: %ld nanoseconds",
+(timespec2.tv_sec - timespec1.tv_sec) * 1000000000 + (timespec2.tv_nsec - timespec1.tv_nsec));
 
     //dm_afs_decode(conf, erasures, data, entropy, carrier); 
     /*//getnstimeofday(&time_spec1);
@@ -65,6 +68,14 @@ static int __init km_template_init(void){
     print_hex_dump(KERN_DEBUG, "carrier: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)carrier, 131, true);*/
 
     kfree(conf);
+    kfree(data[0]);
+    kfree(data[1]);
+    kfree(entropy[0]);
+    kfree(entropy[1]);
+    kfree(carrier[0]);
+    kfree(carrier[1]);
+    kfree(carrier[2]);
+    kfree(carrier[3]);
     return 0;
 }
 
