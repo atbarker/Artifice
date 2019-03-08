@@ -10,7 +10,7 @@ AFS_MODULES :=	src/modules/dm_afs_fat32.o	\
 				src/modules/dm_afs_ntfs.o
 
 # Libraries
-AFS_LIBRARIES := src/lib/bit_vector.o
+AFS_LIBRARIES := src/lib/bit_vector.o src/lib/rs.o src/lib/libgfshare.o
 
 # Kernel module.
 obj-m 	 := dm_afs.o

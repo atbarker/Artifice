@@ -22,7 +22,7 @@
  * not passed to the encoder or decoder.
  *
  */
-#include "dm_afs_rs.h"
+#include "lib/rs.h"
 #include <linux/random.h>
 #include <linux/string.h>
 
