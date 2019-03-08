@@ -32,13 +32,13 @@ static int __init km_template_init(void){
     memcpy(carrier, &encoding[124], 131);
     //getnstimeofday(&time_spec2);
     printk(KERN_INFO "\n MY_DBG : read took: %ld nanoseconds",
-(time_spec2.tv_sec - time_spec1.tv_sec) * 1000000000 + (time_spec2.tv_nsec - time_spec1.tv_nsec));
+(time_spec2.tv_sec - time_spec1.tv_sec) * 1000000000 + (time_spec2.tv_nsec - time_spec1.tv_nsec));*/
     get_random_bytes(encoding, 124);
     memset(&encoding[124], 0, 131);
     rs_decoder = init_rs(8, 0x11D, 0, 1, 32);
     encode_rs8(rs_decoder, encoding, 223, carrier, 0);
     print_hex_dump(KERN_DEBUG, "encoding:", DUMP_PREFIX_OFFSET, 20, 1, (void*)encoding, 255, true);
-    print_hex_dump(KERN_DEBUG, "carrier: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)carrier, 131, true);*/
+    print_hex_dump(KERN_DEBUG, "carrier: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)carrier, 131, true);
     printk(KERN_INFO "Inserting kernel module\n");
     return 0;
 }

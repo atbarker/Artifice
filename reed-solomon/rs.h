@@ -1,37 +1,12 @@
-/* Global definitions for Reed-Solomon encoder/decoder
- * Phil Karn KA9Q, September 1996
- * Modified by Austen Barker 2018
- *
- * The parameters MM and KK specify the Reed-Solomon code parameters.
- *
- * Set MM to be the size of each code symbol in bits. The Reed-Solomon
- * block size will then be NN = 2**M - 1 symbols. Supported values are
- * defined in rs.c.
- *
- * Set KK to be the number of data symbols in each block, which must be
- * less than the block size. The code will then be able to correct up
- * to NN-KK erasures or (NN-KK)/2 errors, or combinations thereof with
- * each error counting as two erasures.
- */
 #ifndef RS_H
 #define RS_H
 
-#include <linux/string.h>
-#include <linux/slab.h>
+#include <linux/types.h>
 
-#ifdef	MSDOS
-#define	inline	/* broken MSC 5.0 */
-#endif
-#define MM  8		/* RS code over GF(2**MM) - change to suit */
-#define KK 192 /* 223 */		/* KK = number of information symbols */
+#define poly_max(a, b) ((a > b) ? (a) : (b))
 
-#define	NN ((1 << MM) - 1)
-
-#if (MM <= 8)
-typedef uint8_t dtype;
-#else
-typedef uint32_t dtype;
-#endif
+#define GF_SIZE 256
+#define MAX_VALUE 255
 
 struct config{
     uint32_t num_data;
@@ -48,50 +23,104 @@ struct config{
     uint32_t final_padding;
 };
 
-
-//TODO find a better solution to handling the erasure location structures
-//sadly right now limited to code words of length 32, theoretically capable of code words of length 255
 struct dm_afs_erasures{
     uint8_t codeword_size;
     uint8_t num_erasures;
     uint8_t erasures[32];
 };
 
-/* Initialization function */
-//TODO eliminate global variables and malloc here
-void init_rs(uint32_t kk);
+typedef struct{
+    int size; //size of the polynomial
+    int array_length; //length of the byte array
+    uint8_t* byte_array; //actual storage of the byte array for the polynomial
+} Polynomial;
 
-/* Cleanup function */
-//TODO free a context structure here
-void cleanup_rs(void);
 
-/* These two functions *must* be called in this order (e.g.,
- * by init_rs()) before any encoding/decoding
- */
+//assumes an already malloc'd byte array to the desired length (max should be 256 so 8 bits is enough)
+Polynomial* init(uint8_t size, uint8_t length, uint8_t* byte_array);
 
-void generate_gf(void);	/* Generate Galois Field */
-void gen_poly(int kk);	/* Generate generator polynomial */
-void hexDump (char *desc, void *addr, uint32_t len);
+//a new empty polynomial
+Polynomial* new_poly(void);
+
+//free memory allocated for a polynomial
+void free_poly(Polynomial *p);
+
+//append to an existing polynomial
+int32_t append(Polynomial* p, uint8_t x);
+
+//reset values to zero, really just zero the size, don't have to zero the memory
+int32_t reset(Polynomial* p);
+
+//set a polynomial to existing values
+int32_t set(Polynomial* p, uint8_t* byte_seq, uint8_t size);
+
+//make a copy of a polynomial
+int32_t poly_copy(Polynomial* src, Polynomial* dest);
+
+//return the length of the length of the byte array
+uint8_t length(Polynomial* p);
+
+//return the size of polynomial
+uint8_t size(Polynomial* p);
+
+//coefficient at position i
+uint8_t value_at(Polynomial* p, uint32_t i);
+
+//return pointer to byte array
+uint8_t* mem(Polynomial* p);
+
+void print_polynomial(Polynomial* p);
+
+
+//The generator polynomial, only one instance of this
+static Polynomial* gen_poly;
+
+//Single number galois field functions
+uint8_t init_tables(void);
+uint8_t gf_add(uint8_t x, uint8_t y);
+uint8_t gf_mult(uint8_t x, uint8_t y, uint16_t prim_poly);
+uint8_t gf_mult_table(uint8_t x, uint8_t y);
+void populate_mult_lookup(void);
+uint8_t gf_mult_lookup(uint8_t x, uint8_t y);
+uint8_t gf_div(int x, int y);
+uint8_t gf_pow(int x, int pow);
+uint8_t gf_inv(uint8_t x);
+
+//polynomial galois field functions
+int32_t gf_poly_scalar(Polynomial *p, Polynomial *output, uint8_t scalar);
+int32_t gf_poly_add(Polynomial *a, Polynomial *b, Polynomial *output);
+int32_t gf_poly_mult(Polynomial *a, Polynomial *b, Polynomial *output);
+int32_t gf_poly_div(Polynomial *a, Polynomial *b, Polynomial *output, Polynomial *remainder);
+uint8_t gf_poly_eval(Polynomial *p, uint8_t x);
+
+//Reed-Solomon functions
+
+//initialize tables and generator polynomial
+void rs_init(uint8_t parity_symbols);
+
+//generate the reed-solomon generator polynomial
+void rs_generator_poly(uint8_t n_symbols);
+
+//make sure that the two arrays are already allocated
+int encode(const void* data, uint8_t data_length, void* parity, uint8_t parity_length);
+
+//calculate the error syndromes
+Polynomial* calc_syndromes(Polynomial* message, uint8_t parity_length);
+
+//calculate the error locator polynomial
+Polynomial* find_error_locator(Polynomial* error_positions);
+
+//error evaluator polynomial
+Polynomial* find_error_evaluator(Polynomial* synd, Polynomial* error_loc, uint8_t parity_length);
+
+//calls find_error_locator and find_error_evaluator and computes the magnitude polynomial to correct errors
+Polynomial* correct_errors(Polynomial* syn, Polynomial* err_pos, Polynomial* message);
+
+//decode the message
+int decode(const uint8_t* src, const uint8_t* parity, uint8_t data_size, uint8_t parity_size, uint8_t* dest, uint8_t* erasure_pos, uint8_t erasure_count);
 
 uint32_t initialize(struct config* configuration, uint32_t num_data, uint32_t num_entropy, uint32_t num_carrier);
-uint32_t encode(struct config* info, uint8_t** data, uint8_t** entropy, uint8_t** carrier);
-uint32_t decode(struct config* info, struct dm_afs_erasures *erasures, uint8_t** data, uint8_t** entropy, uint8_t** carrier);
-
-/* Reed-Solomon encoding
- * data[] is the input block, parity symbols are placed in bb[]
- * bb[] may lie past the end of the data, e.g., for (255,223):
- *	encode_rs(&data[0],&data[223]);
- */
-uint32_t encode_rs(dtype* data, uint32_t kk, dtype* bb, uint32_t n_k);
-
-/* Reed-Solomon erasures-and-errors decoding
- * The received block goes into data[], and a list of zero-origin
- * erasure positions, if any, goes in eras_pos[] with a count in no_eras.
- *
- * The decoder corrects the symbols in place, if possible and returns
- * the number of corrected symbols. If the codeword is illegal or
- * uncorrectible, the data array is unchanged and -1 is returned
- */
-uint32_t eras_dec_rs(dtype data[], uint32_t* eras_pos, uint32_t kk, uint32_t no_eras);
+uint32_t dm_afs_encode(struct config* info, uint8_t** data, uint8_t** entropy, uint8_t** carrier);
+uint32_t dm_afs_decode(struct config* info, struct dm_afs_erasures* erasures, uint8_t** data, uint8_t** entropy, uint8_t** carrier);
 
 #endif
