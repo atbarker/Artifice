@@ -45,18 +45,19 @@ reload:
 ######################################################################
 # Make sure your VM has another disk and its mounted at /dev/sdb.
 #
-# MY CONFIGURATION: /dev/sdb is 512MB.
+# MY CONFIGURATION: /dev/sdb is 4GB.
 # Sectors:
-#	196608 = 096MB Artifice instance.
-#	524288 = 256MB Artifice instance (512MB disk not enough to map with 4 carrier blocks).
+#	196608  = 096MB Artifice instance.
+#	524288  = 256MB Artifice instance.
+#   1048576 = 512MB Artifice instance.
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 196608 artifice 0 pass /dev/sdb --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 1048576 artifice 0 pass /dev/sdb --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 196608 artifice 1 pass /dev/sdb | sudo dmsetup create artifice
+	@echo 0 1048576 artifice 1 pass /dev/sdb | sudo dmsetup create artifice
 
 debug_end:
 	@sudo dmsetup remove artifice || true

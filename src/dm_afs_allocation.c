@@ -65,14 +65,17 @@ uint32_t
 acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
 {
     static uint32_t block_num = 0;
-    uint32_t current_num = block_num;
+    uint32_t current_num;
+    uint32_t ret;
 
     spin_lock(&vector->lock);
+    current_num = block_num;
     do {
         if (allocation_set(vector, block_num)) {
+            ret = fs->block_list[block_num];
             block_num = (block_num + 1) % fs->list_len;
             spin_unlock(&vector->lock);
-            return fs->block_list[block_num];
+            return ret;
         }
         block_num = (block_num + 1) % fs->list_len;
     } while (block_num != current_num);

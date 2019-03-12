@@ -281,7 +281,9 @@ afs_groundq(struct work_struct *ws)
 static struct bio *
 __clone_bio(struct bio *bio_src, uint8_t **allocated_page, bool end_bio_src)
 {
-    const int override = 0;
+    // TODO: Override is enabled because without it, there is too much
+    // lock contention, leading to overall worse performance.
+    const int override = 1;
 
     struct bio_vec bv;
     struct bvec_iter iter;
@@ -528,8 +530,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // This is all just for testing.
     // BEGIN.
-    fs->block_list = vmalloc(131072 * sizeof(*fs->block_list));
-    fs->list_len = 131072;
+    fs->block_list = vmalloc(1048576 * sizeof(*fs->block_list));
+    fs->list_len = 1048576;
 
     for (i = 0; i < fs->list_len; i++) {
         fs->block_list[i] = i;
@@ -566,10 +568,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->ground_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Ground WQ");
     afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
-    // TODO: Make flight_wq multithreaded.
-    // For now, if you change the 1 to 0 (to let it run on an unbounded
-    // number of threads), you may get some data corruption.
-    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Flight WQ");
+    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 0, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     INIT_WORK(&context->ground_ws, afs_groundq);

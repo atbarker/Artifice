@@ -154,7 +154,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req_size);
-    afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
+    // afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
 
     // Read the raw block.
     ret = __afs_read_block(req, block_num);
@@ -212,7 +212,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
     map_entry_hash = map_entry + (config->num_carrier_blocks * sizeof(*map_entry_tuple));
     map_entry_entropy = map_entry_hash + SHA128_SZ;
-    afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
+    // afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
 
     // If this write is a modification, then we perform a read-modify-write.
     // Otherwise, a new block is allocated and written to. We perform the
@@ -229,10 +229,14 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     // Copy from the segments.
     // NOTE: We don't technically need this complicated way
     // of copying, because write bio's are a single contiguous
-    // page (because writes are clones bio's). However, it does
+    // page (because writes are cloned bio's). However, it does
     // not hurt to keep it since it doesn't result in a performance
     // degradation, and may help in future optimizations where we
     // may have multiple pages in a write bio.
+    //
+    // NOTE: ^This case is only true if the __clone_bio function
+    // in dm_afs.c has override disabled. As of 3rd March 2019, the
+    // override has been enabled due to massive lock contention.
 
     segment_offset = 0;
     bio_for_each_segment (bv, bio, iter) {
