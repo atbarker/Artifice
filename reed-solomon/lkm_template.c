@@ -48,11 +48,11 @@ static int __init km_template_init(void){
 (timespec2.tv_sec - timespec1.tv_sec) * 1000000000 + (timespec2.tv_nsec - timespec1.tv_nsec));
 
     erasure->codeword_size = 8;
-    erasure->num_erasures = 2;
+    erasure->num_erasures = 0;
     erasure->erasures[0] = 0;
     erasure->erasures[1] = 1;
 
-    //dm_afs_decode(conf, erasures, data, entropy, carrier); 
+    dm_afs_decode(conf, erasure, data, entropy, carrier); 
     /*//getnstimeofday(&time_spec1);
     memcpy(encoding, data, 62);
     memcpy(&encoding[62], entropy, 62);
