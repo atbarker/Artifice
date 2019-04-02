@@ -26,7 +26,7 @@
 	POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "cm256.h"
+#include "lib/rs-fast.h"
 #include <linux/types.h>
 #include <linux/slab.h>
 
