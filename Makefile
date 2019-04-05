@@ -3,8 +3,9 @@ PWD := $(shell pwd)
 
 # Compile flags.
 # TODO need some way to check for the presence of msse3 or other SIMD instructions
+# AVX2 is nice but not really needed
 # If those aren't present then fall back to the normal rs version, will have to have ifdef's in the code
-ccflags-y += -I$(src)/include/ -msse3 -msse4.1
+ccflags-y += -I$(src)/include/ -msse3 -msse4.1 -mavx2
 
 # Modules.
 AFS_MODULES :=	src/modules/dm_afs_fat32.o	\
@@ -12,7 +13,7 @@ AFS_MODULES :=	src/modules/dm_afs_fat32.o	\
 				src/modules/dm_afs_ntfs.o
 
 # Libraries
-AFS_LIBRARIES := src/lib/bit_vector.o src/lib/rs-fast.o src/lib/libgfshare.o
+AFS_LIBRARIES := src/lib/bit_vector.o src/lib/cauchy_rs.o src/lib/libgfshare.o
 
 # Kernel module.
 obj-m 	 := dm_afs.o
