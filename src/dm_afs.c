@@ -7,6 +7,7 @@
 #include <dm_afs_io.h>
 #include <dm_afs_modules.h>
 #include <linux/delay.h>
+#include "lib/cauchy_rs.h"
 
 /**
  * A procedure to detect the existing file system on a block
@@ -576,6 +577,9 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
+
+    ret = cauchy_init();
+    afs_assert(!ret, sb_err, "could not initialize encoding library [%d]", ret);
 
     afs_debug("constructor completed");
     ti->private = context;
