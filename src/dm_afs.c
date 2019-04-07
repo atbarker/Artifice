@@ -578,8 +578,12 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
 
+    //TODO, change from the default number of blocks
     ret = cauchy_init();
-    afs_assert(!ret, sb_err, "could not initialize encoding library [%d]", ret);
+    afs_assert(!ret, encode_err, "could not initialize encoding library [%d]", ret);
+    context->params.BlockBytes = 4096;
+    context->params.OriginalCount = 4;
+    context->params.RecoveryCount = 4;
 
     afs_debug("constructor completed");
     ti->private = context;
@@ -602,6 +606,9 @@ fs_err:
     dm_put_device(ti, context->passive_dev);
 
 args_err:
+    kfree(context);
+
+encode_err:
     kfree(context);
 
 err:

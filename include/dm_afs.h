@@ -6,6 +6,7 @@
 #include <dm_afs_engine.h>
 #include <dm_afs_format.h>
 #include <dm_afs_modules.h>
+#include "lib/cauchy_rs.h"
 #include <lib/bit_vector.h>
 #include <linux/bio.h>
 #include <linux/completion.h>
@@ -71,6 +72,9 @@ struct afs_private {
     uint8_t *afs_map;
     uint8_t *afs_map_blocks;
     struct afs_ptr_block *afs_ptr_blocks;
+
+    //Encoding stuff
+    cauchy_encoder_params params;
 };
 
 /**
