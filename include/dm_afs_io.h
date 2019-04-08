@@ -3,6 +3,8 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs_config.h>
+#include <dm_afs_format.h>
+#include "lib/cauchy_rs.h"
 
 #ifndef DM_AFS_IO_H
 #define DM_AFS_IO_H
@@ -36,5 +38,9 @@ int read_page(void *page, struct block_device *bdev, uint32_t block_num, bool us
  * Write a single page.
  */
 int write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
+
+int afs_encode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** entropy_blocks, uint8_t** data_blocks);
+
+int afs_decode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** entropy_blocks, uint8_t** data_blocks);
 
 #endif /* DM_AFS_IO_H */

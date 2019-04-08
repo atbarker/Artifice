@@ -5,6 +5,7 @@
 #include <dm_afs.h>
 #include <dm_afs_io.h>
 #include <dm_afs_modules.h>
+#include <dm_afs_format.h>
 
 /**
  * Read or write to an block device.
@@ -113,3 +114,19 @@ write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool
 done:
     return ret;
 }
+
+/**
+ * Wrapper for encoding
+ */
+int afs_encode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** entropy_blocks, uint8_t** data_blocks){
+
+    return 0;
+}
+
+/**
+ * Wrapper for decoding, switches between secret sharing, old-and-busted RS (slow as fuck), and new-hotness-RS (SIMD cauchy)
+ */
+int afs_decode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** entropy_blocks, uint8_t** data_blocks){
+    return 0;
+}
+

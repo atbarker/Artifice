@@ -2087,3 +2087,4 @@ int cauchy_rs_decode(
     Decode(state);
     return 0;
 }
+
