@@ -74,6 +74,7 @@ struct __attribute__((packed)) afs_map_tuple {
 
 struct afs_config {
     uint8_t num_carrier_blocks;
+    uint8_t num_entropy_blocks;
     uint8_t map_entry_sz;
     uint8_t unused_space_per_block;
     uint8_t num_map_entries_per_block;

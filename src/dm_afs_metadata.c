@@ -13,6 +13,7 @@
 
 /**
  * Build the configuration for an instance.
+ * TODO build config for everything
  */
 void
 build_configuration(struct afs_private *context, uint8_t num_carrier_blocks, uint8_t num_entropy_blocks)
@@ -20,6 +21,7 @@ build_configuration(struct afs_private *context, uint8_t num_carrier_blocks, uin
     struct afs_config *config = &context->config;
 
     config->num_carrier_blocks = num_carrier_blocks;
+    config->num_carrier_blocks = num_entropy_blocks;
     config->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * config->num_carrier_blocks);
     config->unused_space_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) % config->map_entry_sz;
     config->num_map_entries_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) / config->map_entry_sz;
