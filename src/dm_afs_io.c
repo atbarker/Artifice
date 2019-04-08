@@ -119,7 +119,9 @@ done:
  * Wrapper for encoding
  */
 int afs_encode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** entropy_blocks, uint8_t** data_blocks){
-
+    int i, ret;	
+    cauchy_block *blocks = kmalloc(sizeof(cauchy_block) * (config->num_carrier_blocks + config->num_entropy_blocks + 1));
+    
     return 0;
 }
 
