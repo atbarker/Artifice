@@ -6,6 +6,7 @@
 #include <dm_afs_io.h>
 #include <dm_afs_modules.h>
 #include <dm_afs_format.h>
+#include <linux/slab.h>
 
 /**
  * Read or write to an block device.
@@ -118,9 +119,20 @@ done:
 /**
  * Wrapper for encoding
  */
-int afs_encode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** entropy_blocks, uint8_t** data_blocks){
-    int i, ret;	
-    cauchy_block *blocks = kmalloc(sizeof(cauchy_block) * (config->num_carrier_blocks + config->num_entropy_blocks + 1));
+int afs_encode(cauchy_encoder_params *params, 
+               struct afs_config *config, 
+               uint8_t** carrier_blocks, 
+               uint8_t** entropy_blocks,
+               uint8_t** data_blocks)
+{
+    int i, ret;
+    int codeword_size = config->num_carrier_blocks + config->num_entropy_blocks + 1;  
+    cauchy_block *blocks = kmalloc(sizeof(cauchy_block) * codeword_size, GFP_KERNEL);
+
+    //TODO: fix this for variable number of data blocks
+    for (i = 0; i < 1; i++){
+        blocks[i].Block = data_blocks[i];
+    }
     
     return 0;
 }
@@ -128,7 +140,12 @@ int afs_encode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** en
 /**
  * Wrapper for decoding, switches between secret sharing, old-and-busted RS (slow as fuck), and new-hotness-RS (SIMD cauchy)
  */
-int afs_decode(struct afs_config *config, uint8_t** carrier_blocks, uint8_t** entropy_blocks, uint8_t** data_blocks){
+int afs_decode(cauchy_encoder_params *params, 
+               struct afs_config *config, 
+               uint8_t** carrier_blocks, 
+               uint8_t** entropy_blocks, 
+               uint8_t** data_blocks)
+{
     return 0;
 }
 
