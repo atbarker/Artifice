@@ -15,7 +15,7 @@
  * Build the configuration for an instance.
  */
 void
-build_configuration(struct afs_private *context, uint8_t num_carrier_blocks)
+build_configuration(struct afs_private *context, uint8_t num_carrier_blocks, uint8_t num_entropy_blocks)
 {
     struct afs_config *config = &context->config;
 
@@ -555,7 +555,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
         "incorrect size provided [%llu:%llu]", config->instance_size, sb->instance_size);
 
     // TODO: Acquire from RS params in SB.
-    build_configuration(context, 4);
+    build_configuration(context, 4, 1);
 
     ret = afs_create_map(context);
     afs_assert(!ret, err, "could not create artifice map [%d]", ret);

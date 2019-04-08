@@ -80,7 +80,7 @@ struct afs_private {
 /**
  * Build the configuration for an instance.
  */
-void build_configuration(struct afs_private *context, uint8_t num_carrier_blocks);
+void build_configuration(struct afs_private *context, uint8_t num_carrier_blocks, uint8_t num_entropy_blocks);
 
 /**
  * Create the Artifice map and initialize it to
@@ -136,6 +136,7 @@ int hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
  * Perform a reverse bit scan for an unsigned long.
+ * Primarily used to verify data sizes for file system processing
  */
 static inline uint64_t
 bsr(uint64_t n)
