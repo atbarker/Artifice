@@ -254,6 +254,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well.
     // TODO: Use Reed-Solomon to build shards of the data block.
+    // TODO: needs a wrapper
+    // cauchy_rs_encode(context->params, blocks, recoveryBlocks)
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
