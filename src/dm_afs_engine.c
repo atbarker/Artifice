@@ -135,7 +135,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
 
         // TODO: Read entropy blocks as well.
         // TODO: Use Reed-Solomon to rebuild data block.
-	ret = cauchy_rs_decode(params, datablocks, (uint8_t**)req->read_blocks, erasures, num_erasures);
+	ret = cauchy_rs_decode(params, datablocks, req->read_blocks, erasures, num_erasures);
         //memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
 	memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);
 
@@ -270,8 +270,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well.
     // TODO: Use Reed-Solomon to build shards of the data block.
-    // TODO: needs a wrapper
-    // cauchy_rs_encode(context->params, blocks, recoveryBlocks)
+    cauchy_rs_encode(context->params, req->data_block, req->write_blocks)
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
