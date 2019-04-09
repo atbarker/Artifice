@@ -214,7 +214,7 @@ int cauchy_init(void);
 typedef struct cauchy_encoder_params_t {
     int OriginalCount;
     int RecoveryCount;
-    size_t BlockBytes;
+    int BlockBytes;
 } cauchy_encoder_params;
 
 typedef struct cauchy_block_t {

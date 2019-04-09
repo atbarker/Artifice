@@ -73,137 +73,6 @@ typedef struct {
 
 static ALIGNED SelfTestBuffersT m_SelfTestBuffers;
 
-static int gf_self_test(void) {
-    unsigned i, j;
-    uint8_t expectedMul, expectedMulAdd;
-    if ((uintptr_t)m_SelfTestBuffers.A % GF_ALIGN_BYTES != 0) {
-        return -1;
-    }
-    if ((uintptr_t)m_SelfTestBuffers.A % GF_ALIGN_BYTES != 0) {
-        return -1;
-    }
-    if ((uintptr_t)m_SelfTestBuffers.B % GF_ALIGN_BYTES != 0) {
-        return -1;
-    }
-    if ((uintptr_t)m_SelfTestBuffers.C % GF_ALIGN_BYTES != 0) {
-        return -1;
-    }
-
-    // Check multiplication/division
-    for (i = 0; i < 256; ++i) {
-        for (j = 0; j < 256; ++j) {
-            uint8_t prod = gf_mul((uint8_t)i, (uint8_t)j);
-            if (i != 0 && j != 0) {
-                uint8_t div1 = gf_div(prod, (uint8_t)i);
-                uint8_t div2;
-                if (div1 != j){
-                    debug("first division failed\n");
-                    return -1;
-                }
-                div2 = gf_div(prod, (uint8_t)j);
-                if (div2 != i){
-                    debug("second division failed\n");
-                    return -1;
-                }
-            }
-            else if (prod != 0){
-                debug("Product is not zero\n");
-                return -1;
-            }
-            if (j == 1 && prod != i){
-                debug("Multiplication error\n");
-                return -1;
-            }
-        }
-    }
-
-    // Check for overruns
-    m_SelfTestBuffers.A[kTestBufferBytes] = 0x5a;
-    m_SelfTestBuffers.B[kTestBufferBytes] = 0x5a;
-    m_SelfTestBuffers.C[kTestBufferBytes] = 0x5a;
-
-    // Test gf_add_mem()
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        m_SelfTestBuffers.A[i] = 0x1f;
-        m_SelfTestBuffers.B[i] = 0xf7;
-    }
-    gf_add_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, kTestBufferBytes);
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (0x1f ^ 0xf7)){
-	        debug("addition failure\n");
-            return -1;
-        }
-	}
-
-    // Test gf_add2_mem()
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        m_SelfTestBuffers.A[i] = 0x1f;
-        m_SelfTestBuffers.B[i] = 0xf7;
-        m_SelfTestBuffers.C[i] = 0x71;
-    }
-    gf_add2_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, m_SelfTestBuffers.C, kTestBufferBytes);
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (0x1f ^ 0xf7 ^ 0x71)) {
-            debug("Failed second add\n");
-            return -1;
-        }
-    }
-
-    // Test gf_addset_mem()
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        m_SelfTestBuffers.A[i] = 0x55;
-        m_SelfTestBuffers.B[i] = 0xaa;
-        m_SelfTestBuffers.C[i] = 0x6c;
-    }
-    gf_addset_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, m_SelfTestBuffers.C, kTestBufferBytes);
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (0xaa ^ 0x6c)) {
-            debug("Failed addset\n");
-            return -1;
-        }
-    }
-    // Test gf_muladd_mem()
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        m_SelfTestBuffers.A[i] = 0xff;
-        m_SelfTestBuffers.B[i] = 0xaa;
-    }
-    expectedMulAdd = gf_mul(0xaa, 0x6c);
-    gf_muladd_mem(m_SelfTestBuffers.A, 0x6c, m_SelfTestBuffers.B, kTestBufferBytes);
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != (expectedMulAdd ^ 0xff)) {
-            debug("muladd failed\n");
-            return -1;
-        }
-    }
-
-    // Test gf_mul_mem()
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        m_SelfTestBuffers.A[i] = 0xff;
-        m_SelfTestBuffers.B[i] = 0x55;
-    }
-    expectedMul = gf_mul(0xa2, 0x55);
-    gf_mul_mem(m_SelfTestBuffers.A, m_SelfTestBuffers.B, 0xa2, kTestBufferBytes);
-    for (i = 0; i < kTestBufferBytes; ++i) {
-        if (m_SelfTestBuffers.A[i] != expectedMul) {
-	    debug("mul failed\n");
-            return -1;
-        }
-    }
-
-    if (m_SelfTestBuffers.A[kTestBufferBytes] != 0x5a) {
-        return -1;
-    }
-    if (m_SelfTestBuffers.B[kTestBufferBytes] != 0x5a) {
-        return -1;
-    }
-    if (m_SelfTestBuffers.C[kTestBufferBytes] != 0x5a) {
-        return -1;
-    }
-
-    debug("Self test passed\n");
-    return 0;
-}
-
 
 //------------------------------------------------------------------------------
 // Runtime CPU Architecture Check
@@ -211,7 +80,6 @@ static int gf_self_test(void) {
 // Feature checks stolen shamelessly from
 // https://github.com/jedisct1/libsodium/blob/master/src/libsodium/sodium/runtime.c
 
-//TODO clean this up, won't work in the kernel
 #if defined(HAVE_ANDROID_GETCPUFEATURES)
 #include <cpu-features.h>
 #endif
@@ -626,11 +494,6 @@ static bool IsLittleEndian(void) {
 }
 
 int gf_init(void) {
-    /*if (version != GF_VERSION){
-        printk(KERN_INFO "something wrong\n");
-        return -1; // User's header does not match library version.
-    }*/
-
     // Avoid multiple initialization
     if (Initialized) {
         printk(KERN_INFO "Already initialized\n");
@@ -650,11 +513,6 @@ int gf_init(void) {
     gf_inv_init();
     gf_sqr_init();
     gf_mul_mem_init();
-
-    if (gf_self_test()) {
-        printk(KERN_INFO "failed self test\n");
-        return -3; // Self-test failed (perhaps untested configuration)
-    }
 
     return 0;
 }
