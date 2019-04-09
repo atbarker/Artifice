@@ -10,6 +10,17 @@
 #include "lib/cauchy_rs.h"
 
 /**
+ * Convert 2 dimensional static array to double pointer 2d array.
+ */
+static inline void arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uint8_t* output[AFS_BLOCK_SIZE]){
+    int i;
+    for(i = 0; i < size; i++){
+        output[i] = array[i];
+    }
+}
+
+
+/**
  * Initialize an engine queue.
  */
 void
@@ -112,7 +123,6 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t num_erasures = 1;
     uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
     uint8_t** parityblocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    datablocks[0] = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
 
     config = req->config;
     //TODO change this when entropy handling is added
@@ -136,9 +146,8 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
 
         // TODO: Read entropy blocks as well.
         // TODO: Use Reed-Solomon to rebuild data block.
-	for (i = 0; i < config->num_carrier_blocks; i++){
-           parityblocks[i] = req->read_blocks[i];
-	}
+	arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
+	arraytopointer(&req->data_block, 1, datablocks);
 	ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
         //memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
 	memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);

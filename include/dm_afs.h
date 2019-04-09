@@ -148,15 +148,4 @@ bsr(uint64_t n)
     return n;
 }
 
-/**
- * Convert 2 dimensional static array to double pointer 2d array.
- */
-static inline void arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uint8_t* output[AFS_BLOCK_SIZE]){
-    int i;
-    for(i = 0; i < size; i++){
-        output[i] = array[i];
-    }
-}
-
-
 #endif /* DM_AFS_H */
