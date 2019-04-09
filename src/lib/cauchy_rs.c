@@ -32,8 +32,6 @@
 */
 
 #include "lib/cauchy_rs.h"
-//#include <linux/types.h>
-//#include <linux/slab.h>
 
 #ifdef LINUX_ARM
 #include <linux/auxvec.h>
@@ -667,49 +665,49 @@ int gf_init(void) {
 
 #if defined(GF_AVX2)
 //all of these are versions of the above for AVX instructions
-inline M256 vector_xor_256(M256 x, M256 y){
+static inline M256 vector_xor_256(M256 x, M256 y){
     return (M256) ((__v4du)x ^ (__v4du)y);
 }
 
-inline M256 vector_and_256(M256 x, M256 y){
+static inline M256 vector_and_256(M256 x, M256 y){
     return (M256) ((__v4du)x & (__v4du)y);
 }
 
-inline M256 vector_srli_epi64_256(M256 x, int y){
+static inline M256 vector_srli_epi64_256(M256 x, int y){
     return (M256) __builtin_ia32_psrlqi256 ((__v4di)x, y);
 }
 
-inline M256 vector_shuffle_epi8_256(M256 x, M256 y){
+static inline M256 vector_shuffle_epi8_256(M256 x, M256 y){
     return (M256)__builtin_ia32_pshufb256((__v32qi)x, (__v32qi)y);
 }
 
-inline M256 vector_set_256(char x){
+static inline M256 vector_set_256(char x){
     return __extension__ (M256)(__v32qi){x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x};
 }
 
 #endif
 //replacement for _mm_xor_si128
-inline M128 vector_xor(M128 x, M128 y){
+static inline M128 vector_xor(M128 x, M128 y){
     return (M128)((__v2du)x ^ (__v2du)y);
 }
 
 //replacement for _mm_and_si128
-inline M128 vector_and(M128 x, M128 y){
+static inline M128 vector_and(M128 x, M128 y){
     return (M128)((__v2du)x & (__v2du)y);
 }
 
 //replacement for _mm_srli_epi64
-inline M128 vector_srli_epi64(M128 x, int y){
+static inline M128 vector_srli_epi64(M128 x, int y){
     return (M128)__builtin_ia32_psrlqi128 ((__v2di)x, y);
 }
 
 //replacement for _mm_shuffle_epi8
-inline M128 vector_shuffle_epi8(M128 x, M128 y){
+static inline M128 vector_shuffle_epi8(M128 x, M128 y){
     return (M128)__builtin_ia32_pshufb128((__v16qi)x, (__v16qi)y);
 }
 
 //replacement for _mm_set1_epi8
-inline M128 vector_set(char x){
+static inline M128 vector_set(char x){
     return __extension__ (M128)(__v16qi){x, x, x, x, x, x, x, x, x, x, x, x, x, x, x, x};
 }
 
@@ -1712,29 +1710,33 @@ void cauchy_rs_encode_block(
 
 int cauchy_rs_encode(
     cauchy_encoder_params params, // Encoder params
-    cauchy_block* originals,      // Array of pointers to original blocks
-    void* recoveryBlocks)        // Output recovery blocks end-to-end
+    uint8_t** dataBlocks,
+    uint8_t** parityBlocks)        // Output recovery blocks end-to-end
 {
-    uint8_t* recoveryBlock;
+    cauchy_block* originals = cauchy_malloc(sizeof(cauchy_block) * params.OriginalCount);
     int block;
 
-    // Validate input:
     if (params.OriginalCount <= 0 || params.RecoveryCount <= 0 || params.BlockBytes <= 0){
         return -1;
     }
     if (params.OriginalCount + params.RecoveryCount > 256){
         return -2;
     }
-    if (!originals || !recoveryBlocks){
+    if (!originals || !parityBlocks || !dataBlocks){
         return -3;
     }
 
-    recoveryBlock = (uint8_t*)(recoveryBlocks);
-
-    for (block = 0; block < params.RecoveryCount; ++block, recoveryBlock += params.BlockBytes){
-        cauchy_rs_encode_block(params, originals, (params.OriginalCount + block), recoveryBlock);
+    for (block = 0; block < params.OriginalCount; ++block){
+        originals[block].Block = dataBlocks[block];
     }
 
+    for (block = 0; block < params.RecoveryCount; ++block){
+        //print_hex_dump(KERN_DEBUG, "data: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)originals[block].Block, 16, true);
+        cauchy_rs_encode_block(params, originals, (params.OriginalCount + block), parityBlocks[block]);
+	//print_hex_dump(KERN_DEBUG, "parity: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)parityBlocks[block], 16, true);
+    }
+
+    kfree(originals);
     return 0;
 }
 
@@ -1757,13 +1759,6 @@ typedef struct {
     // Row indices that were erased
     uint8_t ErasuresIndices[256];
 
-    // Initialize the decoder
-
-    // Decode m=1 case
-
-    // Decode for m>1 case
-
-    // Generate the LU decomposition of the matrix
 }CauchyDecoder;
 
 int Initialize(CauchyDecoder *decoder, cauchy_encoder_params params, cauchy_block* blocks) {
@@ -2047,9 +2042,14 @@ void Decode(CauchyDecoder *decoder) {
 
 int cauchy_rs_decode(
     cauchy_encoder_params params, // Encoder params
-    cauchy_block* blocks)         // Array of 'originalCount' blocks as described above
+    uint8_t** dataBlocks,
+    uint8_t** parityBlocks,
+    uint8_t* erasures,
+    uint8_t num_erasures)         // Array of 'originalCount' blocks as described above
 {
     CauchyDecoder *state = cauchy_malloc(sizeof(CauchyDecoder));
+    cauchy_block *blocks = cauchy_malloc(sizeof(cauchy_block) * params.OriginalCount);
+    int i = 0;
 
     if (params.OriginalCount <= 0 || params.RecoveryCount <= 0 || params.BlockBytes <= 0) {
         return -1;
@@ -2061,11 +2061,14 @@ int cauchy_rs_decode(
         return -3;
     }
 
-    // If there is only one block,
-    if (params.OriginalCount == 1) {
-        // It is the same block repeated
-        blocks[0].Index = 0;
-        return 0;
+    for(i = 0; i < params.OriginalCount; ++i){
+        blocks[i].Block = dataBlocks[i];
+        blocks[i].Index = cauchy_get_original_block_index(params, i);
+    }
+
+    for(i = 0; i < num_erasures; i++){
+        blocks[erasures[i]].Block = parityBlocks[i];
+        blocks[erasures[i]].Index = cauchy_get_recovery_block_index(params, i);
     }
 
     if (Initialize(state, params, blocks)) {
@@ -2085,6 +2088,11 @@ int cauchy_rs_decode(
 
     // Decode for m>1
     Decode(state);
+    for(i = 0; i < params.OriginalCount; ++i){
+    //    print_hex_dump(KERN_DEBUG, "decoded: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)blocks[i].Block, 16, true);
+        memcpy(dataBlocks[i], blocks[i].Block, params.BlockBytes);
+    }
+
+    kfree(blocks);
     return 0;
 }
-

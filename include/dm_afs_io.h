@@ -39,16 +39,4 @@ int read_page(void *page, struct block_device *bdev, uint32_t block_num, bool us
  */
 int write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
 
-int afs_encode(cauchy_encoder_params *params,
-               struct afs_config *config, 
-               uint8_t** carrier_blocks, 
-               uint8_t** entropy_blocks,
-               uint8_t** data_blocks);
-
-int afs_decode(cauchy_encoder_params *params, 
-               struct afs_config *config, 
-               uint8_t** carrier_blocks, 
-               uint8_t** entropy_blocks, 
-               uint8_t** data_blocks);
-
 #endif /* DM_AFS_IO_H */

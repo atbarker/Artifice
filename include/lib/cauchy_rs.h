@@ -54,7 +54,7 @@
     #if defined(__KERNEL__)
         #define debug(fmt, ...)                                      \
             ({                                                       \
-                printk(KERN_DEBUG "Cauchy-debug: [%s:%d] " fmt, \
+                printk(KERN_DEBUG "Cauchy-debug: [%s:%d] " fmt "\n", \
                     __func__, __LINE__,                              \
                     ##__VA_ARGS__);                                  \
             })
@@ -88,7 +88,7 @@ typedef char __v32qi __attribute__ ((__vector_size__ (32)));
 
 #if defined(ANDROID) || defined(IOS) || defined(LINUX_ARM)
     #define GF_ARM //we are on ARM
-    #define ALIGNED_ACCESSES //Inputs must be aligned to GF_ALIGN_BYTES
+    #define ALIGNED_ACCESSES //therefore inputs must be aligned
     #if defined(HAVE_ARM_NEON_H)
         #include <arm_neon.h>
         #define M128 uint8x16_t
@@ -100,7 +100,7 @@ typedef char __v32qi __attribute__ ((__vector_size__ (32)));
     #define M128 __m128i
 #endif
 
-// Compiler-specific force inline keyword
+// Compiler-specific force inline (GCC)
 #define FORCE_INLINE inline __attribute__((always_inline))
 
 // Compiler-specific alignment keyword, only matters on ARM
@@ -111,9 +111,8 @@ void gf_memswap(void * __restrict vx, void * __restrict vy, int bytes);
 
 
 //------------------------------------------------------------------------------
-// GF(256) Context
 
-/// The context object stores tables required to perform library calculations
+// The context object stores tables required to perform library calculations
 typedef struct{
     struct
     {
@@ -128,13 +127,13 @@ typedef struct{
     } MM256;
 #endif
 
-    // Mul/Div/Inv/Sqr tables
+    // Mul/Div/Inv/Sqr lookup tables
     uint8_t GF_MUL_TABLE[256 * 256];
     uint8_t GF_DIV_TABLE[256 * 256];
     uint8_t GF_INV_TABLE[256];
     uint8_t GF_SQR_TABLE[256];
 
-    // Log/Exp tables
+    // Log/Exp lookup tables
     uint16_t GF_LOG_TABLE[256];
     uint8_t GF_EXP_TABLE[512 * 2 + 1];
 
@@ -155,33 +154,31 @@ extern gf_ctx GFContext;
 */
 int gf_init(void);
 
-/// return x + y
+//Galois field add
 static FORCE_INLINE uint8_t gf_add(uint8_t x, uint8_t y)
 {
     return (uint8_t)(x ^ y);
 }
 
-/// return x * y
-/// For repeated multiplication by a constant, it is faster to put the constant in y.
+// Galois Field multiply
 static FORCE_INLINE uint8_t gf_mul(uint8_t x, uint8_t y)
 {
     return GFContext.GF_MUL_TABLE[((unsigned)y << 8) + x];
 }
 
-/// return x / y
-/// Memory-access optimized for constant divisors in y.
+//Galois Field divide
 static FORCE_INLINE uint8_t gf_div(uint8_t x, uint8_t y)
 {
     return GFContext.GF_DIV_TABLE[((unsigned)y << 8) + x];
 }
 
-/// return 1 / x
+//Galois Field inverse
 static FORCE_INLINE uint8_t gf_inv(uint8_t x)
 {
     return GFContext.GF_INV_TABLE[x];
 }
 
-/// return x * x
+//Galois field square
 static FORCE_INLINE uint8_t gf_sqr(uint8_t x)
 {
     return GFContext.GF_SQR_TABLE[x];
@@ -213,16 +210,15 @@ static FORCE_INLINE void gf_div_mem(void * __restrict vz, const void * __restric
 int cauchy_init(void);
 
 // Encoder parameters
-// block counts must be less than 256
+// block counts must be at most 256
 typedef struct cauchy_encoder_params_t {
     int OriginalCount;
     int RecoveryCount;
-    int BlockBytes; //block size in bytes
+    size_t BlockBytes;
 } cauchy_encoder_params;
 
 typedef struct cauchy_block_t {
     uint8_t* Block;
-    // Block index.
     // For original data, it will be in the range
     //    [0..(originalCount-1)] inclusive.
     // For recovery data, the first one's Index must be originalCount,
@@ -246,39 +242,13 @@ static inline unsigned char cauchy_get_original_block_index(cauchy_encoder_param
 
 
 /*
- * This produces a set of recovery blocks that should be transmitted after the
- * original data blocks.
- *
- * It takes in 'originalCount' equal-sized blocks and produces 'recoveryCount'
- * equally-sized recovery blocks.
- *
- * The input 'originals' array allows more natural usage of the library.
- * The output recovery blocks are stored end-to-end in 'recoveryBlocks'.
- * 'recoveryBlocks' should have recoveryCount * blockBytes bytes available.
- *
- * Precondition: originalCount + recoveryCount <= 256
- *
- * When transmitting the data, the block index of the data should be sent,
- * and the recovery block index is also needed.  The decoder should also
- * be provided with the values of originalCount, recoveryCount and blockBytes.
- *
- * Example wire format:
- * [originalCount(1 byte)] [recoveryCount(1 byte)]
- * [blockIndex(1 byte)] [blockData(blockBytes bytes)]
- *
- * Be careful not to mix blocks from different encoders.
- *
- * It is possible to support variable-length data by including the original
- * data length at the front of each message in 2 bytes, such that when it is
- * recovered after a loss the data length is available in the block data and
- * the remaining bytes of padding can be neglected.
- *
- * Returns 0 on success, and any other code indicates failure.
+ * This produces a set of parity blocks from the original data blocks as specified
+ * in the parameters structure.
  */
 int cauchy_rs_encode(
     cauchy_encoder_params params, // Encoder parameters
-    cauchy_block* originals,      // Array of pointers to original blocks
-    void* recoveryBlocks);       // Output recovery blocks end-to-end
+    uint8_t** dataBlocks,         // Array of pointers to original blocks
+    uint8_t** parityBlocks);      // Array of pointers to output parity blocks
 
 // Encode one block.
 // TODO validate input
@@ -289,26 +259,21 @@ void cauchy_rs_encode_block(
     void* recoveryBlock);        // Output recovery block
 
 /*
- * Cauchy MDS GF(256) decode
+ * Cauchy Reed-Solomon decode
  *
- * This recovers the original data from the recovery data in the provided
- * blocks.  There should be 'originalCount' blocks in the provided array.
- * Recovery will always be possible if that many blocks are received.
+ * Input is the array of the (potentially damaged) data blocks, the parity
+ * blocks that are output by the encoding function, and an array of erasures
  *
- * Provide the same values for 'originalCount', 'recoveryCount', and
- * 'blockBytes' used by the encoder.
- *
- * The block Index should be set to the block index of the original data,
- * as described in the cauchy_block struct comments above.
- *
- * Recovery blocks will be replaced with original data and the Index
- * will be updated to indicate the original block that was recovered.
- *
- * Returns 0 on success, and any other code indicates failure.
+ * The length of the erasures array should be equal to the number of erasures
+ * Each entry in that array is the index of an erased block in the original 
+ * code word.
  */
 int cauchy_rs_decode(
     cauchy_encoder_params params, // Encoder parameters
-    cauchy_block* blocks);        // Array of 'originalCount' blocks as described above
+    uint8_t** dataBlocks,         // array of pointers to data blocks
+    uint8_t** parityBlocks,       // array of pointers to parity blocks
+    uint8_t* erasures,            // array of erasures
+    uint8_t num_erasures);        // the number of erasures
 
 
 #endif
