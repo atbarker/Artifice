@@ -111,6 +111,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t erasures[1] = {0};
     uint8_t num_erasures = 1;
     uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    uint8_t** parityblocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
     datablocks[0] = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
 
     config = req->config;
@@ -135,7 +136,10 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
 
         // TODO: Read entropy blocks as well.
         // TODO: Use Reed-Solomon to rebuild data block.
-	ret = cauchy_rs_decode(params, datablocks, req->read_blocks, erasures, num_erasures);
+	for (i = 0; i < config->num_carrier_blocks; i++){
+           parityblocks[i] = req->read_blocks[i];
+	}
+	ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
         //memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
 	memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);
 
@@ -146,6 +150,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     }
     ret = 0;
     kfree(datablocks);
+    kfree(parityblocks);
 
 done:
     return ret;
@@ -270,7 +275,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well.
     // TODO: Use Reed-Solomon to build shards of the data block.
-    cauchy_rs_encode(context->params, req->data_block, req->write_blocks)
+    //cauchy_rs_encode(context->params, req->data_block, req->write_blocks)
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
