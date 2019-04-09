@@ -7,6 +7,7 @@
 #include <dm_afs_engine.h>
 #include <dm_afs_io.h>
 #include <linux/delay.h>
+#include "lib/cauchy_rs.h"
 
 /**
  * Initialize an engine queue.
@@ -104,9 +105,21 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     uint8_t digest[SHA1_SZ];
+    cauchy_encoder_params params;
     int ret, i;
+    //TODO needs to calculate this and check hashes
+    uint8_t erasures[1] = {0};
+    uint8_t num_erasures = 1;
+    uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    datablocks[0] = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
 
     config = req->config;
+    //TODO change this when entropy handling is added
+    params.OriginalCount = 1;
+    params.RecoveryCount = config->num_carrier_blocks;
+    params.BlockBytes = AFS_BLOCK_SIZE;
+
+    //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
     map_entry_hash = map_entry + (config->num_carrier_blocks * sizeof(*map_entry_tuple));
@@ -122,7 +135,9 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
 
         // TODO: Read entropy blocks as well.
         // TODO: Use Reed-Solomon to rebuild data block.
-        memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
+	ret = cauchy_rs_decode(params, datablocks, (uint8_t**)req->read_blocks, erasures, num_erasures);
+        //memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
+	memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);
 
         // Confirm hash matches.
         hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
@@ -130,6 +145,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
+    kfree(datablocks);
 
 done:
     return ret;
