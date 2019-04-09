@@ -122,13 +122,14 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t erasures[1] = {0};
     uint8_t num_erasures = 1;
     uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    uint8_t** parityblocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    uint8_t** parityblocks;
 
     config = req->config;
     //TODO change this when entropy handling is added
     params.OriginalCount = 1;
     params.RecoveryCount = config->num_carrier_blocks;
     params.BlockBytes = AFS_BLOCK_SIZE;
+    parityblocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
@@ -231,12 +232,21 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint32_t segment_offset;
     bool modification = false;
     int ret = 0, i;
+    uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    uint8_t** parityblocks;
+    cauchy_encoder_params params;
 
     config = req->config;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
+
+    //TODO update this
+    params.OriginalCount = 1;
+    params.RecoveryCount = config->num_carrier_blocks;
+    params.BlockBytes = AFS_BLOCK_SIZE;
+    parityblocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
@@ -284,12 +294,14 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well.
     // TODO: Use Reed-Solomon to build shards of the data block.
-    //cauchy_rs_encode(context->params, req->data_block, req->write_blocks)
+    arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
+    arraytopointer(&req->data_block, 1, datablocks);
+    cauchy_rs_encode(params, datablocks, parityblocks);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // TODO: Get rid of.
-        memcpy(req->write_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        //memcpy(req->write_blocks[i], req->data_block, AFS_BLOCK_SIZE);
 
         // Allocate new block, or use old one.
         block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
@@ -304,6 +316,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
+
+    //TODO make sure these are cleaned up in case of failure
+    kfree(parityblocks);
+    kfree(datablocks);
     return 0;
 
 reset_entry:
