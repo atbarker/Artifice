@@ -581,9 +581,9 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //TODO, change from the default number of blocks
     ret = cauchy_init();
     afs_assert(!ret, encode_err, "could not initialize encoding library [%d]", ret);
-    context->params.BlockBytes = AFS_BLOCK_SIZE;
-    context->params.OriginalCount = context->config.num_carrier_blocks + context->config.num_entropy_blocks;
-    context->params.RecoveryCount = context->params.OriginalCount;
+//    context->params.BlockBytes = AFS_BLOCK_SIZE;
+//    context->params.OriginalCount = context->config.num_carrier_blocks + context->config.num_entropy_blocks;
+//    context->params.RecoveryCount = context->params.OriginalCount;
 
     afs_debug("constructor completed");
     ti->private = context;

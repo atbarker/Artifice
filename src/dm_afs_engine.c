@@ -116,20 +116,20 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     uint8_t digest[SHA1_SZ];
-    //cauchy_encoder_params params;
+    cauchy_encoder_params params;
     int ret, i;
     //TODO needs to calculate this and check hashes
-    //uint8_t erasures[1] = {0};
-    //uint8_t num_erasures = 1;
-    //uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    //uint8_t** parityblocks;
+    uint8_t erasures[1] = {0};
+    uint8_t num_erasures = 1;
+    uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    uint8_t** parityblocks;
 
     config = req->config;
     //TODO change this when entropy handling is added
-    //params.OriginalCount = 1;
-    //params.RecoveryCount = config->num_carrier_blocks;
-    //params.BlockBytes = AFS_BLOCK_SIZE;
-    //parityblocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
+    params.OriginalCount = 1;
+    params.RecoveryCount = config->num_carrier_blocks;
+    params.BlockBytes = AFS_BLOCK_SIZE;
+    parityblocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
@@ -159,8 +159,8 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
-    //kfree(datablocks);
-    //kfree(parityblocks);
+    kfree(datablocks);
+    kfree(parityblocks);
 
 done:
     return ret;
@@ -232,9 +232,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint32_t segment_offset;
     bool modification = false;
     int ret = 0, i;
-    //uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    //uint8_t** parityblocks;
-    //cauchy_encoder_params params;
+    uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    uint8_t** parityblocks;
+    cauchy_encoder_params params;
 
     config = req->config;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
@@ -243,10 +243,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     //TODO update this
-    //params.OriginalCount = 1;
-    //params.RecoveryCount = config->num_carrier_blocks;
-    //params.BlockBytes = AFS_BLOCK_SIZE;
-    //parityblocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
+    params.OriginalCount = 1;
+    params.RecoveryCount = config->num_carrier_blocks;
+    params.BlockBytes = AFS_BLOCK_SIZE;
+    parityblocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
@@ -318,8 +318,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
     //TODO make sure these are cleaned up in case of failure
-    //kfree(parityblocks);
-    //kfree(datablocks);
+    kfree(parityblocks);
+    kfree(datablocks);
     return 0;
 
 reset_entry:
