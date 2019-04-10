@@ -294,14 +294,17 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well.
     // TODO: Use Reed-Solomon to build shards of the data block.
+    print_hex_dump(KERN_DEBUG, "encoded writeblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)req->write_blocks[0], 60, true);
     arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
     arraytopointer(&req->data_block, 1, datablocks);
     cauchy_rs_encode(params, datablocks, parityblocks);
+    print_hex_dump(KERN_DEBUG, "encoded parity: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)parityblocks[0], 60, true);
+    print_hex_dump(KERN_DEBUG, "encoded writeblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)req->write_blocks[0], 60, true);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // TODO: Get rid of.
-        //memcpy(req->write_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        memcpy(req->write_blocks[i], req->data_block, AFS_BLOCK_SIZE);
 
         // Allocate new block, or use old one.
         block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
