@@ -110,38 +110,43 @@ struct fat_boot_sector {
 /**
  * Reads in boot parameter block as seen in DOS 2.0.
  */
-static int
+static int 
 fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_sec)
 {
-    vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
-    vol->sector_order = bsr(vol->bytes_sector);
-    afs_assert(is_power_of_2(vol->bytes_sector) && vol->sector_order >= 5 && vol->sector_order <= 12,
-        out_invalid, "sector order mismatch [%d]", vol->sector_order);
+	vol->bytes_sector = le16_to_cpu(boot_sec->bytes_sec);
+	vol->sector_order = bsr(vol->bytes_sector);
+	if(!is_power_of_2(vol->bytes_sector) || vol->sector_order < 5 || vol->sector_order > 12){
+		//error out of this function
+		goto out_invalid;
+	}
+	vol->sec_cluster = boot_sec->sec_cluster;
+	vol->sec_cluster_order = bsr(vol->sec_cluster);
+	if (!is_power_of_2(vol->sec_cluster) || vol->sec_cluster_order > 7){
+		//error out
+		goto out_invalid;
+	}
+	vol->cluster_order = vol->sector_order + vol->sec_cluster_order;
 
-    vol->sec_cluster = boot_sec->sec_cluster;
-    vol->sec_cluster_order = bsr(vol->sec_cluster);
-    afs_assert(is_power_of_2(vol->sec_cluster) && vol->sec_cluster_order <= 7, out_invalid,
-        "sector cluster order mismatch [%d]", vol->sec_cluster_order);
+	vol->reserved = le16_to_cpu(boot_sec->res_sec);
 
-    vol->cluster_order = vol->sector_order + vol->sec_cluster_order;
-    vol->reserved = le16_to_cpu(boot_sec->res_sec);
+	vol->tables = boot_sec->num_tables;
+	if(vol->tables != 1 && vol->tables != 2){
+		//error out, number of tables
+		goto out_invalid;
+	}	
 
-    vol->tables = boot_sec->num_tables;
-    afs_assert(vol->tables == 1 || vol->tables == 2, out_invalid, "incorrect number of tables");
-
-    vol->root_entries = le16_to_cpu(boot_sec->max_root_ent);
-    if (vol->root_entries == 0) {
-        // then this is a FAT32 volume.
-    } else {
-        // TODO: Why is this here?
-    }
-    vol->total_sec = le16_to_cpu(boot_sec->total_sectors);
-    vol->media_desc = boot_sec->media_desc;
-    vol->sec_fat = le16_to_cpu(boot_sec->sec_fat);
-    return 0;
-
+	vol->root_entries = le16_to_cpu(boot_sec->max_root_ent);
+	if(vol->root_entries == 0){
+		//then this is a FAT32 volume
+	}else{
+		
+	}
+	vol->total_sec = le16_to_cpu(boot_sec->total_sectors);
+	vol->media_desc = boot_sec->media_desc;
+	vol->sec_fat = le16_to_cpu(boot_sec->sec_fat);
+	return 0;
 out_invalid:
-    return -1;
+	return -1;
 }
 
 /**
