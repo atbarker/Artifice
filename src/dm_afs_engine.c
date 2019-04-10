@@ -147,11 +147,11 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
 
         // TODO: Read entropy blocks as well.
         // TODO: Use Reed-Solomon to rebuild data block.
-	//arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
-	//arraytopointer(&req->data_block, 1, datablocks);
-	//ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
-        memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
-	//memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);
+	arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
+	arraytopointer(&req->data_block, 1, datablocks);
+	ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
+        //memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
+	memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);
 
         // Confirm hash matches.
         hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
@@ -294,14 +294,14 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well.
     // TODO: Use Reed-Solomon to build shards of the data block.
-    //arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
-    //arraytopointer(&req->data_block, 1, datablocks);
-    //cauchy_rs_encode(params, datablocks, parityblocks);
+    arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
+    arraytopointer(&req->data_block, 1, datablocks);
+    cauchy_rs_encode(params, datablocks, parityblocks);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // TODO: Get rid of.
-        memcpy(req->write_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        //memcpy(req->write_blocks[i], req->data_block, AFS_BLOCK_SIZE);
 
         // Allocate new block, or use old one.
         block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
