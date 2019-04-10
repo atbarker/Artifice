@@ -56,11 +56,11 @@ reload:
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 1048576 artifice 0 pass /dev/sdc --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 1048576 artifice 0 pass /dev/sdd --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 1048576 artifice 1 pass /dev/sdc | sudo dmsetup create artifice
+	@echo 0 1048576 artifice 1 pass /dev/sdd | sudo dmsetup create artifice
 
 debug_end:
 	@sudo dmsetup remove artifice || true
