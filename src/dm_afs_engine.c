@@ -304,7 +304,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // TODO: Get rid of.
-        memcpy(parityblocks[i], datablocks[0], AFS_BLOCK_SIZE);
+        //memcpy(parityblocks[i], datablocks[0], AFS_BLOCK_SIZE);
 
         // Allocate new block, or use old one.
         block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
@@ -312,7 +312,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         map_entry_tuple[i].carrier_block_ptr = block_num;
 
         ret = write_page(parityblocks[i], req->bdev, block_num, false);
-        //print_hex_dump(KERN_DEBUG, "data block: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)req->data_block, 60, true);
+        afs_debug("carrier blocks %d", config->num_carrier_blocks);
+        print_hex_dump(KERN_DEBUG, "parityblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)parityblocks[i], 60, true);
         afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
     }
 
@@ -324,7 +325,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //TODO make sure these are cleaned up in case of failure
     kfree(parityblocks);
     kfree(datablocks);
-    return 0;
+    return ret;
 
 reset_entry:
     for (i = 0; i < config->num_carrier_blocks; i++) {
