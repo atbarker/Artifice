@@ -149,10 +149,9 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         // TODO: Use Reed-Solomon to rebuild data block.
 	arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
 	arraytopointer(&req->data_block, 1, datablocks);
-	//ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
-        memcpy(datablocks[0], parityblocks[0], AFS_BLOCK_SIZE);
+	ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
+        //memcpy(datablocks[0], parityblocks[0], AFS_BLOCK_SIZE);
 	//memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);
-        //print_hex_dump(KERN_DEBUG, "data block: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)datablocks[0], 60, true);
 
         // Confirm hash matches.
         hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
@@ -298,7 +297,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 //    print_hex_dump(KERN_DEBUG, "encoded writeblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)req->write_blocks[0], 60, true);
     arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
     arraytopointer(&req->data_block, 1, datablocks);
-    //cauchy_rs_encode(params, datablocks, parityblocks);
+    cauchy_rs_encode(params, datablocks, parityblocks);
 //    print_hex_dump(KERN_DEBUG, "encoded parity: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)parityblocks[0], 60, true);
 //    print_hex_dump(KERN_DEBUG, "encoded writeblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)req->write_blocks[0], 60, true);
 
