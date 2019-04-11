@@ -21,7 +21,7 @@ build_configuration(struct afs_private *context, uint8_t num_carrier_blocks, uin
     struct afs_config *config = &context->config;
 
     config->num_carrier_blocks = num_carrier_blocks;
-    config->num_carrier_blocks = num_entropy_blocks;
+    config->num_entropy_blocks = num_entropy_blocks;
     config->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * config->num_carrier_blocks);
     config->unused_space_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) % config->map_entry_sz;
     config->num_map_entries_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) / config->map_entry_sz;
@@ -41,7 +41,9 @@ build_configuration(struct afs_private *context, uint8_t num_carrier_blocks, uin
         config->num_ptr_blocks = (config->num_map_blocks - NUM_MAP_BLKS_IN_SB) / NUM_MAP_BLKS_IN_PB;
         config->num_ptr_blocks += ((config->num_map_blocks - NUM_MAP_BLKS_IN_SB) % NUM_MAP_BLKS_IN_PB) ? 1 : 0;
     }
-
+   
+    afs_debug("Number carrier blocks per tuple: %u", config->num_carrier_blocks);
+    afs_debug("Number entropy blocks per tuple: %u", config->num_entropy_blocks); 
     afs_debug("Map entry size: %u", config->map_entry_sz);
     afs_debug("Unused: %u | Entries per block: %u", config->unused_space_per_block, config->num_map_entries_per_block);
     afs_debug("Blocks: %u", config->num_blocks);

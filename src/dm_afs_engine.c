@@ -146,12 +146,9 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         }
 
         // TODO: Read entropy blocks as well.
-        // TODO: Use Reed-Solomon to rebuild data block.
 	arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
 	arraytopointer(&req->data_block, 1, datablocks);
 	ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
-        //memcpy(datablocks[0], parityblocks[0], AFS_BLOCK_SIZE);
-	//memcpy(req->data_block, datablocks[0], AFS_BLOCK_SIZE);
 
         // Confirm hash matches.
         hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
@@ -293,27 +290,18 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
 
     // TODO: Read entropy blocks as well.
-    // TODO: Use Reed-Solomon to build shards of the data block.
-//    print_hex_dump(KERN_DEBUG, "encoded writeblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)req->write_blocks[0], 60, true);
     arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
     arraytopointer(&req->data_block, 1, datablocks);
     cauchy_rs_encode(params, datablocks, parityblocks);
-//    print_hex_dump(KERN_DEBUG, "encoded parity: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)parityblocks[0], 60, true);
-//    print_hex_dump(KERN_DEBUG, "encoded writeblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)req->write_blocks[0], 60, true);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
-        // TODO: Get rid of.
-        //memcpy(parityblocks[i], datablocks[0], AFS_BLOCK_SIZE);
-
         // Allocate new block, or use old one.
         block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
 
         ret = write_page(parityblocks[i], req->bdev, block_num, false);
-        afs_debug("carrier blocks %d", config->num_carrier_blocks);
-        print_hex_dump(KERN_DEBUG, "parityblocks: ", DUMP_PREFIX_OFFSET, 30, 1, (void*)parityblocks[i], 60, true);
         afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
     }
 
@@ -322,7 +310,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
-    //TODO make sure these are cleaned up in case of failure
     kfree(parityblocks);
     kfree(datablocks);
     return ret;
@@ -334,7 +321,10 @@ reset_entry:
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
+    kfree(parityblocks);
+    kfree(datablocks);
 
 err:
+    kfree(datablocks);
     return ret;
 }
