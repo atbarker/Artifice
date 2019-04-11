@@ -15,21 +15,26 @@
 
 DEFINE_HASHTABLE(HASH_TABLE_NAME, HASH_TABLE_ORDER);
 
+/**
+ * Helper function for opening a file in the kernel
+ */
 struct file* file_open(char* path, int flags, int rights){
     struct file *filp = NULL;
-    //mm_segment_t oldfs;
-
-    //oldfs = get_fs();
-    //set_fs(get_ds());
     filp = filp_open(path, flags, rights);
-    //set_fs(oldfs);
     return filp;
 }
 
+/**
+ * Closing a file in the kernel
+ */
 void file_close(struct file* file){
     filp_close(file, NULL);
 }
 
+
+/**
+ * Insert something into the entropy hash table
+ */
 int insert_entropy_ht(char *filename){
     uint64_t filename_hash = 0;
     struct entropy_hash_entry *entry = kmalloc(sizeof(struct entropy_hash_entry), GFP_KERNEL);
@@ -44,22 +49,23 @@ int insert_entropy_ht(char *filename){
     return 0;
 }
 
-//filldir
+/**
+ * Filldir function
+ * Does the heavy lifting when iterating through a directory
+ * Need to make it recursive
+ */
 static int dm_afs_filldir(struct dir_context *context, const char *name, int name_length, loff_t offset, u64 ino, unsigned d_type){
     printk(KERN_DEBUG "Name: %s\n", name);
     return 0;
 }
 
-//Probably should not need this
-/*static int dm_afs_iterate(struct file *filp, struct dir_context *context){
-    return 0;
-}*/
 
-//sorcery
+/**
+ * Sorcery
+ * This scans a directory and returns a list of the files in that directory
+ * It could also be possible hook into the system call sys_getdents()
+ */
 //recursive list, ls $(find <path> -not -path '*/\.*' -type f)
-//iterate_dir
-//hook into sys_getdents
-//just do the sys_call/get_fs/set_fs dance
 void scan_directory(char* directory_name, char** file_list){
     struct file *file = NULL;
     //loff_t pos = 0;
@@ -67,18 +73,6 @@ void scan_directory(char* directory_name, char** file_list){
         .actor = dm_afs_filldir,
         .pos = 0		
     };
-    //This code block is blasphemy, should only be used when no other option works.
-    /*int fd;
-    struct linux_dirent __user *dirents;
-    int count = 0;
-    mm_segment_t old_fs = get_fs();
-    set_fs(KERNEL_DS);
-    fd = sys_open(directory_name, O_RDONLY, 0);
-    if (fd >= 0){
-        sys_getdents(fd, dirents, count); 
-        sys_close(fd);
-    }
-    set_fs(old_fs);*/
 
     file = filp_open(directory_name, O_RDONLY, 0);
     if (file){
@@ -86,6 +80,10 @@ void scan_directory(char* directory_name, char** file_list){
     }
 }
 
+
+/**
+ * Entropy hash table constructor
+ */
 void build_entropy_ht(char* directory_name){
     int i, file_count = 0;
     char** filename_list = NULL;
@@ -98,6 +96,10 @@ void build_entropy_ht(char* directory_name){
     }
 }
 
+
+/**
+ * Entropy hash table destructor
+ */
 void cleanup_entropy_ht(void){
     int bucket;
     struct entropy_hash_entry *entry;
@@ -109,10 +111,16 @@ void cleanup_entropy_ht(void){
     }
 }
 
+/**
+ * Allocate a random entropy block from the file list for use in an encoding tuple
+ */
 void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer){
 
 }
 
+/**
+ * Retrieve a full file name from the hash table
+ */
 char* retrieve_filename(uint64_t filename_hash){
     struct entropy_hash_entry *entry;
     hash_for_each_possible(HASH_TABLE_NAME, entry, hash_list, filename_hash){
@@ -123,8 +131,10 @@ char* retrieve_filename(uint64_t filename_hash){
     return NULL;
 }
 
+/**
+ * Read a specific entropy block with assistance from the filename
+ */
 int read_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* block){
-    //mm_segment_t oldfs;
     int ret;
     char* filename;
     struct file* file = NULL;
@@ -134,12 +144,8 @@ int read_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* block)
 
     file = file_open(filename, O_RDONLY, 0);
 
-    //oldfs = get_fs();
-    //set_fs(get_ds());
-
     ret = vfs_read(file, block, BLOCK_LENGTH, &offset);
 
-    //set_fs(oldfs);
     file_close(file);
     return ret;
 }
