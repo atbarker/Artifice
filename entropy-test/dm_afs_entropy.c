@@ -15,6 +15,16 @@
 
 DEFINE_HASHTABLE(HASH_TABLE_NAME, HASH_TABLE_ORDER);
 
+uint64_t djb2_hash(unsigned char *str){
+    unsigned long hash = 5381;
+    int c;
+
+    while((c = *str++)){
+        hash = ((hash << 5) + hash) + c;
+    }
+    return hash;
+}
+
 /**
  * Helper function for opening a file in the kernel
  */
@@ -40,6 +50,7 @@ int insert_entropy_ht(char *filename){
     struct entropy_hash_entry *entry = kmalloc(sizeof(struct entropy_hash_entry), GFP_KERNEL);
 
     //TODO, hash the filename to a 64bit value
+    filename_hash = djb2_hash(filename);
     
     entry->key = filename_hash;
     entry->filename = filename;
@@ -56,6 +67,7 @@ int insert_entropy_ht(char *filename){
  */
 static int dm_afs_filldir(struct dir_context *context, const char *name, int name_length, loff_t offset, u64 ino, unsigned d_type){
     printk(KERN_DEBUG "Name: %s\n", name);
+    insert_entropy_ht(name);
     return 0;
 }
 
@@ -91,9 +103,10 @@ void build_entropy_ht(char* directory_name){
     //initialize hash table
     hash_init(HASH_TABLE_NAME);
 
-    for(i = 0; i < file_count; i++){
-        insert_entropy_ht(filename_list[i]);
-    }
+    scan_directory(directory_name, filename_list);
+    //for(i = 0; i < file_count; i++){
+    //    insert_entropy_ht(filename_list[i]);
+    //}
 }
 
 
