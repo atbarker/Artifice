@@ -86,8 +86,10 @@ int insert_entropy_ht(char *filename){
 static int dm_afs_filldir(struct dir_context *context, const char *name, int name_length, loff_t offset, u64 ino, unsigned d_type){
     if(ent_context.number_of_files < FILE_LIST_SIZE){
 	//insert_entropy_ht(name);
-        ent_context.file_list[ent_context.number_of_files] = kmalloc(name_length, GFP_KERNEL);
-	memcpy(ent_context.file_list[ent_context.number_of_files], name, name_length);
+	
+        ent_context.file_list[ent_context.number_of_files] = kmalloc(sizeof(char) * (name_length + ent_context.directory_name_length), GFP_KERNEL);
+	memcpy(ent_context.file_list[ent_context.number_of_files], ent_context.directory_name, ent_context.directory_name_length);
+	//strncat(ent_context.file_list[ent_context.number_of_files], name, name_length);
         ent_context.number_of_files++;
     }
     return 0;
@@ -117,11 +119,14 @@ void scan_directory(char* directory_name){
 /**
  * Entropy hash table constructor
  */
-void build_entropy_ht(char* directory_name){
+void build_entropy_ht(char* directory_name, size_t name_length){
     int i;
 
     //TODO experiment with setting it to this size
-    ent_context.file_list = kmalloc(sizeof(char*) * FILE_LIST_SIZE, GFP_KERNEL);    
+    ent_context.file_list = kmalloc(sizeof(char*) * FILE_LIST_SIZE, GFP_KERNEL);
+    ent_context.directory_name = kmalloc(sizeof(char) * name_length, GFP_KERNEL);
+    memcpy(ent_context.directory_name, directory_name, name_length);
+    ent_context.directory_name_length = name_length;    
     
     //initialize hash table
     hash_init(HASH_TABLE_NAME);

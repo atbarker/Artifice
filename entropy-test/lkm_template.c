@@ -13,7 +13,7 @@ MODULE_AUTHOR("AUSTEN BARKER");
 
 static int __init km_template_init(void){
     printk(KERN_INFO "Inserting kernel module\n");
-    build_entropy_ht("/usr/bin");
+    build_entropy_ht("/usr/bin", 8);
     return 0;
 }
 

@@ -18,10 +18,12 @@ struct entropy_hash_entry{
 
 struct entropy_context{
     uint32_t number_of_files;
+    char* directory_name;
+    size_t directory_name_length;
     char** file_list;
 };
 
-void build_entropy_ht(char* directory_name);
+void build_entropy_ht(char* directory_name, size_t name_length);
 
 void cleanup_entropy_ht(void);
 
