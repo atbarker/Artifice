@@ -72,7 +72,6 @@ int insert_entropy_ht(char *filename){
 
     file_close(file);
     entry->file_size = ret;
-    //entry.hash_list = NULL;
 
     hash_add_64(HASH_TABLE_NAME, &entry->hash_list, entry->key);
     return 0;
@@ -84,12 +83,12 @@ int insert_entropy_ht(char *filename){
  * Need to make it recursive
  */
 static int dm_afs_filldir(struct dir_context *context, const char *name, int name_length, loff_t offset, u64 ino, unsigned d_type){
+
     if(ent_context.number_of_files < FILE_LIST_SIZE){
-	//insert_entropy_ht(name);
-	
-        ent_context.file_list[ent_context.number_of_files] = kmalloc(sizeof(char) * (name_length + ent_context.directory_name_length), GFP_KERNEL);
-	memcpy(ent_context.file_list[ent_context.number_of_files], ent_context.directory_name, ent_context.directory_name_length);
-	//strncat(ent_context.file_list[ent_context.number_of_files], name, name_length);
+        size_t full_path_size = name_length + ent_context.directory_name_length + 1;
+        ent_context.file_list[ent_context.number_of_files] = kmalloc(sizeof(char) * (full_path_size), GFP_KERNEL);
+	strlcpy(ent_context.file_list[ent_context.number_of_files], ent_context.directory_name, full_path_size);
+	strlcat(ent_context.file_list[ent_context.number_of_files], name, full_path_size);
         ent_context.number_of_files++;
     }
     return 0;
@@ -110,6 +109,7 @@ void scan_directory(char* directory_name){
     };
 
     file = filp_open(directory_name, O_RDONLY, 0);
+
     if (file){
         iterate_dir(file, &context);
     }
@@ -124,8 +124,8 @@ void build_entropy_ht(char* directory_name, size_t name_length){
 
     //TODO experiment with setting it to this size
     ent_context.file_list = kmalloc(sizeof(char*) * FILE_LIST_SIZE, GFP_KERNEL);
-    ent_context.directory_name = kmalloc(sizeof(char) * name_length, GFP_KERNEL);
-    memcpy(ent_context.directory_name, directory_name, name_length);
+    ent_context.directory_name = kmalloc(sizeof(char) * name_length + 1, GFP_KERNEL);
+    strlcpy(ent_context.directory_name, directory_name, name_length + 1);
     ent_context.directory_name_length = name_length;    
     
     //initialize hash table
@@ -162,7 +162,9 @@ void cleanup_entropy_ht(void){
  * Allocate a random entropy block from the file list for use in an encoding tuple
  */
 void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer){
-
+    int i;
+    get_random_bytes(&i, sizeof(int));
+    i = i % ent_context.number_of_files;
 }
 
 /**
