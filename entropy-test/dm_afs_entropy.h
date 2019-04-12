@@ -12,7 +12,13 @@
 struct entropy_hash_entry{
     uint64_t key;
     char* filename;
+    size_t file_size;
     struct hlist_node hash_list;
+};
+
+struct entropy_context{
+    uint32_t number_of_files;
+    char** file_list;
 };
 
 void build_entropy_ht(char* directory_name);
@@ -23,6 +29,5 @@ void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer);
 
 int read_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* block);
 
-void scan_directory(char* directory_name, char** file_list);
 
 #endif

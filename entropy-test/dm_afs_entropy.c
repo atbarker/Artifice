@@ -4,17 +4,26 @@
 #include <linux/hashtable.h>
 #include <linux/hash.h>
 #include <linux/syscalls.h>
+#include <linux/string.h>
 #include <asm/uaccess.h>
 
 //redefine our own hash table add to use the hash_64_generic function for 64 bit values
-//gave it protection via rcu just in case
+//gave it protection via rcu just in case multiple things try to access it, although it should be read only
 #define hash_add_64(hashtable, node, key)						\
     hlist_add_head_rcu(node, &hashtable[hash_64_generic(key, HASH_BITS(hashtable))])
 
 #define BLOCK_LENGTH 4096
+#define FILE_LIST_SIZE 1024
 
 DEFINE_HASHTABLE(HASH_TABLE_NAME, HASH_TABLE_ORDER);
+static struct entropy_context ent_context = {
+    .number_of_files = 0,
+};
 
+/**
+ * Damn black magic
+ * http://www.cse.yorku.ca/~oz/hash.html
+ */
 uint64_t djb2_hash(unsigned char *str){
     unsigned long hash = 5381;
     int c;
@@ -47,13 +56,22 @@ void file_close(struct file* file){
  */
 int insert_entropy_ht(char *filename){
     uint64_t filename_hash = 0;
+    struct file* file = NULL;
+    loff_t ret = 0;
     struct entropy_hash_entry *entry = kmalloc(sizeof(struct entropy_hash_entry), GFP_KERNEL);
 
-    //TODO, hash the filename to a 64bit value
     filename_hash = djb2_hash(filename);
     
     entry->key = filename_hash;
     entry->filename = filename;
+    //TODO, determine file size (important for allocation)
+    file = file_open(filename, O_RDONLY, 0);
+
+    //should seek to the end of the file
+    ret = vfs_llseek(file, 0, SEEK_END);
+
+    file_close(file);
+    entry->file_size = ret;
     //entry.hash_list = NULL;
 
     hash_add_64(HASH_TABLE_NAME, &entry->hash_list, entry->key);
@@ -66,8 +84,12 @@ int insert_entropy_ht(char *filename){
  * Need to make it recursive
  */
 static int dm_afs_filldir(struct dir_context *context, const char *name, int name_length, loff_t offset, u64 ino, unsigned d_type){
-    printk(KERN_DEBUG "Name: %s\n", name);
-    insert_entropy_ht(name);
+    if(ent_context.number_of_files < FILE_LIST_SIZE){
+	//insert_entropy_ht(name);
+        ent_context.file_list[ent_context.number_of_files] = kmalloc(name_length, GFP_KERNEL);
+	memcpy(ent_context.file_list[ent_context.number_of_files], name, name_length);
+        ent_context.number_of_files++;
+    }
     return 0;
 }
 
@@ -78,9 +100,8 @@ static int dm_afs_filldir(struct dir_context *context, const char *name, int nam
  * It could also be possible hook into the system call sys_getdents()
  */
 //recursive list, ls $(find <path> -not -path '*/\.*' -type f)
-void scan_directory(char* directory_name, char** file_list){
+void scan_directory(char* directory_name){
     struct file *file = NULL;
-    //loff_t pos = 0;
     struct dir_context context = {
         .actor = dm_afs_filldir,
         .pos = 0		
@@ -97,15 +118,18 @@ void scan_directory(char* directory_name, char** file_list){
  * Entropy hash table constructor
  */
 void build_entropy_ht(char* directory_name){
-    int i, file_count = 0;
-    char** filename_list = NULL;
+    int i;
 
+    //TODO experiment with setting it to this size
+    ent_context.file_list = kmalloc(sizeof(char*) * FILE_LIST_SIZE, GFP_KERNEL);    
+    
     //initialize hash table
     hash_init(HASH_TABLE_NAME);
 
-    scan_directory(directory_name, filename_list);
-    //for(i = 0; i < file_count; i++){
-    //    insert_entropy_ht(filename_list[i]);
+    scan_directory(directory_name);
+    printk(KERN_INFO "number of files %d\n", ent_context.number_of_files);
+    //for(i = 0; i < ent_context.number_of_files; i++){
+    //    insert_entropy_ht(ent_context.file_list[i]);
     //}
 }
 
@@ -114,8 +138,13 @@ void build_entropy_ht(char* directory_name){
  * Entropy hash table destructor
  */
 void cleanup_entropy_ht(void){
-    int bucket;
+    int bucket, i;
     struct entropy_hash_entry *entry;
+
+    for(i = 0; i < ent_context.number_of_files; i++){
+        kfree(ent_context.file_list[i]);
+    } 
+    kfree(ent_context.file_list);
 
     hash_for_each_rcu(HASH_TABLE_NAME, bucket, entry, hash_list){
 	//the filename will have been malloc'd elsewhere
