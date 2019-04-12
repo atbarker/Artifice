@@ -60,6 +60,10 @@ int insert_entropy_ht(char *filename){
     loff_t ret = 0;
     struct entropy_hash_entry *entry = kmalloc(sizeof(struct entropy_hash_entry), GFP_KERNEL);
 
+    if(!filename){
+        printk(KERN_INFO "Filename Null\n");
+	return -1;
+    }
     filename_hash = djb2_hash(filename);
     
     entry->key = filename_hash;
@@ -68,9 +72,9 @@ int insert_entropy_ht(char *filename){
     file = file_open(filename, O_RDONLY, 0);
 
     //should seek to the end of the file
-    ret = vfs_llseek(file, 0, SEEK_END);
+    //ret = vfs_llseek(file, 0, SEEK_END);
 
-    file_close(file);
+    //file_close(file);
     entry->file_size = ret;
 
     hash_add_64(HASH_TABLE_NAME, &entry->hash_list, entry->key);
@@ -89,6 +93,7 @@ static int dm_afs_filldir(struct dir_context *context, const char *name, int nam
         ent_context.file_list[ent_context.number_of_files] = kmalloc(sizeof(char) * (full_path_size), GFP_KERNEL);
 	strlcpy(ent_context.file_list[ent_context.number_of_files], ent_context.directory_name, full_path_size);
 	strlcat(ent_context.file_list[ent_context.number_of_files], name, full_path_size);
+	insert_entropy_ht(ent_context.file_list[ent_context.number_of_files]);
         ent_context.number_of_files++;
     }
     return 0;
