@@ -162,11 +162,12 @@ void cleanup_entropy_ht(void){
         kfree(ent_context.file_list[i]);
     } 
     kfree(ent_context.file_list);
+    kfree(ent_context.directory_name);
 
     hash_for_each_rcu(HASH_TABLE_NAME, bucket, entry, hash_list){
 	//the filename will have been malloc'd elsewhere
-	kfree(entry->filename);
-	kfree(entry);
+	//kfree(entry->filename);
+	//kfree(entry);
     }
 }
 
