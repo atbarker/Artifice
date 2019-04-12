@@ -72,6 +72,10 @@ int insert_entropy_ht(char *filename){
     file = file_open(filename, O_RDONLY, 0);
 
     //should seek to the end of the file
+    //TODO fix seg fault here
+    if(!file){
+        printk(KERN_INFO "Null pointer at filename %s\n", filename);
+    }
     //ret = vfs_llseek(file, 0, SEEK_END);
 
     //file_close(file);
@@ -138,9 +142,13 @@ void build_entropy_ht(char* directory_name, size_t name_length){
 
     scan_directory(directory_name);
     printk(KERN_INFO "number of files %d\n", ent_context.number_of_files);
-    //for(i = 0; i < ent_context.number_of_files; i++){
-    //    insert_entropy_ht(ent_context.file_list[i]);
-    //}
+    for(i = 0; i < ent_context.number_of_files; i++){
+	if(ent_context.file_list[i]){
+            insert_entropy_ht(ent_context.file_list[i]);
+	}else{
+            printk(KERN_INFO "Filename null %d\n", i);
+	}
+    }
 }
 
 
