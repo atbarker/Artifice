@@ -5,6 +5,8 @@
 #include <linux/hash.h>
 #include <linux/syscalls.h>
 #include <linux/string.h>
+#include <linux/path.h>
+#include <linux/namei.h>
 #include <asm/uaccess.h>
 
 //redefine our own hash table add to use the hash_64_generic function for 64 bit values
@@ -53,11 +55,13 @@ void file_close(struct file* file){
 
 /**
  * Insert something into the entropy hash table
+ * vfs_llseek() causes a seg fault
+ * vfs_stat() seems to work
  */
 int insert_entropy_ht(char *filename){
     uint64_t filename_hash = 0;
-    struct file* file = NULL;
-    loff_t ret = 0;
+    struct kstat stat;
+    struct path p;
     struct entropy_hash_entry *entry = kmalloc(sizeof(struct entropy_hash_entry), GFP_KERNEL);
 
     if(!filename){
@@ -68,18 +72,11 @@ int insert_entropy_ht(char *filename){
     
     entry->key = filename_hash;
     entry->filename = filename;
-    //TODO, determine file size (important for allocation)
-    file = file_open(filename, O_RDONLY, 0);
 
-    //should seek to the end of the file
-    //TODO fix seg fault here
-    if(!file){
-        printk(KERN_INFO "Null pointer at filename %s\n", filename);
-    }
-    //ret = vfs_llseek(file, 0, SEEK_END);
-
-    //file_close(file);
-    entry->file_size = ret;
+    kern_path(filename, LOOKUP_FOLLOW, &p);
+    vfs_getattr(&p, &stat, STATX_ALL, KSTAT_QUERY_FLAGS);
+    //printk(KERN_INFO "File size %s, %llu\n", filename, stat.size);
+    entry->file_size = stat.size;
 
     hash_add_64(HASH_TABLE_NAME, &entry->hash_list, entry->key);
     return 0;
@@ -93,11 +90,13 @@ int insert_entropy_ht(char *filename){
 static int dm_afs_filldir(struct dir_context *context, const char *name, int name_length, loff_t offset, u64 ino, unsigned d_type){
 
     if(ent_context.number_of_files < FILE_LIST_SIZE){
-        size_t full_path_size = name_length + ent_context.directory_name_length + 1;
+        size_t full_path_size = name_length + ent_context.directory_name_length + 2;
         ent_context.file_list[ent_context.number_of_files] = kmalloc(sizeof(char) * (full_path_size), GFP_KERNEL);
 	strlcpy(ent_context.file_list[ent_context.number_of_files], ent_context.directory_name, full_path_size);
+	strlcat(ent_context.file_list[ent_context.number_of_files], "/", full_path_size);
 	strlcat(ent_context.file_list[ent_context.number_of_files], name, full_path_size);
 	insert_entropy_ht(ent_context.file_list[ent_context.number_of_files]);
+	//printk(KERN_INFO "Filename: %s, Type: %d\n", name, d_type);
         ent_context.number_of_files++;
     }
     return 0;

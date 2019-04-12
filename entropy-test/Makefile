@@ -10,7 +10,6 @@ all:
 
 test:
 	sudo insmod EntropyTest.ko
-	sleep 3
 	sudo rmmod EntropyTest.ko
 
 clean:
