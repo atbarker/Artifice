@@ -18,6 +18,8 @@
 #define FILE_LIST_SIZE 1024
 
 DEFINE_HASHTABLE(HASH_TABLE_NAME, HASH_TABLE_ORDER);
+
+//need to get rid of the global context
 static struct entropy_context ent_context = {
     .number_of_files = 0,
 };
@@ -96,7 +98,6 @@ static int dm_afs_filldir(struct dir_context *context, const char *name, int nam
 	strlcat(ent_context.file_list[ent_context.number_of_files], "/", full_path_size);
 	strlcat(ent_context.file_list[ent_context.number_of_files], name, full_path_size);
 	insert_entropy_ht(ent_context.file_list[ent_context.number_of_files]);
-	//printk(KERN_INFO "Filename: %s, Type: %d\n", name, d_type);
         ent_context.number_of_files++;
     }
     return 0;
@@ -140,10 +141,11 @@ void build_entropy_ht(char* directory_name, size_t name_length){
     hash_init(HASH_TABLE_NAME);
 
     scan_directory(directory_name);
-    printk(KERN_INFO "number of files %d\n", ent_context.number_of_files);
+    //printk(KERN_INFO "number of files %d\n", ent_context.number_of_files);
     for(i = 0; i < ent_context.number_of_files; i++){
 	if(ent_context.file_list[i]){
-            insert_entropy_ht(ent_context.file_list[i]);
+	    //TODO figure out why inserting here causes a slab free error
+            //insert_entropy_ht(ent_context.file_list[i]);
 	}else{
             printk(KERN_INFO "Filename null %d\n", i);
 	}
@@ -165,32 +167,43 @@ void cleanup_entropy_ht(void){
     kfree(ent_context.directory_name);
 
     hash_for_each_rcu(HASH_TABLE_NAME, bucket, entry, hash_list){
-	//the filename will have been malloc'd elsewhere
+	//TODO Check here for memory leaks
 	//kfree(entry->filename);
 	kfree(entry);
     }
 }
 
 /**
- * Allocate a random entropy block from the file list for use in an encoding tuple
+ * Retrieve a full file name from the hash table
  */
-void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer){
-    int i;
-    get_random_bytes(&i, sizeof(int));
-    i = i % ent_context.number_of_files;
+struct entropy_hash_entry*  retrieve_file_data(uint64_t filename_hash){
+    struct entropy_hash_entry *entry;
+    hash_for_each_possible(HASH_TABLE_NAME, entry, hash_list, filename_hash){
+        if(filename_hash == entry->key){
+            return entry;
+        }
+    }
+    return NULL;
 }
 
 /**
- * Retrieve a full file name from the hash table
+ * Allocate a random entropy block from the file list for use in an encoding tuple
  */
-char* retrieve_filename(uint64_t filename_hash){
-    struct entropy_hash_entry *entry;
-    hash_for_each_possible(HASH_TABLE_NAME, entry, hash_list, filename_hash){
-	if(filename_hash == entry->key){
-            return entry->filename;
-	}
-    }
-    return NULL;
+void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* entropy_block){
+    int file_index, block_index;
+    struct entropy_hash_entry *entry = NULL;
+
+    //get random numbers to pick a random entropy block out of our pool
+    get_random_bytes(&file_index, sizeof(int));
+    get_random_bytes(&block_index, sizeof(int));
+
+    //calculate the index of our random file and retrieve data on that file
+    file_index = file_index % ent_context.number_of_files;
+    entry = retrieve_file_data(djb2_hash(ent_context.file_list[file_index]));
+
+    //calculate the block index within the bounds of file size and retrieve data
+    block_index = block_index % entry->file_size;
+    read_entropy(entry->key, block_index, entropy_block); 
 }
 
 /**
@@ -198,16 +211,20 @@ char* retrieve_filename(uint64_t filename_hash){
  */
 int read_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* block){
     int ret;
-    char* filename;
+    struct entropy_hash_entry* entry = NULL;
     struct file* file = NULL;
     loff_t offset = block_pointer * BLOCK_LENGTH;
 
-    filename = retrieve_filename(filename_hash);
+    entry = retrieve_file_data(filename_hash);
 
-    file = file_open(filename, O_RDONLY, 0);
+    if(entry != NULL){
+        file = file_open(entry->filename, O_RDONLY, 0);
+        ret = vfs_read(file, block, BLOCK_LENGTH, &offset);
+        file_close(file);
+    }else{
+        printk(KERN_INFO "Could not read hash table entry\n");
+	ret = -1;
+    }
 
-    ret = vfs_read(file, block, BLOCK_LENGTH, &offset);
-
-    file_close(file);
     return ret;
 }
