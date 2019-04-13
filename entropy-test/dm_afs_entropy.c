@@ -167,7 +167,7 @@ void cleanup_entropy_ht(void){
     hash_for_each_rcu(HASH_TABLE_NAME, bucket, entry, hash_list){
 	//the filename will have been malloc'd elsewhere
 	//kfree(entry->filename);
-	//kfree(entry);
+	kfree(entry);
     }
 }
 
