@@ -23,7 +23,7 @@ static int __init km_template_init(void){
     allocate_entropy(&filename_hash, &block_pointer, entropy_block);
 
     printk(KERN_INFO "Filename hash: %llu\n Block Pointer: %u\n", filename_hash, block_pointer);
-
+    print_hex_dump(KERN_DEBUG, "entropy:", DUMP_PREFIX_OFFSET, 20, 1, (void*)entropy_block, 4096, true);
     cleanup_entropy_ht();
     kfree(entropy_block);
     return 0;
