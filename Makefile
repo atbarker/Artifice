@@ -23,6 +23,7 @@ dm_afs-y := src/dm_afs.o            \
 			src/dm_afs_allocation.o \
 			src/dm_afs_crypto.o     \
 			src/dm_afs_io.o         \
+			src/dm_afs_entropy.o    \
 			$(AFS_LIBRARIES)        \
 			$(AFS_MODULES)
 
