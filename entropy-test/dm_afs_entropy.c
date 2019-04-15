@@ -189,7 +189,7 @@ struct entropy_hash_entry*  retrieve_file_data(uint64_t filename_hash){
 /**
  * Allocate a random entropy block from the file list for use in an encoding tuple
  */
-void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* entropy_block){
+void allocate_entropy(uint64_t *filename_hash, uint32_t *block_pointer, uint8_t *entropy_block){
     int file_index, block_index;
     struct entropy_hash_entry *entry = NULL;
 
@@ -203,7 +203,10 @@ void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* e
 
     //calculate the block index within the bounds of file size and retrieve data
     block_index = block_index % entry->file_size;
-    read_entropy(entry->key, block_index, entropy_block); 
+    read_entropy(entry->key, block_index, entropy_block);
+
+    *block_pointer = block_index;
+    *filename_hash = entry->key;
 }
 
 /**

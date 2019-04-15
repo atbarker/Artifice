@@ -51,7 +51,7 @@ void cleanup_entropy_ht(void);
  * Allocate an entropy block (if new blocks are needed)
  * Populates the variables for the filename hash, block pointer, and data block
  */
-void allocate_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* entropy_block);
+void allocate_entropy(uint64_t *filename_hash, uint32_t *block_pointer, uint8_t *entropy_block);
 
 /**
  * Reads a specified entropy block from the disk
