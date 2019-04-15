@@ -1,6 +1,6 @@
 PWD := $(shell pwd)
 
-ccflags-y += -I$(src)/include/
+ccflags-y += -I$(src)/include/ -g
 
 EntropyTest-objs := lkm_template.o dm_afs_entropy.o
 obj-m += EntropyTest.o

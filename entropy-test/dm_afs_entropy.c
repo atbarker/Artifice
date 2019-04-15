@@ -202,7 +202,8 @@ void allocate_entropy(uint64_t *filename_hash, uint32_t *block_pointer, uint8_t 
     entry = retrieve_file_data(djb2_hash(ent_context.file_list[file_index]));
 
     //calculate the block index within the bounds of file size and retrieve data
-    block_index = block_index % entry->file_size;
+    block_index = (block_index % entry->file_size) / BLOCK_LENGTH;
+    printk(KERN_INFO "File size: %ld\n", entry->file_size);
     read_entropy(entry->key, block_index, entropy_block);
 
     *block_pointer = block_index;
@@ -213,16 +214,21 @@ void allocate_entropy(uint64_t *filename_hash, uint32_t *block_pointer, uint8_t 
  * Read a specific entropy block with assistance from the filename
  */
 int read_entropy(uint64_t filename_hash, uint32_t block_pointer, uint8_t* block){
-    int ret;
+    int ret = 0;
     struct entropy_hash_entry* entry = NULL;
     struct file* file = NULL;
+    //loff_t offset = 0;
     loff_t offset = block_pointer * BLOCK_LENGTH;
 
     entry = retrieve_file_data(filename_hash);
 
     if(entry != NULL){
-        file = file_open(entry->filename, O_RDONLY, 0);
-        ret = vfs_read(file, block, BLOCK_LENGTH, &offset);
+	//printk(KERN_INFO "Filename: %s\n", entry->filename);
+	file = file_open(entry->filename, O_RDONLY, 0);
+        ret = kernel_read(file, block, BLOCK_LENGTH, &offset);
+	if (ret < 0){
+            printk(KERN_INFO "Kernel Read Failed: %d\n", ret);
+	}
         file_close(file);
     }else{
         printk(KERN_INFO "Could not read hash table entry\n");
