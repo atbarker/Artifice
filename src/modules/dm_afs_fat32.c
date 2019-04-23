@@ -265,10 +265,11 @@ read_boot_sector(struct fat_volume *vol, const void *data)
     }
     ret = fat_read_nonfat32_ebpb(vol, &boot_sec->ebpb.nonfat32_ebpb);
 
-    num_data_sectors = vol->total_sec - vol->reserved - ((vol->root_entries << 5) >> vol->sector_order);
+    num_data_sectors = vol->total_sec - vol->reserved - (vol->sec_fat * vol->tables) - ((vol->root_entries << 5) >> vol->sector_order);
     afs_debug("Number of data sectors: %u", num_data_sectors);
+    afs_debug("Number of reserved: %u", vol->sec_fat);
 
-    vol->num_data_clusters = num_data_sectors >> vol->sec_cluster_order;
+    vol->num_data_clusters = num_data_sectors / vol->sec_cluster;
     return 0;
 
 out_invalid:
@@ -297,7 +298,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     int status;
     int cluster_number;
     sector_t start_sector;
-    void *fat_data;
+    void *fat_data = NULL;
     struct page *page = NULL;
     struct afs_io fatio;
     uint32_t page_size;
@@ -306,10 +307,12 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     page_size = 1 << PAGE_SHIFT;
     fat_offset = (off_t)vol->reserved << vol->sector_order;
     fat_aligned_offset = fat_offset & ~(page_size - 1);
-    fat_size_bytes = (size_t)vol->sec_fat << vol->sector_order;
+    fat_size_bytes = (size_t)(vol->sec_fat * vol->bytes_sector);
     fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
-    page_number = fat_aligned_size_bytes / 512;
+    page_number = fat_aligned_size_bytes / 4096 + 1;
 
+    afs_debug("Number of data clusters: %u ", vol->num_data_clusters);
+    afs_debug("FAT size in bytes: %zu ", fat_size_bytes);
     afs_debug("FAT aligned size in bytes: %zu ", fat_aligned_size_bytes);
     afs_debug("FAT aligned offset: %d ", (int)fat_aligned_offset);
     afs_debug("FAT size in pages: %u ", page_number);
@@ -317,26 +320,29 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
 
     if (fat_aligned_offset + fat_aligned_size_bytes > 4096) {
         afs_debug("Read more data to map the FAT");
-        page = alloc_pages(GFP_KERNEL, (unsigned int)bsr(page_number));
-        fat_data = page_address(page);
-        fatio.bdev = device;
-        fatio.io_page = page;
-        fatio.io_sector = fat_aligned_offset / 512;
-        fatio.io_size = fat_aligned_size_bytes;
-        fatio.type = IO_READ;
-        status = afs_blkdev_io(&fatio);
+        //page = alloc_pages(GFP_KERNEL, (unsigned int)(bsr(page_number)));
+        //fat_data = page_address(page);
+        fat_data = vmalloc(4096);
+        read_page(fat_data, device, 4, true);
+        //fatio.bdev = device;
+        //fatio.io_page = page;
+        //fatio.io_sector = fat_aligned_offset / 512;
+        //fatio.io_size = fat_aligned_size_bytes;
+        //fatio.type = IO_READ;
+        //status = afs_blkdev_io(&fatio);
         afs_debug("FAT read successfully.");
     }
-    vol->fat_map = data;
-
-    p = (int *)data;
+    
+    vol->fat_map = fat_data;
+     
+    p = (int *)fat_data;
     afs_debug("p: %p", p);
 
     cluster_number = 0;
-    empty_clusters = kmalloc(fat_size_bytes, GFP_KERNEL);
+    empty_clusters = vmalloc(fat_size_bytes);
     memset((void *)empty_clusters, 0, fat_size_bytes);
 
-    for (i = 0; i < vol->num_data_clusters; i++) {
+    for (i = 0; i < 512; i++) {
         afs_debug("block %d: %d", i, p[i]);
         if (p[i] == 0) {
             empty_clusters[cluster_number] = i;
@@ -345,7 +351,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     }
     vol->empty_clusters = empty_clusters;
     vol->num_empty_clusters = cluster_number;
-
+    
     return 0;
 }
 
