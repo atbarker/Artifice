@@ -453,7 +453,7 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
     strncpy(sb->entropy_dir, context->args.entropy_dir, ENTROPY_DIR_SZ);
     hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
-    ret = write_page(sb, context->bdev, sb_block, context->passive_fs.data_start_off, false);
+    ret = write_page(sb, context->bdev, fs->block_list[sb_block], context->passive_fs.data_start_off, false);
     afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
     afs_debug("super block written to disk [block: %u]", sb_block);
 
