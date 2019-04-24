@@ -56,7 +56,7 @@ alloc_err:
  * Read a single page.
  */
 int
-read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc)
+read_page(void *page, struct block_device *bdev, uint32_t block_num, uint32_t sector_offset, bool used_vmalloc)
 {
     struct afs_io request;
     struct page *page_structure;
@@ -68,7 +68,7 @@ read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_v
 
     // Acquire page structure and sector offset.
     page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
-    sector_num = (block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
+    sector_num = ((block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + sector_offset;
 
     // Build the request.
     request.bdev = bdev;
@@ -88,7 +88,7 @@ done:
  * Write a single page.
  */
 int
-write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc)
+write_page(const void *page, struct block_device *bdev, uint32_t block_num, uint32_t sector_offset, bool used_vmalloc)
 {
     struct afs_io request;
     struct page *page_structure;
@@ -100,7 +100,7 @@ write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool
 
     // Acquire page structure and sector offset.
     page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
-    sector_num = (block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE;
+    sector_num = ((block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE)  + sector_offset;
 
     // Build the request.
     request.bdev = bdev;
@@ -115,5 +115,3 @@ write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool
 done:
     return ret;
 }
-
-

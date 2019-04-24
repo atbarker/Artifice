@@ -131,7 +131,7 @@ afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
     entries_read = 0;
     for (i = 0; i < NUM_MAP_BLKS_IN_SB; i++) {
         // Read map block.
-        ret = read_page(map_block, context->bdev, sb->map_block_ptrs[i], false);
+        ret = read_page(map_block, context->bdev, sb->map_block_ptrs[i], 0, false);
         afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, entries_read % config->num_map_blocks);
         allocation_set(&context->vector, sb->map_block_ptrs[i]);
 
@@ -156,14 +156,14 @@ afs_fill_map(struct afs_super_block *sb, struct afs_private *context)
     // Begin reading from pointer blocks.
     for (i = 0; i < config->num_ptr_blocks; i++) {
         next_block = (i == 0) ? sb->first_ptr_block : ptr_block->next_ptr_block;
-        ret = read_page(ptr_block, context->bdev, next_block, false);
+        ret = read_page(ptr_block, context->bdev, next_block, 0, false);
         afs_assert(!ret, read_err, "could not read pointer block [%d:%u]", ret, i);
         allocation_set(&context->vector, next_block);
         // TODO: Calculate and verify hash of ptr_block.
 
         for (j = 0; j < NUM_MAP_BLKS_IN_PB; i++) {
             // Read map block.
-            ret = read_page(map_block, context->bdev, ptr_block->map_block_ptrs[j], false);
+            ret = read_page(map_block, context->bdev, ptr_block->map_block_ptrs[j], 0, false);
             afs_assert(!ret, read_err, "could not read map block [%d:%u]", ret, entries_read % config->num_map_blocks);
             allocation_set(&context->vector, ptr_block->map_block_ptrs[j]);
 
@@ -316,7 +316,7 @@ write_map_blocks(struct afs_private *context, bool update)
         } else {
             block_num = sb->map_block_ptrs[i];
         }
-        ret = write_page(afs_map_blocks + (blocks_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
+        ret = write_page(afs_map_blocks + (blocks_written * AFS_BLOCK_SIZE), context->bdev, block_num, 0, true);
         afs_assert(!ret, done, "could not write blocks [%d:%u]", ret, blocks_written);
         blocks_written += 1;
     }
@@ -338,7 +338,7 @@ write_map_blocks(struct afs_private *context, bool update)
             } else {
                 block_num = afs_ptr_blocks[i].map_block_ptrs[j];
             }
-            ret = write_page(afs_map_blocks + (blocks_written * AFS_BLOCK_SIZE), context->bdev, block_num, true);
+            ret = write_page(afs_map_blocks + (blocks_written * AFS_BLOCK_SIZE), context->bdev, block_num, 0, true);
             afs_assert(!ret, done, "could not write block [%d:%u]", ret, blocks_written);
             blocks_written += 1;
         }
@@ -390,7 +390,7 @@ write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
         // Write to disk and save pointer.
         block_num = acquire_block(fs, &context->vector);
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
-        ret = write_page(ptr_blocks + i, context->bdev, block_num, false);
+        ret = write_page(ptr_blocks + i, context->bdev, block_num, 0, false);
         afs_assert(!ret, done, "could not write ptr block [%d:%llu]", ret, i);
 
         if (i == 0) {
@@ -450,7 +450,7 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
     strncpy(sb->entropy_dir, context->args.entropy_dir, ENTROPY_DIR_SZ);
     hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
-    ret = write_page(sb, context->bdev, sb_block, false);
+    ret = write_page(sb, context->bdev, sb_block, 0, false);
     afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
     afs_debug("super block written to disk [block: %u]", sb_block);
 
@@ -519,7 +519,7 @@ rebuild_ptr_blocks(struct afs_private *context)
     num_ptr_blocks = config->num_ptr_blocks;
     for (i = 0; i < num_ptr_blocks; i++) {
         block_num = (i == 0) ? context->super_block.first_ptr_block : afs_ptr_blocks[i].next_ptr_block;
-        ret = read_page(afs_ptr_blocks + i, context->bdev, block_num, false);
+        ret = read_page(afs_ptr_blocks + i, context->bdev, block_num, 0, false);
         afs_assert(!ret, done, "could not read pointer block [%d:%u]", ret, block_num);
     }
     ret = 0;
@@ -546,7 +546,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     allocation_set(&context->vector, sb_block);
 
     // Read in the super block from disk.
-    ret = read_page(sb, context->bdev, sb_block, false);
+    ret = read_page(sb, context->bdev, sb_block, 0, false);
     afs_assert(!ret, err, "could not read super block page [%d]", ret);
 
     // Check for corruption.

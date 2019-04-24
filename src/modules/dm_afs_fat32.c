@@ -296,12 +296,9 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     uint32_t *p;
     uint32_t *empty_clusters;
     int i;
-    int status;
     int cluster_number;
     sector_t start_sector;
     uint8_t *fat_data = NULL;
-    struct page *page = NULL;
-    struct afs_io fatio;
     uint32_t page_size;
     uint32_t page_number;
     uint8_t *reader = kmalloc(4096, GFP_KERNEL);
@@ -312,9 +309,10 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     fat_size_bytes = (size_t)(vol->sec_fat * vol->bytes_sector);
     fat_aligned_size_bytes = fat_size_bytes + (fat_offset - fat_aligned_offset);
     page_number = fat_aligned_size_bytes / 4096 + 1;
+    vol->data_start_off = (off_t)((vol->tables * vol->sec_fat) + vol->reserved);
 
-    afs_debug("Number of data clusters: %u ", vol->num_data_clusters);
-    afs_debug("FAT size in bytes: %zu ", fat_size_bytes);
+    afs_debug("Data start offset: %zu ", vol->data_start_off);
+    afs_debug("Root starting cluster: %u", vol->root_dir_start);
     afs_debug("FAT aligned size in bytes: %zu ", fat_aligned_size_bytes);
     afs_debug("FAT aligned offset: %d ", (int)fat_aligned_offset);
     afs_debug("FAT size in pages: %u ", page_number);
@@ -326,7 +324,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
         //fat_data = page_address(page);
         fat_data = vmalloc(page_number * AFS_BLOCK_SIZE);
         for(i = 0; i < page_number; i++){
-            read_page(reader, device, 4 + i, true);
+            read_page(reader, device, (fat_aligned_offset / 4096) + i, 0, true);
             memcpy(&fat_data[i * 4096], reader, 4096);
         }
         //fatio.bdev = device;
@@ -390,17 +388,17 @@ afs_fat32_detect(const void *data, struct block_device *device, struct afs_passi
         afs_debug("Failed to map FAT");
         goto vol_err;
     }
-    vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved + (vol->root_entries >> (vol->sector_order - 5)))
-        << vol->sector_order;
+    //vol->data_start_off = (off_t)((vol->tables * vol->sec_fat) + vol->reserved + (vol->root_entries >> (vol->sector_order - 5)))
+    //    << vol->sector_order;
 
-    vol->data_start_off = (off_t)(vol->tables * vol->sec_fat + vol->reserved);
+    vol->data_start_off = (off_t)((vol->tables * vol->sec_fat) + vol->reserved);
 
     if (fs) {
         fs->total_blocks = vol->num_data_clusters;
         fs->sectors_per_block = vol->sec_cluster;
         fs->block_list = vol->empty_clusters;
         fs->list_len = vol->num_empty_clusters;
-        fs->data_start_off = vol->data_start_off; // Data start in clusters.
+        fs->data_start_off = vol->data_start_off; // Data start in sectors, blocks are relative to this.
         return true;
     }
 

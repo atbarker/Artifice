@@ -30,7 +30,7 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
 
     page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
     afs_action(page, ret = -ENOMEM, alloc_err, "could not allocate page [%d]", ret);
-    ret = read_page(page, device, 0, false);
+    ret = read_page(page, device, 0, 0, false);
     afs_assert(!ret, read_err, "could not read page [%d]", ret);
 
     // Add more detection functions as a series of else..if blocks.

@@ -19,7 +19,7 @@ struct afs_allocation_vector {
 
 // Passive file system information.
 struct afs_passive_fs {
-    uint32_t *block_list;      // List of empty blocks.
+    uint32_t *block_list;      // List of empty blocks, numbering is relative to the data start offset.
     uint32_t list_len;         // Length of that list.
     uint8_t sectors_per_block; // Sectors in a block.
     uint32_t total_blocks;     // Total number of blocks in the FS.

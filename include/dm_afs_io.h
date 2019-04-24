@@ -31,12 +31,14 @@ int afs_blkdev_io(struct afs_io *request);
 
 /**
  * Read a single page.
+ * The sector offset argument is for just in case everything is not block aligned (FAT32)
  */
-int read_page(void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
+int read_page(void *page, struct block_device *bdev, uint32_t block_num, uint32_t sector_offset, bool used_vmalloc);
 
 /**
  * Write a single page.
+ * The sector offset argument is for just in case everything is not block alinged (FAT32)
  */
-int write_page(const void *page, struct block_device *bdev, uint32_t block_num, bool used_vmalloc);
+int write_page(const void *page, struct block_device *bdev, uint32_t block_num, uint32_t sector_offset,  bool used_vmalloc);
 
 #endif /* DM_AFS_IO_H */

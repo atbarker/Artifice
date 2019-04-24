@@ -141,7 +141,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
     } else {
         for (i = 0; i < config->num_carrier_blocks; i++) {
-            ret = read_page(req->read_blocks[i], req->bdev, map_entry_tuple[i].carrier_block_ptr, false);
+            ret = read_page(req->read_blocks[i], req->bdev, map_entry_tuple[i].carrier_block_ptr, 0, false);
             afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", map_entry_tuple[i].carrier_block_ptr);
         }
 
@@ -301,7 +301,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
 
-        ret = write_page(parityblocks[i], req->bdev, block_num, false);
+        ret = write_page(parityblocks[i], req->bdev, block_num, 0, false);
         afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
     }
 
