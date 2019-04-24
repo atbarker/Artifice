@@ -417,10 +417,15 @@ done:
 int
 write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
 {
-    const uint32_t sb_block = 0;
+    uint32_t sb_block = 0;
     struct afs_config *config = &context->config;
     struct afs_ptr_block *ptr_blocks = NULL;
     int ret = 0;
+
+    //hash passphrase and determine location
+    hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
+    memcpy(&sb_block, sb->hash, sizeof(uint32_t));
+    sb_block = sb_block % context->passive_fs.list_len;
 
     // Reserve space for the super block location.
     allocation_set(&context->vector, sb_block);
@@ -450,7 +455,7 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     // 4. Hash the super block.
     // 5. Write to disk.
     sb->instance_size = config->instance_size;
-    hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
+    //hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
     strncpy(sb->entropy_dir, context->args.entropy_dir, ENTROPY_DIR_SZ);
     hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
     ret = write_page(sb, context->bdev, fs->block_list[sb_block], context->passive_fs.data_start_off, false);
@@ -540,11 +545,15 @@ done:
 int
 find_super_block(struct afs_super_block *sb, struct afs_private *context)
 {
-    const uint32_t sb_block = 0;
+    uint32_t sb_block = 0;
     struct afs_config *config = &context->config;
     struct afs_ptr_block *ptr_blocks = NULL;
     uint8_t sb_digest[SHA256_SZ];
     int ret = 0;
+
+    hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
+    memcpy(&sb_block, sb->hash, sizeof(uint32_t));
+    sb_block = sb_block % context->passive_fs.list_len;
 
     // Mark super block location as reserved.
     allocation_set(&context->vector, sb_block);

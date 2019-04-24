@@ -4,6 +4,19 @@
  */
 #include <dm_afs.h>
 #include <dm_afs_modules.h>
+#include <linux/random.h>
+
+
+/**
+ * Pick an index at random within the allocation vector
+ * TODO Probably should have this operate over the length of the block_list array 
+ */
+uint32_t random_block_index(struct afs_allocation_vector *vector){
+    uint32_t block_num;
+    get_random_bytes(&block_num, sizeof(uint32_t));
+    block_num = block_num % vector->vector->length;
+    return block_num; 
+}
 
 /**
  * Get the state of a block in the allocation vector.
