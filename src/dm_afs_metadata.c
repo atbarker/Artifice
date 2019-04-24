@@ -411,24 +411,32 @@ done:
 
 /**
  * Write the super block onto the disk.
- * 
- * TODO: Change sb_block location.
  */
 int
 write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct afs_private *context)
 {
-    uint32_t sb_block = 0;
+    uint32_t sb_block[NUM_SUPERBLOCK_REPLICAS];
     struct afs_config *config = &context->config;
     struct afs_ptr_block *ptr_blocks = NULL;
     int ret = 0;
+    int i = 0;
+    uint8_t pass_hash[NUM_SUPERBLOCK_REPLICAS][SHA1_SZ];
 
     //hash passphrase and determine location
-    hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
-    memcpy(&sb_block, sb->hash, sizeof(uint32_t));
-    sb_block = sb_block % context->passive_fs.list_len;
+    hash_sha1(context->args.passphrase, PASSPHRASE_SZ, pass_hash[0]);
+    memcpy(&sb_block[0], pass_hash[0], sizeof(uint32_t));
+    sb_block[0] = sb_block[0] % context->passive_fs.list_len;
 
     // Reserve space for the super block location.
-    allocation_set(&context->vector, sb_block);
+    allocation_set(&context->vector, sb_block[0]);
+
+    //generate list of additional superblock locations
+    for(i = 1; i < NUM_SUPERBLOCK_REPLICAS; i++){
+        hash_sha1(pass_hash[i-1], SHA1_SZ, pass_hash[i]);
+        memcpy(&sb_block[i], pass_hash[i], sizeof(uint32_t));
+        sb_block[i] = sb_block[i] % context->passive_fs.list_len;
+        allocation_set(&context->vector, sb_block[i]);
+    }
 
     // Build the Artifice Map.
     ret = afs_create_map(context);
@@ -450,17 +458,17 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     afs_assert(!ret, ptr_block_err, "could not write pointer blocks [%d]", ret);
 
     // 1. Take note of the instance size.
-    // 2. Calculate the hash of the provided passphrase.
-    // 3. Take note of the entropy directory for the instance.
-    // 4. Hash the super block.
-    // 5. Write to disk.
+    // 2. Take note of the entropy directory for the instance.
+    // 3. Hash the super block.
+    // 4. Write each block to disk.
     sb->instance_size = config->instance_size;
-    //hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
     strncpy(sb->entropy_dir, context->args.entropy_dir, ENTROPY_DIR_SZ);
     hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
-    ret = write_page(sb, context->bdev, fs->block_list[sb_block], context->passive_fs.data_start_off, false);
-    afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
-    afs_debug("super block written to disk [block: %u]", sb_block);
+    for(i = 0; i < 1; i++){
+        ret = write_page(sb, context->bdev, fs->block_list[sb_block[i]], context->passive_fs.data_start_off, false);
+        afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
+    }
+    afs_debug("super blocks written to disk [block: %u]", sb_block[i]);
 
     // We don't need the map blocks anymore.
     vfree(context->afs_map_blocks);
@@ -540,26 +548,36 @@ done:
 /**
  * Find the super block on the disk.
  *
- * TODO: Change sb_block location.
  */
 int
 find_super_block(struct afs_super_block *sb, struct afs_private *context)
 {
-    uint32_t sb_block = 0;
+    uint32_t sb_block[NUM_SUPERBLOCK_REPLICAS];
     struct afs_config *config = &context->config;
     struct afs_ptr_block *ptr_blocks = NULL;
     uint8_t sb_digest[SHA256_SZ];
     int ret = 0;
+    int i = 0;
+    uint8_t pass_hash[NUM_SUPERBLOCK_REPLICAS][SHA1_SZ];
 
-    hash_sha1(context->args.passphrase, PASSPHRASE_SZ, sb->hash);
-    memcpy(&sb_block, sb->hash, sizeof(uint32_t));
-    sb_block = sb_block % context->passive_fs.list_len;
+    hash_sha1(context->args.passphrase, PASSPHRASE_SZ, pass_hash[0]);
+    memcpy(&sb_block[0], pass_hash[0], sizeof(uint32_t));
+    sb_block[0] = sb_block[0] % context->passive_fs.list_len;
 
     // Mark super block location as reserved.
-    allocation_set(&context->vector, sb_block);
+    allocation_set(&context->vector, sb_block[0]);
+
+    //TODO, only calculate superblock location for one, then if fail, calculate next hash and try again
+    //keep track of how many are lost
+    for(i = 1; i < NUM_SUPERBLOCK_REPLICAS; i++){
+        hash_sha1(pass_hash[i-1], SHA1_SZ, pass_hash[i]);
+        memcpy(&sb_block[i], pass_hash[i], sizeof(uint32_t));
+        sb_block[i] = sb_block[i] % context->passive_fs.list_len;
+        allocation_set(&context->vector, sb_block[i]);
+    }
 
     // Read in the super block from disk.
-    ret = read_page(sb, context->bdev, context->passive_fs.block_list[sb_block], context->passive_fs.data_start_off, false);
+    ret = read_page(sb, context->bdev, context->passive_fs.block_list[sb_block[0]], context->passive_fs.data_start_off, false);
     afs_assert(!ret, err, "could not read super block page [%d]", ret);
 
     // Check for corruption.

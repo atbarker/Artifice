@@ -79,6 +79,7 @@ enum {
     NUM_MAP_BLKS_IN_PB = 1019,
     NUM_DEFAULT_CARRIER_BLKS = 4,
     NUM_MAX_CARRIER_BLKS = 8,
+    NUM_SUPERBLOCK_REPLICAS = 8,
 
     // Array sizes.
     PASSPHRASE_SZ = 64,
