@@ -531,11 +531,11 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // This is all just for testing.
     // BEGIN.
-    fs->block_list = vmalloc(1048576 * sizeof(*fs->block_list));
-    fs->list_len = 1048576;
+    //fs->block_list = vmalloc(1048576 * sizeof(*fs->block_list));
+    //fs->list_len = 1048576;
 
-    for (i = 0; i < fs->list_len; i++) {
-        fs->block_list[i] = i;
+    for (i = 0; i < 100; i++) {
+        afs_debug("Allocation list: %d ", fs->block_list[i]);
     }
     // END.
 

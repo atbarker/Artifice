@@ -326,8 +326,6 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
         //fat_data = page_address(page);
         fat_data = vmalloc(page_number * AFS_BLOCK_SIZE);
         for(i = 0; i < page_number; i++){
-            afs_debug("Block number: %d ", 4+i);
-            afs_debug("Read Offset: %d ", i * 4096);
             read_page(reader, device, 4 + i, true);
             memcpy(&fat_data[i * 4096], reader, 4096);
         }
