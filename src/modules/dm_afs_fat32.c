@@ -132,6 +132,7 @@ fat_read_dos_2_0_bpb(struct fat_volume *vol, const struct fat_boot_sector *boot_
     vol->root_entries = le16_to_cpu(boot_sec->max_root_ent);
     if (vol->root_entries == 0) {
         // then this is a FAT32 volume.
+        afs_debug("FS is Fat32, not Fat16 or 12");
     } else {
         // TODO: Why is this here?
     }
@@ -298,11 +299,12 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     int status;
     int cluster_number;
     sector_t start_sector;
-    void *fat_data = NULL;
+    uint8_t *fat_data = NULL;
     struct page *page = NULL;
     struct afs_io fatio;
     uint32_t page_size;
     uint32_t page_number;
+    uint8_t *reader = kmalloc(4096, GFP_KERNEL);
 
     page_size = 1 << PAGE_SHIFT;
     fat_offset = (off_t)vol->reserved << vol->sector_order;
@@ -322,8 +324,13 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
         afs_debug("Read more data to map the FAT");
         //page = alloc_pages(GFP_KERNEL, (unsigned int)(bsr(page_number)));
         //fat_data = page_address(page);
-        fat_data = vmalloc(4096);
-        read_page(fat_data, device, 4, true);
+        fat_data = vmalloc(page_number * AFS_BLOCK_SIZE);
+        for(i = 0; i < page_number; i++){
+            afs_debug("Block number: %d ", 4+i);
+            afs_debug("Read Offset: %d ", i * 4096);
+            read_page(reader, device, 4 + i, true);
+            memcpy(&fat_data[i * 4096], reader, 4096);
+        }
         //fatio.bdev = device;
         //fatio.io_page = page;
         //fatio.io_sector = fat_aligned_offset / 512;
@@ -342,8 +349,8 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     empty_clusters = vmalloc(fat_size_bytes);
     memset((void *)empty_clusters, 0, fat_size_bytes);
 
-    for (i = 0; i < 512; i++) {
-        afs_debug("block %d: %d", i, p[i]);
+    for (i = 0; i < vol->num_data_clusters; i++) {
+        //afs_debug("block %d: %d", i, p[i]);
         if (p[i] == 0) {
             empty_clusters[cluster_number] = i;
             cluster_number++;
@@ -351,7 +358,7 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     }
     vol->empty_clusters = empty_clusters;
     vol->num_empty_clusters = cluster_number;
-    
+    kfree(reader); 
     return 0;
 }
 
