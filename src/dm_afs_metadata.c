@@ -550,7 +550,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     allocation_set(&context->vector, sb_block);
 
     // Read in the super block from disk.
-    ret = read_page(sb, context->bdev, sb_block, context->passive_fs.data_start_off, false);
+    ret = read_page(sb, context->bdev, context->passive_fs.block_list[sb_block], context->passive_fs.data_start_off, false);
     afs_assert(!ret, err, "could not read super block page [%d]", ret);
 
     // Check for corruption.
