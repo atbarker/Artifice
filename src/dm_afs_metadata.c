@@ -606,39 +606,68 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     uint8_t sb_digest[SHA256_SZ];
     int ret = 0;
     int i = 0;
+    uint32_t sb_tries = 0;
     uint8_t pass_hash[NUM_SUPERBLOCK_REPLICAS][SHA1_SZ];
     uint32_t block_device_size = config->bdev_size / AFS_SECTORS_PER_BLOCK;
 
     hash_sha1(context->args.passphrase, PASSPHRASE_SZ, pass_hash[0]);
     memcpy(&sb_block[0], pass_hash[0], sizeof(uint32_t));
     sb_block[0] = sb_block[0] % block_device_size;
-
+    /*
     // Mark super block location as reserved.
     // Reserve space for the super block location.
     // if the hashed block is available
-    if(binary_search(context->passive_fs.block_list, sb_block[0], context->passive_fs.list_len) != -1){
-        allocation_set(&context->vector, sb_block[0]);
-    }else{
-
+    while(binary_search(context->passive_fs.block_list, sb_block[0], context->passive_fs.list_len) == -1){
+        hash_sha1(pass_hash[0], SHA1_SZ, pass_hash[0]);
+        memcpy(&sb_block[0] , pass_hash[0], sizeof(uint32_t));
+        sb_block[0] = sb_block[0] % block_device_size;
     }
+    allocation_set(&context->vector, sb_block[0]);
 
-    //TODO, only calculate superblock location for one, then if fail, calculate next hash and try again
-    //keep track of how many are lost
     for(i = 1; i < NUM_SUPERBLOCK_REPLICAS; i++){
         hash_sha1(pass_hash[i-1], SHA1_SZ, pass_hash[i]);
         memcpy(&sb_block[i], pass_hash[i], sizeof(uint32_t));
         sb_block[i] = sb_block[i] % block_device_size;
+        while(binary_search(context->passive_fs.block_list, sb_block[i], context->passive_fs.list_len) == -1){
+            hash_sha1(pass_hash[i], SHA1_SZ, pass_hash[i]);
+            memcpy(&sb_block[i] , pass_hash[i], sizeof(uint32_t));
+            sb_block[i] = sb_block[i] % block_device_size;
+        }
         allocation_set(&context->vector, sb_block[i]);
+    }*/
+    //TODO make it so we can somehow keep track of how many of these we lose
+    while (sb_tries < 32){
+        //if our superblock is not present in the block list then we can assume it doesn't exist
+        while(binary_search(context->passive_fs.block_list, sb_block[0], context->passive_fs.list_len) == -1){
+            hash_sha1(pass_hash[0], SHA1_SZ, pass_hash[0]);
+            memcpy(&sb_block[0], pass_hash[0], sizeof(uint32_t));
+            sb_block[0] = sb_block[0] % block_device_size;
+            sb_tries++;
+        }
+        //attempt to read superblock
+        ret = read_page(sb, context->bdev, context->passive_fs.block_list[sb_block[0]], context->passive_fs.data_start_off, false);
+        afs_assert(!ret, err, "could not read super block page [%d]", ret);
+
+        // Check for corruption.
+        hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
+        ret = memcmp(sb->sb_hash, sb_digest, SHA256_SZ);
+        if(ret){
+            afs_debug("Superblock read attempt %u corrupted", sb_tries);
+            sb_tries++;
+        }else{
+            break; 
+        }
     }
+    allocation_set(&context->vector, sb_block[0]);
 
     // Read in the super block from disk.
-    ret = read_page(sb, context->bdev, context->passive_fs.block_list[sb_block[0]], context->passive_fs.data_start_off, false);
-    afs_assert(!ret, err, "could not read super block page [%d]", ret);
+    //ret = read_page(sb, context->bdev, context->passive_fs.block_list[sb_block[0]], context->passive_fs.data_start_off, false);
+    //afs_assert(!ret, err, "could not read super block page [%d]", ret);
 
     // Check for corruption.
-    hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
-    ret = memcmp(sb->sb_hash, sb_digest, SHA256_SZ);
-    afs_action(!ret, ret = -ENOENT, err, "super block corrupted");
+    //hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
+    //ret = memcmp(sb->sb_hash, sb_digest, SHA256_SZ);
+    //afs_action(!ret, ret = -ENOENT, err, "super block corrupted");
 
     // Confirm size is same.
     afs_action(config->instance_size == sb->instance_size, ret = -EINVAL, err,
