@@ -12,11 +12,12 @@
 
 /**
  * Binary search for use in finding a superblock
- * TODO need negative return value other than 0
+ * returns block index in the free block list if true
+ * returns -1 if false
  */
-static uint32_t binary_search(uint32_t *array, uint32_t value, uint32_t length){
+static int64_t binary_search(uint32_t *array, uint32_t value, uint32_t length){
     int first, last, middle;
-    uint32_t index = 0;
+    int64_t index = -1;
 
     first = 0;
     last = length - 1;
@@ -456,7 +457,12 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     sb_block[0] = sb_block[0] % block_device_size;
 
     // Reserve space for the super block location.
-    allocation_set(&context->vector, sb_block[0]);
+    // if the hashed block is available
+    if(binary_search(fs->block_list, sb_block[0], fs->list_len) != -1){
+        allocation_set(&context->vector, sb_block[0]);
+    }else{
+
+    }
 
     //generate list of additional superblock locations
     for(i = 1; i < NUM_SUPERBLOCK_REPLICAS; i++){
@@ -594,7 +600,13 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     sb_block[0] = sb_block[0] % block_device_size;
 
     // Mark super block location as reserved.
-    allocation_set(&context->vector, sb_block[0]);
+    // Reserve space for the super block location.
+    // if the hashed block is available
+    if(binary_search(context->passive_fs.block_list, sb_block[0], context->passive_fs.list_len) != -1){
+        allocation_set(&context->vector, sb_block[0]);
+    }else{
+
+    }
 
     //TODO, only calculate superblock location for one, then if fail, calculate next hash and try again
     //keep track of how many are lost
