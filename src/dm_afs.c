@@ -480,7 +480,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     int ret;
     int8_t detected_fs;
     uint64_t instance_size;
-    uint64_t i;
+    //uint64_t i;
 
     // Make sure instance is large enough.
     instance_size = ti->len * AFS_SECTOR_SIZE;
@@ -536,9 +536,9 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //fs->block_list = vmalloc(1048576 * sizeof(*fs->block_list));
     //fs->list_len = 1048576;
 
-    for (i = 0; i < 100; i++) {
-        afs_debug("Allocation list: %d ", fs->block_list[i]);
-    }
+    //for (i = 0; i < 100; i++) {
+    //    afs_debug("Allocation list: %d ", fs->block_list[i]);
+    //}
     // END.
 
     // Allocate the free list allocation vector to be able

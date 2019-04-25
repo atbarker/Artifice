@@ -630,7 +630,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
         hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb_digest);
         ret = memcmp(sb->sb_hash, sb_digest, SHA256_SZ);
         if(ret){
-            afs_debug("Superblock read attempt %u corrupted", sb_tries);
+            afs_debug("Superblock read attempt %u failed", sb_tries);
             sb_tries++;
         }else{
             break; 
