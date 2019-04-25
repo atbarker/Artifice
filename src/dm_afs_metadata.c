@@ -437,6 +437,13 @@ done:
     return ret;
 }
 
+int chain_hash_superblock(uint32_t *pass_hash[SHA1_SZ], uint32_t *sb_block, uint32_t block_device_size, struct afs_passive_fs *fs){
+    while(binary_search(fs->block_list, *sb_block, fs->list_len) == -1){
+        
+    }
+    return 0;
+}
+
 /**
  * Write the super block onto the disk.
  */
@@ -457,18 +464,25 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     sb_block[0] = sb_block[0] % block_device_size;
 
     // Reserve space for the super block location.
-    // if the hashed block is available
-    if(binary_search(fs->block_list, sb_block[0], fs->list_len) != -1){
-        allocation_set(&context->vector, sb_block[0]);
-    }else{
-
+    // if the hashed block is available, rehash and try again if it is not
+    while(binary_search(fs->block_list, sb_block[0], fs->list_len) == -1){
+        hash_sha1(pass_hash[0], SHA1_SZ, pass_hash[0]);
+        memcpy(&sb_block[0] , pass_hash[0], sizeof(uint32_t));
+        sb_block[0] = sb_block[0] % block_device_size; 
     }
+    allocation_set(&context->vector, sb_block[0]);
 
     //generate list of additional superblock locations
+    //Iteratively hash like before
     for(i = 1; i < NUM_SUPERBLOCK_REPLICAS; i++){
         hash_sha1(pass_hash[i-1], SHA1_SZ, pass_hash[i]);
         memcpy(&sb_block[i], pass_hash[i], sizeof(uint32_t));
         sb_block[i] = sb_block[i] % block_device_size;
+        while(binary_search(fs->block_list, sb_block[i], fs->list_len) == -1){
+            hash_sha1(pass_hash[i], SHA1_SZ, pass_hash[i]);   
+            memcpy(&sb_block[i] , pass_hash[i], sizeof(uint32_t));
+            sb_block[i] = sb_block[i] % block_device_size;
+        }
         allocation_set(&context->vector, sb_block[i]);
     }
 
@@ -498,11 +512,11 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     sb->instance_size = config->instance_size;
     strncpy(sb->entropy_dir, context->args.entropy_dir, ENTROPY_DIR_SZ);
     hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
-    for(i = 0; i < 1; i++){
+    for(i = 0; i < NUM_SUPERBLOCK_REPLICAS; i++){
         ret = write_page(sb, context->bdev, fs->block_list[sb_block[i]], context->passive_fs.data_start_off, false);
         afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
+        afs_debug("super blocks written to disk [block: %u]", sb_block[i]);
     }
-    afs_debug("super blocks written to disk [block: %u]", sb_block[i]);
 
     // We don't need the map blocks anymore.
     vfree(context->afs_map_blocks);
