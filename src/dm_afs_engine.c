@@ -10,35 +10,8 @@
 #include "lib/cauchy_rs.h"
 
 /**
- * Binary search for use in finding a superblock
- * TODO need negative return value other than 0
- */
-static uint32_t binary_search(uint32_t *array, uint32_t value, uint32_t length){
-    int first, last, middle;
-    uint32_t index = 0;
-   
-    first = 0;
-    last = length - 1;
-    middle = (first + last) / 2;
-
-    while (first <= last){
-        if(array[middle] < value){
-            first = middle + 1;
-        } else if (array[middle] == value){
-            index = middle;
-            break;
-        } else {
-            last = middle - 1;
-        }
-        middle = (first + last)/2;
-    }
-     
-    return index;
-}
-
-
-/**
  * Convert 2 dimensional static array to double pointer 2d array.
+ * TODO this can be thrown out once we get map request block arrays as double pointers instead of static arrays
  */
 static inline void arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uint8_t* output[AFS_BLOCK_SIZE]){
     int i;

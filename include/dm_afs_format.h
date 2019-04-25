@@ -82,6 +82,7 @@ struct afs_config {
     uint32_t num_map_blocks;
     uint32_t num_ptr_blocks;
     uint64_t instance_size;
+    uint64_t bdev_size;
 };
 
 #endif /* DM_AFS_FORMAT_H */

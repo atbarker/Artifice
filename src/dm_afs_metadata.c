@@ -9,7 +9,34 @@
 #include <linux/crypto.h>
 #include <linux/errno.h>
 #include <linux/random.h>
-#include <linux/rslib.h>
+
+/**
+ * Binary search for use in finding a superblock
+ * TODO need negative return value other than 0
+ */
+static uint32_t binary_search(uint32_t *array, uint32_t value, uint32_t length){
+    int first, last, middle;
+    uint32_t index = 0;
+
+    first = 0;
+    last = length - 1;
+    middle = (first + last) / 2;
+
+    while (first <= last){
+        if(array[middle] < value){
+            first = middle + 1;
+        } else if (array[middle] == value){
+            index = middle;
+            break;
+        } else {
+            last = middle - 1;
+        }
+        middle = (first + last)/2;
+    }
+
+    return index;
+}
+
 
 /**
  * Build the configuration for an instance.
@@ -421,11 +448,12 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     int ret = 0;
     int i = 0;
     uint8_t pass_hash[NUM_SUPERBLOCK_REPLICAS][SHA1_SZ];
+    uint32_t block_device_size = config->bdev_size / AFS_SECTORS_PER_BLOCK;
 
-    //hash passphrase and determine location
+    //hash passphrase and determine location of first superblock
     hash_sha1(context->args.passphrase, PASSPHRASE_SZ, pass_hash[0]);
     memcpy(&sb_block[0], pass_hash[0], sizeof(uint32_t));
-    sb_block[0] = sb_block[0] % context->passive_fs.list_len;
+    sb_block[0] = sb_block[0] % block_device_size;
 
     // Reserve space for the super block location.
     allocation_set(&context->vector, sb_block[0]);
@@ -434,7 +462,7 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     for(i = 1; i < NUM_SUPERBLOCK_REPLICAS; i++){
         hash_sha1(pass_hash[i-1], SHA1_SZ, pass_hash[i]);
         memcpy(&sb_block[i], pass_hash[i], sizeof(uint32_t));
-        sb_block[i] = sb_block[i] % context->passive_fs.list_len;
+        sb_block[i] = sb_block[i] % block_device_size;
         allocation_set(&context->vector, sb_block[i]);
     }
 
@@ -559,10 +587,11 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     int ret = 0;
     int i = 0;
     uint8_t pass_hash[NUM_SUPERBLOCK_REPLICAS][SHA1_SZ];
+    uint32_t block_device_size = config->bdev_size / AFS_SECTORS_PER_BLOCK;
 
     hash_sha1(context->args.passphrase, PASSPHRASE_SZ, pass_hash[0]);
     memcpy(&sb_block[0], pass_hash[0], sizeof(uint32_t));
-    sb_block[0] = sb_block[0] % context->passive_fs.list_len;
+    sb_block[0] = sb_block[0] % block_device_size;
 
     // Mark super block location as reserved.
     allocation_set(&context->vector, sb_block[0]);
@@ -572,7 +601,7 @@ find_super_block(struct afs_super_block *sb, struct afs_private *context)
     for(i = 1; i < NUM_SUPERBLOCK_REPLICAS; i++){
         hash_sha1(pass_hash[i-1], SHA1_SZ, pass_hash[i]);
         memcpy(&sb_block[i], pass_hash[i], sizeof(uint32_t));
-        sb_block[i] = sb_block[i] % context->passive_fs.list_len;
+        sb_block[i] = sb_block[i] % block_device_size;
         allocation_set(&context->vector, sb_block[i]);
     }
 

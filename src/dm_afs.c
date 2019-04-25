@@ -504,6 +504,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     ret = dm_get_device(ti, args->passive_dev, dm_table_get_mode(ti->table), &context->passive_dev);
     afs_assert(!ret, args_err, "could not find given disk [%s]", args->passive_dev);
     context->bdev = context->passive_dev->bdev;
+    context->config.bdev_size = context->bdev->bd_part->nr_sects;
 
     fs = &context->passive_fs;
     detected_fs = detect_fs(context->bdev, fs);
