@@ -63,7 +63,7 @@ double write_throughput = 0.0;
 void *
 thread_write(void *t_arg)
 {
-    const int n_writes = 96;
+    const int n_writes = 192;
     const int repeat_factor = 1;
 
     int urandom_fd;
@@ -93,6 +93,7 @@ thread_write(void *t_arg)
         for (j = 0; j < n_writes; j++) {
             offset = (type == RAND) ? BUFFER_SIZE * (rand() % n_writes) : BUFFER_SIZE * j;
             ret = pwrite(fd, buf, BUFFER_SIZE, offset);
+            fsync(fd);
         }
         duration += GET_TIME(time_ctx);
     }
@@ -108,7 +109,7 @@ thread_write(void *t_arg)
 void *
 thread_read(void *t_arg)
 {
-    const int n_reads = 96;
+    const int n_reads = 192;
     const int repeat_factor = 1;
 
     off_t offset;
@@ -174,7 +175,8 @@ main(int argc, char *argv[])
     }
 
     // Open disk/file.
-    fd = open(argv[3], O_RDWR | O_SYNC);
+    fd = open(argv[3], O_RDWR);
+    //removed O_SYNC flag
     if (fd < 0) {
         perror("could not open file");
         return -1;
