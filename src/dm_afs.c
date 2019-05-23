@@ -646,6 +646,7 @@ afs_dtr(struct dm_target *ti)
         }
         vfree(context->afs_map_blocks);
     }
+    
 
     // Free the Artifice pointer blocks.
     kfree(context->afs_ptr_blocks);

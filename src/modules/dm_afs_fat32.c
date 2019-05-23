@@ -271,6 +271,7 @@ read_boot_sector(struct fat_volume *vol, const void *data)
     afs_debug("Number of reserved: %u", vol->sec_fat);
 
     vol->num_data_clusters = num_data_sectors / vol->sec_cluster;
+    kfree(boot_sec);
     return 0;
 
 out_invalid:
@@ -354,7 +355,8 @@ fat_map(struct fat_volume *vol, void *data, struct block_device *device)
     }
     vol->empty_clusters = empty_clusters;
     vol->num_empty_clusters = cluster_number;
-    kfree(reader); 
+    kfree(reader);
+    vfree(fat_data);
     return 0;
 }
 
@@ -393,15 +395,18 @@ afs_fat32_detect(const void *data, struct block_device *device, struct afs_passi
 
     vol->data_start_off = (off_t)((vol->tables * vol->sec_fat) + vol->reserved);
 
+    //TODO Really should just store the whole volume struct but oh well
     if (fs) {
         fs->total_blocks = vol->num_data_clusters;
         fs->sectors_per_block = vol->sec_cluster;
         fs->block_list = vol->empty_clusters;
         fs->list_len = vol->num_empty_clusters;
         fs->data_start_off = vol->data_start_off; // Data start in sectors, blocks are relative to this.
+	kfree(vol);
         return true;
     }
 
 vol_err:
+    kfree(vol);
     return false;
 }

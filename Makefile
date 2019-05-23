@@ -5,7 +5,7 @@ PWD := $(shell pwd)
 # TODO need some way to check for the presence of msse3 or other SIMD instructions
 # AVX2 is nice but not really needed
 # If those aren't present then fall back to the normal rs version, will have to have ifdef's in the code
-ccflags-y += -I$(src)/include/ -msse3 -msse4.1 -mavx2 -mpreferred-stack-boundary=4
+ccflags-y += -I$(src)/include/ -g -msse3 -msse4.1 -mavx2 -mpreferred-stack-boundary=4
 
 # Modules.
 AFS_MODULES :=	src/modules/dm_afs_fat32.o	\
