@@ -1950,7 +1950,8 @@ int cauchy_rs_decode(
     //    print_hex_dump(KERN_DEBUG, "decoded: ", DUMP_PREFIX_OFFSET, 20, 1, (void*)blocks[i].Block, 16, true);
         memcpy(dataBlocks[i], blocks[i].Block, params.BlockBytes);
     }
-
+    
+    kfree(state);
     kfree(blocks);
     return 0;
 }

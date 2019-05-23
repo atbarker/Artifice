@@ -8,7 +8,7 @@ typ = "seq"
 cmd = "./bench " + op + " " + typ + " " + dev
 
 throughput = []
-for i in range(10):
+for i in range(2):
     output = subprocess.check_output(cmd, shell=True)
     split_output = output.split(":")
     output = split_output[1]
