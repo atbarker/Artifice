@@ -43,6 +43,7 @@ afs_blkdev_io(struct afs_io *request)
     bio_add_page(bio, request->io_page, request->io_size, page_offset);
 
     submit_bio_wait(bio);
+    kfree(bio);
     return 0;
 
 invalid_type:
