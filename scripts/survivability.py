@@ -8,7 +8,7 @@ block_size = 4096 #4KB
 total_size = 54975581388 #512GB
 num_blocks = total_size / block_size
 blocks_overwritten = 1310720 #5GB in blocks
-mat_size_blocks = 1310720 #5GB artifice instance
+art_size_blocks = 1310720 #5GB artifice instance
 prob_success = blocks_overwritten / num_blocks
 num_days = 365
 
@@ -39,9 +39,9 @@ def calc_metadata_size_rs(blocks, parity, entropy, data):
 
     entries_per_block = math.floor(block_size / record_size)
     print("entries per block: {}".format(entries_per_block))
-    num_map_blocks = math.ceil((blocks * amplification_factor) / entries_per_block)
+    num_map_blocks = math.ceil((blocks / amplification_factor) / entries_per_block)
     print("number of map blocks: {}".format(num_map_blocks))
-    num_map_map_blocks = math.ceil((num_map_blocks * amplification_factor) / entries_per_block)
+    num_map_map_blocks = math.ceil((num_map_blocks / amplification_factor) / entries_per_block)
     print("number of map map blocks: {}".format(num_map_map_blocks))
     num_pointer_blocks = math.ceil(num_map_map_blocks / pointers_per_pointerblock)
     print("number of pointer_blocks: {}".format(num_pointer_blocks))
@@ -80,10 +80,10 @@ def calc_total_size(size, parity, data):
     return size * (parity / data)
 
 def prob_metadata_alive(k, m):
-    return (prob_survival(k, m, ps) ** (calc_metadata_size_rs(mat_size_blocks, m, 2, 2) * num_days))
+    return (prob_survival(k, m, prob_success) ** (calc_metadata_size_rs(art_size_blocks, m, 2, 2) * num_days))
 
 def prob_artifice_alive(k, m):
-    return (prob_survival(k, m, ps) ** (calc_total_size(mat_size_blocks, m, k) * num_days))
+    return (prob_survival(k, m, prob_success) ** (calc_total_size(art_size_blocks, m, k) * num_days))
 
 #mean time to failure (MTTF) is in hours
 def prob_disk_alive(mttf, days):
@@ -91,10 +91,10 @@ def prob_disk_alive(mttf, days):
 
 def main():
     print("Metadata_size for Reed-Solomon")
-    calc_metadata_size_rs(mat_size_blocks, 4, 2, 2)
+    calc_metadata_size_rs(art_size_blocks, 4, 2, 2)
     print(" ")
     print("Metadata size for shamir secret sharing")
-    calc_metadata_size_shamir(mat_size_blocks, 4, 1)
+    calc_metadata_size_shamir(art_size_blocks, 4, 1)
 
 if __name__ == "__main__":
     main()
