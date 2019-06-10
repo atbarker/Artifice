@@ -92,6 +92,9 @@ def prob_metadata_alive(k, m):
 def prob_artifice_alive(k, m):
     return (prob_survival(k, m, prob_success) ** (calc_total_size(art_size_blocks, m, k, 8) * num_days))
 
+def prob_nines(k, m, p):
+    return -math.log10(1 - prob_survival(k, m, p))
+
 #mean time to failure (MTTF) is in hours
 def prob_disk_alive(mttf, days):
     return ((1 - (1/mttf)) ** (days * 24))
@@ -102,6 +105,24 @@ def main():
     print(" ")
     print("|---Metadata size for secret sharing---|")
     calc_metadata_size_shamir(art_size_blocks, 4, 1, 8)
+    
+    #nines
+    m_max = 0.05
+    m_values = np.arange(0.0001, 0.05, 0.0001)
+    prob1 = []
+    prob2 = []
+    prob3 = []
+    prob4 = []
+    prob5 = []
+    for i in m_values:
+        prob1.append(prob_nines(3, 3, i))
+        prob2.append(prob_nines(3, 4, i))
+        prob3.append(prob_nines(3, 5, i))
+        prob4.append(prob_nines(3, 6, i))
+        prob5.append(prob_nines(3, 7, i))
+    plt.axis([0, 0.05, 0, 14])
+    plt.plot(m_values, prob1, m_values, prob2, m_values, prob3, m_values, prob4, m_values, prob5)
+    plt.show()
 
 if __name__ == "__main__":
     main()
