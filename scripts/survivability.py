@@ -94,7 +94,10 @@ def calc_metadata_size_shamir(blocks, shares, threshold, replicas, verbose):
     return metadata_size
 
 def calc_total_size(size, parity, data):
-    return size * (parity / data)
+    if parity == 0:
+        return 0
+    else:
+        return size * (parity / data)
 
 #TODO both of these need some work so that we can more accurately model overwrite resistance with redundant metadata
 #hard coded for 1 entropy block, multiple data blocks
@@ -107,11 +110,11 @@ def prob_metadata_alive_sss(k, m):
 
 #k is data + entropy, m 
 def prob_artifice_alive_rs(e, d, m):
-    return math.pow(prob_survival_rs(e, d, m, prob_success), (calc_total_size(art_size_blocks, m, e+d, 8, False) * num_days))
+    return math.pow(prob_survival_rs(e, d, m, prob_success), (calc_total_size(art_size_blocks, m, e+d) * num_days))
 
 #k is the reconstruct threshold, m is the number of additional shares
 def prob_artifice_alive_sss(k, m):
-    return math.pow(prob_survival_sss(k, m, prob_success), (calc_total_size(art_size_blocks, m, k, 8, False) * num_days))
+    return math.pow(prob_survival_sss(k, m, prob_success), (calc_total_size(art_size_blocks, m, k) * num_days))
 
 def prob_nines(k, m, p):
     return -math.log10(1 - prob_survival(k, m, p))
@@ -144,7 +147,7 @@ def main():
     plt.show()'''
 
     #probability of survival for metadata, reed solomon
-    m_values = np.arange(0, 9, 1)
+    '''m_values = np.arange(1, 9, 1)
     prob1 = []
     prob2 = []
     prob3 = []
@@ -162,6 +165,32 @@ def main():
     plt.xlabel("Number of Parity Blocks")
     plt.ylabel("Probability of Survival")
     plt.title("Probability of Metadata Survival vs Number of Parity Blocks")
+    rs = plt.plot(m_values, prob1, label='RS, 1 data block')
+    rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks')
+    shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
+    shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3')
+    plt.legend()
+    plt.show()'''
+
+
+    m_values = np.arange(1, 9, 1)
+    prob1 = []
+    prob2 = []
+    prob3 = []
+    prob4 = []
+    for i in m_values:
+        #1 entropy block, 1 data block, i parity blocks
+        prob1.append(prob_artifice_alive_rs(1, 1, i))
+        #reconstruct threshold of 2, i additional blocks
+        prob2.append(prob_artifice_alive_sss(2, i))
+        #1 entropy block, 2 data blocks, i parity blocks
+        prob3.append(prob_artifice_alive_rs(1, 2, i))
+        #reconstruct threshold of 3, i additional blocks
+        prob4.append(prob_artifice_alive_sss(3, i))
+
+    plt.xlabel("Number of Parity Blocks")
+    plt.ylabel("Probability of Survival")
+    plt.title("Probability of Artifice Survival vs Number of Parity Blocks")
     rs = plt.plot(m_values, prob1, label='RS, 1 data block')
     rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks')
     shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
