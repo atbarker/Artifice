@@ -93,11 +93,11 @@ def calc_metadata_size_shamir(blocks, shares, threshold, replicas, verbose):
 
     return metadata_size
 
-def calc_total_size(size, parity, data):
-    if parity == 0:
-        return 0
-    else:
-        return size * (parity / data)
+def calc_total_size_rs(size, parity, data, entropy):
+    return (size * (parity / data)) + calc_metadata_size_rs(size, parity, entropy, data, 8, False)
+
+def calc_total_size_sss(size, k, m):
+    return (size * (k + m)) + calc_metadata_size_shamir(size, m, k, 8, False)
 
 #TODO both of these need some work so that we can more accurately model overwrite resistance with redundant metadata
 #hard coded for 1 entropy block, multiple data blocks
@@ -110,11 +110,11 @@ def prob_metadata_alive_sss(k, m):
 
 #k is data + entropy, m 
 def prob_artifice_alive_rs(e, d, m):
-    return math.pow(prob_survival_rs(e, d, m, prob_success), (calc_total_size(art_size_blocks, m, e+d) * num_days))
+    return math.pow(prob_survival_rs(e, d, m, prob_success), (calc_total_size_rs(art_size_blocks, m, d, e) * num_days))
 
 #k is the reconstruct threshold, m is the number of additional shares
 def prob_artifice_alive_sss(k, m):
-    return math.pow(prob_survival_sss(k, m, prob_success), (calc_total_size(art_size_blocks, m, k) * num_days))
+    return math.pow(prob_survival_sss(k, m, prob_success), (calc_total_size_sss(art_size_blocks, m, k) * num_days))
 
 def prob_nines(k, m, p):
     return -math.log10(1 - prob_survival(k, m, p))
