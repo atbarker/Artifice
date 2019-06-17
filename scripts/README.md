@@ -10,10 +10,10 @@ This script handles the theoretical survivability models for Artifice. It will c
 
 There are three command line options, nines, metadata, all, and disk. 
 
-    The 'nines' option simply prints out a graph generated from the binomial CDF that represents the probability of overwrite without taking into account the size of the Artifice instance.
-    The 'metadata' option graphs the probability of survival for only the metadata. Since if the metadata survives then we can at the very least recognize errors in the rest of the instance.
-    The 'all' option  graphs the probability of survival for the entire Artifice instance.
-    The 'disk' option calculates the probability of survival for a disk given the mean time to failure. 
+The 'nines' option simply prints out a graph generated from the binomial CDF that represents the probability of overwrite without taking into account the size of the Artifice instance.
+The 'metadata' option graphs the probability of survival for only the metadata. Since if the metadata survives then we can at the very least recognize errors in the rest of the instance.
+The 'all' option  graphs the probability of survival for the entire Artifice instance.
+The 'disk' option calculates the probability of survival for a disk given the mean time to failure. 
 
 ## Benchmarking
 
