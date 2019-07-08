@@ -11,10 +11,10 @@
  * Pick an index at random within the allocation vector
  * TODO Probably should have this operate over the length of the block_list array 
  */
-uint32_t random_block_index(struct afs_allocation_vector *vector){
+uint32_t random_block_index(struct afs_passive_fs *fs, struct afs_allocation_vector *vector){
     uint32_t block_num;
     get_random_bytes(&block_num, sizeof(uint32_t));
-    block_num = block_num % vector->vector->length;
+    block_num = block_num % fs->list_len;
     return block_num; 
 }
 
@@ -73,6 +73,7 @@ allocation_free(struct afs_allocation_vector *vector, uint32_t index)
 
 /**
  * Acquire a free block from the free list.
+ * TODO just have it randomly select a block
  */
 uint32_t
 acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
@@ -82,6 +83,7 @@ acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
     uint32_t ret;
 
     spin_lock(&vector->lock);
+    block_num = random_block_index(fs, vector);
     current_num = block_num;
     do {
         if (allocation_set(vector, block_num)) {
@@ -90,7 +92,8 @@ acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
             spin_unlock(&vector->lock);
             return ret;
         }
-        block_num = (block_num + 1) % fs->list_len;
+	block_num = random_block_index(fs, vector);
+        //block_num = (block_num + 1) % fs->list_len;
     } while (block_num != current_num);
     spin_unlock(&vector->lock);
 
