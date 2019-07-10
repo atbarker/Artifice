@@ -7,6 +7,8 @@
 
 uint32_t gen_crc32(const void* data, size_t length, uint32_t previousCrc32);
 uint16_t gen_crc16(const uint8_t *data, uint16_t size);
+bool check_crc32(uint32_t checksum, const void* data, size_t len);
+bool check_crc16(uint16_t checksum, const void* data, size_t len);
 
 const uint32_t crc32Lookup[8][256] =
 {

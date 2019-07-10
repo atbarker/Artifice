@@ -104,6 +104,20 @@ uint16_t gen_crc16(const uint8_t *data, uint16_t size)
     return crc;
 }
 
+bool check_crc32(uint32_t checksum, const void* data, size_t len){
+    if(checksum == gen_crc32(data, len, 0)){
+        return true;
+    }
+    return false;
+}
+
+bool check_crc16(uint16_t checksum, const void* data, size_t len){
+    if(checksum == gen_crc16(data, len)){
+        return true;
+    }
+    return false;
+}
+
 /**
  * Acquire a SHA1 hash of given data.
  * 
