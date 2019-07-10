@@ -148,14 +148,14 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         }
 
         // TODO: Read entropy blocks as well.
-	//memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
-	arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
-	arraytopointer(&req->data_block, 1, datablocks);
-	ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
+	memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
+	//arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
+	//arraytopointer(&req->data_block, 1, datablocks);
+	//ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
 
         // Confirm hash matches.
-        hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
-	//hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
+        //hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
+	hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
         ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
@@ -295,9 +295,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
 
     // TODO: Read entropy blocks as well.
-    arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
-    arraytopointer(&req->data_block, 1, datablocks);
-    cauchy_rs_encode(params, datablocks, parityblocks);
+    //arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
+    //arraytopointer(&req->data_block, 1, datablocks);
+    //cauchy_rs_encode(params, datablocks, parityblocks);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -306,16 +306,16 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
 
-	//ret = write_page(req->data_block, req->bdev, block_num, req->fs->data_start_off, false);
-        ret = write_page(parityblocks[i], req->bdev, block_num, req->fs->data_start_off, false);
+	ret = write_page(req->data_block, req->bdev, block_num, req->fs->data_start_off, false);
+        //ret = write_page(parityblocks[i], req->bdev, block_num, req->fs->data_start_off, false);
         afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
     }
 
     // TODO: Set the entropy hash correctly.
     time = ktime_get_ns();
-    hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
+    //hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
     afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
-    //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
+    hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
