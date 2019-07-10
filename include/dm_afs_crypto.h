@@ -5,12 +5,44 @@
 //common CRC32 polynomial used for networks, zlib, etc
 #define CRC32_POLY 0xEDB88320
 
+/**
+ * Run CRC32 checksum on data
+ * If unsure just pass in 0 for the argument previousCrc32
+ */
 uint32_t gen_crc32(const void* data, size_t length, uint32_t previousCrc32);
+
+/**
+ * CRC16 Checksum
+ */
 uint16_t gen_crc16(const uint8_t *data, uint16_t size);
+
+/**
+ * Verify a CRC32 Checksum
+ */
 bool check_crc32(uint32_t checksum, const void* data, size_t len);
+
+/**
+ * Verify a CRC16 checksum
+ */
 bool check_crc16(uint16_t checksum, const void* data, size_t len);
 
-const uint32_t crc32Lookup[8][256] =
+/**
+ * Acquire a SHA1 hash of given data.
+ */
+int hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest);
+
+/**
+ * Acquire a SHA256 hash of given data.
+ */
+int hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest);
+
+/**
+ * Acquire a SHA512 hash of given data.
+ */
+int hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest);
+
+
+const static uint32_t crc32Lookup[8][256] =
 {
   //// same algorithm as crc32_bitwise
   //for (int i = 0; i <= 0xFF; i++)

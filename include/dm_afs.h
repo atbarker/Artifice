@@ -3,6 +3,7 @@
  * Copyright: UC Santa Cruz, SSRC
  */
 #include <dm_afs_config.h>
+#include <dm_afs_crypto.h>
 #include <dm_afs_engine.h>
 #include <dm_afs_format.h>
 #include <dm_afs_modules.h>
@@ -119,20 +120,6 @@ int write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, str
  */
 int find_super_block(struct afs_super_block *sb, struct afs_private *context);
 
-/**
- * Acquire a SHA1 hash of given data.
- */
-int hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest);
-
-/**
- * Acquire a SHA256 hash of given data.
- */
-int hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest);
-
-/**
- * Acquire a SHA512 hash of given data.
- */
-int hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest);
 
 /**
  * Perform a reverse bit scan for an unsigned long.
