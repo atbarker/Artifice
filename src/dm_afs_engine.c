@@ -7,6 +7,7 @@
 #include <dm_afs_engine.h>
 #include <dm_afs_io.h>
 #include <linux/delay.h>
+#include <linux/timekeeping.h>
 #include "lib/cauchy_rs.h"
 
 /**
@@ -234,6 +235,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     int ret = 0, i;
     uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
     uint8_t** parityblocks;
+    uint64_t time = 0;
     cauchy_encoder_params params;
 
     config = req->config;
@@ -310,7 +312,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
 
     // TODO: Set the entropy hash correctly.
+    time = ktime_get_ns();
     hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
+    afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
     //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
