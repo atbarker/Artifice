@@ -119,7 +119,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     uint8_t digest[SHA1_SZ];
-    cauchy_encoder_params params;
+    //cauchy_encoder_params params;
     int ret, i;
     //TODO needs to calculate sharenrs and adjust as needed
     uint8_t* sharenrs = "0123";
@@ -165,8 +165,8 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
-    kfree(datablocks);
-    kfree(parityblocks);
+    //kfree(datablocks);
+    //kfree(parityblocks);
     gfshare_ctx_free(share_decode);
 
 done:
@@ -331,8 +331,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
-    kfree(parityblocks);
-    kfree(datablocks);
+    //kfree(parityblocks);
+    //kfree(datablocks);
     gfshare_ctx_free(share_encode);
     return ret;
 
@@ -343,11 +343,11 @@ reset_entry:
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    kfree(parityblocks);
-    kfree(datablocks);
+    //kfree(parityblocks);
+    //kfree(datablocks);
 
 err:
-    kfree(datablocks);
+    //kfree(datablocks);
     gfshare_ctx_free(share_encode);
     return ret;
 }
