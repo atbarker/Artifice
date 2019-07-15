@@ -9,6 +9,7 @@
 #include <linux/delay.h>
 #include <linux/timekeeping.h>
 #include "lib/cauchy_rs.h"
+#include "lib/libgfshare.h"
 
 /**
  * Convert 2 dimensional static array to double pointer 2d array.
@@ -120,18 +121,22 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t digest[SHA1_SZ];
     cauchy_encoder_params params;
     int ret, i;
-    //TODO needs to calculate this and check hashes
-    uint8_t erasures[1] = {0};
-    uint8_t num_erasures = 1;
-    uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    uint8_t** parityblocks;
+    //TODO needs to calculate sharenrs and adjust as needed
+    uint8_t* sharenrs = "0123";
+    gfshare_ctx share_decode;
+
+    //uint8_t erasures[1] = {0};
+    //uint8_t num_erasures = 1;
+    //uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    //uint8_t** parityblocks;
 
     config = req->config;
     //TODO change this when entropy handling is added
-    params.OriginalCount = 1;
-    params.RecoveryCount = config->num_carrier_blocks;
-    params.BlockBytes = AFS_BLOCK_SIZE;
-    parityblocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
+    //params.OriginalCount = 1;
+    //params.RecoveryCount = config->num_carrier_blocks;
+    //params.BlockBytes = AFS_BLOCK_SIZE;
+    //parityblocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
+    gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
@@ -162,6 +167,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     ret = 0;
     kfree(datablocks);
     kfree(parityblocks);
+    gfshare_ctx_free(share_decode);
 
 done:
     return ret;
@@ -233,10 +239,14 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint32_t segment_offset;
     bool modification = false;
     int ret = 0, i;
-    uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    uint8_t** parityblocks;
+
+    uint8_t* sharenrs = "0123";
+    gfshare_ctx share_encode;
+
+    //uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
+    //uint8_t** parityblocks;
     uint64_t time = 0;
-    cauchy_encoder_params params;
+    //cauchy_encoder_params params;
 
     config = req->config;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
@@ -245,10 +255,12 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     //TODO update this
-    params.OriginalCount = 1;
-    params.RecoveryCount = config->num_carrier_blocks;
-    params.BlockBytes = AFS_BLOCK_SIZE;
-    parityblocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
+    //params.OriginalCount = 1;
+    //params.RecoveryCount = config->num_carrier_blocks;
+    //params.BlockBytes = AFS_BLOCK_SIZE;
+    //parityblocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
+
+    gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
@@ -321,6 +333,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     kfree(parityblocks);
     kfree(datablocks);
+    gfshare_ctx_free(share_encode);
     return ret;
 
 reset_entry:
@@ -335,5 +348,6 @@ reset_entry:
 
 err:
     kfree(datablocks);
+    gfshare_ctx_free(share_encode);
     return ret;
 }
