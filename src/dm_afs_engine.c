@@ -123,20 +123,19 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     int ret, i;
     //TODO needs to calculate sharenrs and adjust as needed
     uint8_t* sharenrs = "0123";
-    gfshare_ctx share_decode;
+    gfshare_ctx *share_decode = NULL;
 
     //uint8_t erasures[1] = {0};
     //uint8_t num_erasures = 1;
-    //uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    //uint8_t** parityblocks;
+    uint8_t** carrier_blocks;
 
     config = req->config;
     //TODO change this when entropy handling is added
     //params.OriginalCount = 1;
     //params.RecoveryCount = config->num_carrier_blocks;
     //params.BlockBytes = AFS_BLOCK_SIZE;
-    //parityblocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
-    gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
+    gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
@@ -154,9 +153,11 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
 
         // TODO: Read entropy blocks as well.
 	memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
-	//arraytopointer(req->read_blocks, config->num_carrier_blocks, parityblocks);
+	arraytopointer(req->read_blocks, config->num_carrier_blocks, carrier_blocks);
 	//arraytopointer(&req->data_block, 1, datablocks);
 	//ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
+	gfshare_ctx_dec_decode(share_decode, sharenrs, carrier_blocks, req->data_block);
+	
 
         // Confirm hash matches.
         //hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
@@ -165,8 +166,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
-    //kfree(datablocks);
-    //kfree(parityblocks);
+    kfree(carrier_blocks);
     gfshare_ctx_free(share_decode);
 
 done:
@@ -241,10 +241,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     int ret = 0, i;
 
     uint8_t* sharenrs = "0123";
-    gfshare_ctx share_encode;
+    gfshare_ctx *share_encode = NULL;
 
     //uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
-    //uint8_t** parityblocks;
+    uint8_t** carrier_blocks = NULL;
     uint64_t time = 0;
     //cauchy_encoder_params params;
 
@@ -258,7 +258,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //params.OriginalCount = 1;
     //params.RecoveryCount = config->num_carrier_blocks;
     //params.BlockBytes = AFS_BLOCK_SIZE;
-    //parityblocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
+    carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
 
     gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
@@ -307,9 +307,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
 
     // TODO: Read entropy blocks as well.
-    //arraytopointer(req->write_blocks, config->num_carrier_blocks, parityblocks);
+    arraytopointer(req->write_blocks, config->num_carrier_blocks, carrier_blocks);
     //arraytopointer(&req->data_block, 1, datablocks);
     //cauchy_rs_encode(params, datablocks, parityblocks);
+    gfshare_ctx_enc_getshares(share_encode, req->data_block, carrier_blocks);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -318,8 +319,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
 
-	ret = write_page(req->data_block, req->bdev, block_num, req->fs->data_start_off, false);
-        //ret = write_page(parityblocks[i], req->bdev, block_num, req->fs->data_start_off, false);
+	//ret = write_page(req->data_block, req->bdev, block_num, req->fs->data_start_off, false);
+        ret = write_page(carrier_blocks[i], req->bdev, block_num, req->fs->data_start_off, false);
         afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
     }
 

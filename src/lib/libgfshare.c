@@ -346,3 +346,49 @@ void gfshare_ctx_dec_extract(const gfshare_ctx* ctx, uint8_t* secretbuf) {
     }
   }
 }
+
+void gfshare_ctx_dec_decode(const gfshare_ctx* ctx, uint8_t* sharenrs, uint8_t** shares, uint8_t* secretbuf) {
+  uint32_t i, j, n, jn;
+  uint8_t *secret_ptr, *share_ptr;
+
+  memcpy(ctx->sharenrs, sharenrs, ctx->sharecount);
+  memset(secretbuf, 0, ctx->size);
+  for(i = 0; i < ctx->sharecount; i++){
+      memcpy(ctx->buffer + (i * ctx->maxsize), shares[i], ctx->size);
+  }
+
+  for(n = i = 0; n < ctx->threshold && i < ctx->sharecount; ++n, ++i) {
+    /* Compute L(i) as per Lagrange Interpolation */
+    unsigned Li_top = 0, Li_bottom = 0;
+
+    if(ctx->sharenrs[i] == 0) {
+      n--;
+      continue; /* this share is not provided. */
+    }
+
+    for(jn = j = 0; jn < ctx->threshold && j < ctx->sharecount; ++jn, ++j) {
+      if(i == j) {
+        continue;
+      }
+      if(ctx->sharenrs[j] == 0) {
+        jn--;
+        continue; /* skip empty share */
+      }
+      Li_top += logs[ctx->sharenrs[j]];
+      Li_bottom += logs[(ctx->sharenrs[i]) ^ (ctx->sharenrs[j])];
+    }
+    Li_bottom %= 0xff;
+    Li_top += 0xff - Li_bottom;
+    Li_top %= 0xff;
+    /* Li_top is now log(L(i)) */
+
+    secret_ptr = secretbuf; share_ptr = ctx->buffer + (ctx->maxsize * i);
+    for(j = 0; j < ctx->size; ++j) {
+      if(*share_ptr) {
+        *secret_ptr ^= exps[Li_top + logs[*share_ptr]];
+      }
+      share_ptr++; secret_ptr++;
+    }
+  }
+}
+

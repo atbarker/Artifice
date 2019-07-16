@@ -87,5 +87,7 @@ int gfshare_ctx_dec_giveshare(gfshare_ctx* ctx, uint8_t sharenr, const uint8_t* 
  */
 void gfshare_ctx_dec_extract(const gfshare_ctx* ctx, uint8_t* secretbuf);
 
+void gfshare_ctx_dec_decode(const gfshare_ctx* ctx, uint8_t* sharenrs, uint8_t** shares, uint8_t* secretbuf); 
+
 #endif /* LIBGFSHARE_H */
 
