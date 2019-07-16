@@ -5,6 +5,9 @@
 //common CRC32 polynomial used for networks, zlib, etc
 #define CRC32_POLY 0xEDB88320
 
+
+void speck_128_hash(uint8_t *data, size_t data_length, uint8_t* hash);
+
 /**
  * Run CRC32 checksum on data
  * If unsure just pass in 0 for the argument previousCrc32
