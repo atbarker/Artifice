@@ -158,7 +158,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     }
     ret = 0;
     kfree(carrier_blocks);
-    gfshare_ctx_free(share_decode);
+    //gfshare_ctx_free(share_decode);
 
 done:
     return ret;
