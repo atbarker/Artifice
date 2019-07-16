@@ -129,7 +129,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     config = req->config;
     //TODO change this when entropy handling is added
     carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
-    gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    share_decode = gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
@@ -158,7 +158,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     }
     ret = 0;
     kfree(carrier_blocks);
-    //gfshare_ctx_free(share_decode);
+    gfshare_ctx_free(share_decode);
 
 done:
     return ret;
@@ -246,7 +246,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //TODO update this
     carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
 
-    gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    share_encode = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
