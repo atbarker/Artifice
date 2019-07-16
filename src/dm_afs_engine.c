@@ -119,21 +119,15 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     uint8_t digest[SHA1_SZ];
-    //cauchy_encoder_params params;
     int ret, i;
     //TODO needs to calculate sharenrs and adjust as needed
     uint8_t* sharenrs = "0123";
     gfshare_ctx *share_decode = NULL;
 
-    //uint8_t erasures[1] = {0};
-    //uint8_t num_erasures = 1;
     uint8_t** carrier_blocks;
 
     config = req->config;
     //TODO change this when entropy handling is added
-    //params.OriginalCount = 1;
-    //params.RecoveryCount = config->num_carrier_blocks;
-    //params.BlockBytes = AFS_BLOCK_SIZE;
     carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
     gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
@@ -154,13 +148,10 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         // TODO: Read entropy blocks as well.
 	memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
 	arraytopointer(req->read_blocks, config->num_carrier_blocks, carrier_blocks);
-	//arraytopointer(&req->data_block, 1, datablocks);
-	//ret = cauchy_rs_decode(params, datablocks, parityblocks, erasures, num_erasures);
 	gfshare_ctx_dec_decode(share_decode, sharenrs, carrier_blocks, req->data_block);
 	
 
         // Confirm hash matches.
-        //hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
 	hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
         ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
@@ -243,10 +234,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint8_t* sharenrs = "0123";
     gfshare_ctx *share_encode = NULL;
 
-    //uint8_t** datablocks = kmalloc(sizeof(uint8_t*), GFP_KERNEL);
     uint8_t** carrier_blocks = NULL;
     uint64_t time = 0;
-    //cauchy_encoder_params params;
 
     config = req->config;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
@@ -255,9 +244,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     //TODO update this
-    //params.OriginalCount = 1;
-    //params.RecoveryCount = config->num_carrier_blocks;
-    //params.BlockBytes = AFS_BLOCK_SIZE;
     carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
 
     gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
@@ -308,8 +294,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well.
     arraytopointer(req->write_blocks, config->num_carrier_blocks, carrier_blocks);
-    //arraytopointer(&req->data_block, 1, datablocks);
-    //cauchy_rs_encode(params, datablocks, parityblocks);
     gfshare_ctx_enc_getshares(share_encode, req->data_block, carrier_blocks);
 
     // Issue the writes.
@@ -326,14 +310,12 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Set the entropy hash correctly.
     time = ktime_get_ns();
-    //hash_sha1(datablocks[0], AFS_BLOCK_SIZE, digest);
     afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
     hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
-    //kfree(parityblocks);
-    //kfree(datablocks);
+    kfree(carrier_blocks);
     gfshare_ctx_free(share_encode);
     return ret;
 
@@ -344,11 +326,9 @@ reset_entry:
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    //kfree(parityblocks);
-    //kfree(datablocks);
 
 err:
-    //kfree(datablocks);
+    kfree(carrier_blocks);
     gfshare_ctx_free(share_encode);
     return ret;
 }
