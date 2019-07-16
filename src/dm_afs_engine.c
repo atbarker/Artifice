@@ -310,8 +310,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Set the entropy hash correctly.
     time = ktime_get_ns();
-    afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
     hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
+    afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
