@@ -104,4 +104,13 @@ uint32_t CityHash32(const uint8_t *buf, size_t len);
 // This is intended to be a reasonably good hash function.
 inline uint64_t Hash128to64(const uint128 x);
 
+//This should just convert a uint128 from the cityhash library to a byte array
+static inline uint8_t* cityhash128_to_array(uint128 hash){
+    static uint64_t array[2];
+    array[0] = hash.first;
+    array[1] = hash.second;
+    return (uint8_t*)array;
+}
+
+
 #endif  // CITY_HASH_H_
