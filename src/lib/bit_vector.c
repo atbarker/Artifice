@@ -67,17 +67,18 @@ bit_vector_free(bit_vector_t *vector)
 int
 bit_vector_set(bit_vector_t *vector, uint64_t index)
 {
-    uint8_t or_bits;
+//    uint8_t or_bits;
 
     if (!vector || index > vector->length) {
         afs_debug("vector: %p | index: %llu", vector, index);
         return -EINVAL;
     }
 
-    spin_lock(&vector->lock);
-    or_bits = 1 << BIT_VECTOR_GET_BIT_INDEX(index);
-    vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] |= or_bits;
-    spin_unlock(&vector->lock);
+    //spin_lock(&vector->lock);
+    //or_bits = 1 << BIT_VECTOR_GET_BIT_INDEX(index);
+    //vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] |= or_bits;
+    //spin_unlock(&vector->lock);
+    set_bit(index, (volatile unsigned long*)vector->array);
 
     return 0;
 }
@@ -96,16 +97,17 @@ bit_vector_set(bit_vector_t *vector, uint64_t index)
 int
 bit_vector_clear(bit_vector_t *vector, uint64_t index)
 {
-    uint8_t and_bits;
+//    uint8_t and_bits;
 
     if (!vector || index > vector->length) {
         return -EINVAL;
     }
 
-    spin_lock(&vector->lock);
-    and_bits = ~(1 << BIT_VECTOR_GET_BIT_INDEX(index));
-    vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] &= and_bits;
-    spin_unlock(&vector->lock);
+    //spin_lock(&vector->lock);
+    //and_bits = ~(1 << BIT_VECTOR_GET_BIT_INDEX(index));
+    //vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] &= and_bits;
+    //spin_unlock(&vector->lock);
+    clear_bit(index, (volatile unsigned long*)vector->array);
 
     return 0;
 }
@@ -126,17 +128,18 @@ int
 bit_vector_get(bit_vector_t *vector, uint64_t index)
 {
     uint8_t return_bits;
-    uint8_t and_bits;
+//    uint8_t and_bits;
 
     if (!vector || index > vector->length) {
         afs_debug("vector: %p | index: %llu", vector, index);
         return -EINVAL;
     }
 
-    spin_lock(&vector->lock);
-    and_bits = 1 << BIT_VECTOR_GET_BIT_INDEX(index);
-    return_bits = vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] & and_bits;
-    spin_unlock(&vector->lock);
+    //spin_lock(&vector->lock);
+    //and_bits = 1 << BIT_VECTOR_GET_BIT_INDEX(index);
+    //return_bits = vector->array[BIT_VECTOR_GET_BYTE_INDEX(index)] & and_bits;
+    //spin_unlock(&vector->lock);
+    return_bits = test_bit(index, (volatile unsigned long*)vector->array);
 
     return !!return_bits;
 }
