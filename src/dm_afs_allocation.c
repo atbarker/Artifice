@@ -82,8 +82,9 @@ acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
     uint32_t ret;
 
     spin_lock(&vector->lock);
-    block_num = random_block_index(fs, vector);
-    do {
+    //block_num = random_block_index(fs, vector);
+    current_num = block_num;
+    /*do {
         if (allocation_set(vector, block_num)) {
             ret = fs->block_list[block_num];
             spin_unlock(&vector->lock);
@@ -93,19 +94,19 @@ acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
 	current_num++;
     } while (current_num != fs->list_len);
     spin_unlock(&vector->lock);
-    
-    /* Old sequential allocation
+    */
+    // Old sequential allocation
     spin_lock(&vector->lock);
     do {
         if (allocation_set(vector, block_num)) {
             ret = fs->block_list[block_num];
+	    block_num = (block_num + 1) % fs->list_len;
             spin_unlock(&vector->lock);
             return ret;
         }
         block_num = (block_num + 1) % fs->list_len;
     } while (block_num != current_num);
     spin_unlock(&vector->lock);
-    */
-
+    
     return AFS_INVALID_BLOCK;
 }
