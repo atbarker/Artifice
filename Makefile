@@ -34,6 +34,9 @@ clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
 	rm -f src/*.rc src/modules/*.rc src/lib/*.rc
 
+build_bench:
+	(cd scripts/bench; make)
+
 load:
 	@make
 	@sudo insmod dm_afs.ko afs_debug_mode=1
@@ -62,6 +65,9 @@ debug_create:
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
 	@echo 0 1048576 artifice 1 pass /dev/sdb1 | sudo dmsetup create artifice
+
+debug_bench: build_bench
+	(cd scripts/bench; sudo python bench.py)
 
 debug_end:
 	@sudo dmsetup remove artifice || true
