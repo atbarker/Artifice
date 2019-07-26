@@ -118,8 +118,8 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     uint8_t *map_entry = NULL;
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
-    //uint8_t digest[SHA1_SZ];
-    uint8_t *digest;
+    uint8_t digest[SHA1_SZ];
+    //uint8_t *digest;
     int ret, i;
     //TODO needs to calculate sharenrs and adjust as needed
     uint8_t* sharenrs = "0123";
@@ -153,10 +153,10 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
 	
 
         // Confirm hash matches.
-	digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
-	ret = memcmp(map_entry_hash, digest, SHA128_SZ);
-	//hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
-        //ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
+        //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
+	//ret = memcmp(map_entry_hash, digest, SHA128_SZ);
+	hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
+        ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
@@ -226,8 +226,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     uint8_t *bio_data = NULL;
-    uint8_t *digest;
-    //uint8_t digest[SHA1_SZ];
+    //uint8_t *digest;
+    uint8_t digest[SHA1_SZ];
     uint32_t req_size;
     uint32_t block_num;
     uint32_t sector_offset;
@@ -314,11 +314,11 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Set the entropy hash correctly.
     time = ktime_get_ns();
-    digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
-    //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
+    //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
+    hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
     afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
-    //memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
-    memcpy(map_entry_hash, digest, SHA128_SZ);
+    memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
+    //memcpy(map_entry_hash, digest, SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
     kfree(carrier_blocks);
