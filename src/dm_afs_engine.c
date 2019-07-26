@@ -165,10 +165,13 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
-    kfree(carrier_blocks);
-    gfshare_ctx_free(share_decode);
+    //kfree(carrier_blocks);
+    //gfshare_ctx_free(share_decode);
 
 done:
+    kfree(carrier_blocks);
+    gfshare_ctx_free(share_decode);
+    kfree(block_nums);
     return ret;
 }
 
@@ -244,18 +247,20 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     gfshare_ctx *share_encode = NULL;
 
     uint8_t** carrier_blocks = NULL;
-    uint32_t *block_nums;
+    uint32_t *block_nums = NULL;
     uint64_t time = 0;
 
     config = req->config;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+    
+    carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
+    block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
+
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     //TODO update this
-    carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
-    block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
     share_encode = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
@@ -329,6 +334,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
     kfree(carrier_blocks);
+    kfree(block_nums);
     gfshare_ctx_free(share_encode);
     return ret;
 
@@ -342,6 +348,7 @@ reset_entry:
 
 err:
     kfree(carrier_blocks);
+    kfree(block_nums);
     gfshare_ctx_free(share_encode);
     return ret;
 }

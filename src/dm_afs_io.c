@@ -91,20 +91,20 @@ done:
 int
 read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32_t sector_offset, bool used_vmalloc, size_t num_pages){
     uint64_t sector_num;
-    struct bio **bio = NULL;
     const int page_offset = 0;
     int i = 0;
     int ret = 0;
 
     //DECLARE_COMPLETION_ONSTACK_MAP(done, bio->bi_disk->lockdep_map);
 
-    bio = kmalloc(sizeof(struct bio) * num_pages, GFP_KERNEL);
+    //bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
 
     for(i = 0; i < num_pages; i++){
 	struct page *page_structure;
+        struct bio *bio = NULL;
 
-        bio[i] = bio_alloc(GFP_NOIO, 1);
-        afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
+        bio = bio_alloc(GFP_NOIO, 1);
+        afs_action(!IS_ERR(bio), ret = PTR_ERR(bio), done, "could not allocate bio [%d]", ret);
 
         // Make sure page is aligned.
         afs_action(!((uint64_t)pages[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
@@ -113,20 +113,23 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
         page_structure = (used_vmalloc) ? vmalloc_to_page(pages[i]) : virt_to_page(pages[i]);
         sector_num = ((block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + sector_offset;
 
-        bio[i]->bi_opf |= REQ_OP_READ;
-        bio_set_dev(bio[i], bdev);
-        bio[i]->bi_iter.bi_sector = sector_num;
-        bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
+        bio->bi_opf |= REQ_OP_READ;
+        bio_set_dev(bio, bdev);
+        bio->bi_iter.bi_sector = sector_num;
+        bio_add_page(bio, page_structure, AFS_BLOCK_SIZE, page_offset);
 
 	//bio[i]->bi_private = &done;
         //bio[i]->bi_end_io = submit_bio_wait_endio;
         //bio[i]->bi_opf |= REQ_SYNC;
-        submit_bio_wait(bio[i]);
-        kfree(bio[i]);
+        submit_bio_wait(bio);
+        bio_endio(bio);
+        if(bio){
+            afs_debug("bio size %p %ld", bio, sizeof(struct bio));
+        }
     }
     //wait_for_completion_io(&done);
 done:
-    kfree(bio);
+    //kfree(bio);
     return ret;
 }
 
@@ -172,7 +175,7 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
 
     //DECLARE_COMPLETION_ONSTACK_MAP(done, bio->bi_disk->lockdep_map);
 
-    bio = kmalloc(sizeof(struct bio) * num_pages, GFP_KERNEL);
+    bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
 
     for(i = 0; i < num_pages; i++){
         struct page *page_structure;
@@ -195,9 +198,10 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
         //bio[i]->bi_private = &done;
         //bio[i]->bi_end_io = submit_bio_wait_endio;
         //bio[i]->bi_opf |= REQ_SYNC;
-        //submit_bio(bio[i]);
-        generic_make_request(bio[i]);
-        ndelay(300);
+        submit_bio_wait(bio[i]);
+        kfree(bio[i]);
+        //generic_make_request(bio[i]);
+        //ndelay(300);
 	//bio_put(bio[i]);
     }
 //    wait_for_completion_io(&done);
