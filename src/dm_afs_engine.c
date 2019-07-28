@@ -274,8 +274,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     // read of the block regardless because if the block is indeed unmapped, then
     // the data block will be simply zero'ed out.
 
-    ret = __afs_read_block(req, block_num);
-    afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
+    //ret = __afs_read_block(req, block_num);
+    //afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
 
     if (map_entry_tuple[0].carrier_block_ptr != AFS_INVALID_BLOCK) {
         modification = true;
