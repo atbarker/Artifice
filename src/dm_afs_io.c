@@ -18,7 +18,8 @@ struct afs_completion{
  * Custom end_io function to signal completion of all bio operations in a batch
  */
 static void afs_endio(struct bio *bio){
-    struct afs_completion *work = bio->bi_private; 
+    struct afs_completion *work = bio->bi_private;
+    bio_put(bio); 
     if(atomic_dec_and_test(&work->bios_pending)){
         complete(&work->work);
     }
@@ -141,9 +142,7 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
         submit_bio(bio[i]);
     }
     wait_for_completion_io(&completion.work);
-    for(i = 0; i < num_pages; i++){
-        bio_put(bio[i]);
-    }
+
 done:
     kfree(bio);
     return ret;
@@ -223,9 +222,7 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
 	//generic_make_request(bio[i]);
     }
     wait_for_completion_io(&completion.work);
-    for(i = 0; i < num_pages; i++){
-        bio_put(bio[i]);
-    }
+
 done:
     kfree(bio);
     return ret;
