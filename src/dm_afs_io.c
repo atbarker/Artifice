@@ -203,6 +203,7 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
 
 	//bio_list_add(&req_list, bio[i]);
         //submit_bio_wait(bio[i]);
+	//TODO, in order to call this we may have to set a bio_end_io function
 	submit_bio(bio[i]);
 	generic_make_request(bio[i]);
 	//bio_put(bio[i]);
