@@ -120,12 +120,12 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-	bio_list_add(&req_list, bio[i]);
-        //submit_bio_wait(bio[i]);
-        //bio_put(bio[i]);
+	//bio_list_add(&req_list, bio[i]);
+        submit_bio_wait(bio[i]);
+        bio_put(bio[i]);
 	//kfree(bio[i]);
     }
-    submit_bio_wait(req_list.head);
+    //submit_bio_wait(req_list.head);
     //bio_list_for_each(iterator, &req_list){
     //    bio_put(iterator);
     //}
