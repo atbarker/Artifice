@@ -130,7 +130,7 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
     //    bio_put(iterator);
     //}
 done:
-    kfree(bio);
+    //kfree(bio);
     //if(bio[0]){
     //        afs_debug("bio size %p %ld", bio[0], sizeof(struct bio));
     //}
@@ -202,14 +202,16 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
 	//bio_list_add(&req_list, bio[i]);
-        submit_bio_wait(bio[i]);
-	bio_put(bio[i]);
+        //submit_bio_wait(bio[i]);
+	submit_bio(bio[i]);
+	generic_make_request(bio[i]);
+	//bio_put(bio[i]);
     }
     //submit_bio_wait(req_list.head);
     //bio_list_for_each(iterator, &req_list){
     //    bio_put(iterator);
     //}
 done:
-    kfree(bio);
+    //kfree(bio);
     return ret;
 }
