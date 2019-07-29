@@ -10,6 +10,12 @@
 #include <linux/delay.h>
 
 
+/**
+ * For function for releasing an IO structure once submitted with generic_make_request
+ */
+static void afs_write_endio(struct bio *bio){
+    bio_put(bio);
+}
 
 /**
  * Read or write to an block device.
@@ -95,7 +101,6 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
     int i = 0;
     int ret = 0;
     struct bio **bio = NULL;
-    struct bio *iterator = NULL;
     struct bio_list req_list;
 
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
@@ -103,7 +108,6 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
 
     for(i = 0; i < num_pages; i++){
 	struct page *page_structure;
-        //struct bio *bio = NULL;
 
         bio[i] = bio_alloc(GFP_NOIO, 1);
         afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
@@ -119,21 +123,17 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
         bio_set_dev(bio[i], bdev);
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
+        bio[i]->bi_end_io = afs_write_endio;
 
-	//bio_list_add(&req_list, bio[i]);
         submit_bio_wait(bio[i]);
         bio_put(bio[i]);
-	//kfree(bio[i]);
     }
     //submit_bio_wait(req_list.head);
     //bio_list_for_each(iterator, &req_list){
     //    bio_put(iterator);
     //}
 done:
-    //kfree(bio);
-    //if(bio[0]){
-    //        afs_debug("bio size %p %ld", bio[0], sizeof(struct bio));
-    //}
+    kfree(bio);
     return ret;
 }
 
@@ -176,7 +176,6 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
     int i = 0;
     const int page_offset = 0;
     struct bio **bio = NULL;
-    struct bio *iterator = NULL;
     struct bio_list req_list;
 
 
@@ -200,20 +199,13 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
         bio_set_dev(bio[i], bdev);
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
+        bio[i]->bi_end_io = afs_write_endio;
 
-	//bio_list_add(&req_list, bio[i]);
-        //submit_bio_wait(bio[i]);
 	//TODO, in order to call this we may have to set a bio_end_io function
 	//TODO, also look at submit_bio and how they handle bio chaining
-	submit_bio(bio[i]);
 	generic_make_request(bio[i]);
-	//bio_put(bio[i]);
     }
-    //submit_bio_wait(req_list.head);
-    //bio_list_for_each(iterator, &req_list){
-    //    bio_put(iterator);
-    //}
 done:
-    //kfree(bio);
+    kfree(bio);
     return ret;
 }

@@ -123,7 +123,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     int ret, i;
     //TODO needs to calculate sharenrs and adjust as needed
     uint8_t* sharenrs = "0123";
-    gfshare_ctx *share_decode = NULL;
+    //gfshare_ctx *share_decode = NULL;
 
     uint8_t** carrier_blocks;
     uint32_t *block_nums;
@@ -132,7 +132,7 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     //TODO change this when entropy handling is added
     carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
     block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
-    share_decode = gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //share_decode = gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
@@ -153,8 +153,8 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         
 
         // TODO: Read entropy blocks as well.
-	//memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
-	gfshare_ctx_dec_decode(share_decode, sharenrs, carrier_blocks, req->data_block);
+	memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
+	//gfshare_ctx_dec_decode(share_decode, sharenrs, carrier_blocks, req->data_block);
 	
 
         // Confirm hash matches.
@@ -165,12 +165,10 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
-    //kfree(carrier_blocks);
-    //gfshare_ctx_free(share_decode);
 
 done:
     kfree(carrier_blocks);
-    gfshare_ctx_free(share_decode);
+    //gfshare_ctx_free(share_decode);
     kfree(block_nums);
     return ret;
 }
@@ -244,11 +242,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     int ret = 0, i;
 
     uint8_t* sharenrs = "0123";
-    gfshare_ctx *share_encode = NULL;
+    //gfshare_ctx *share_encode = NULL;
 
     uint8_t** carrier_blocks = NULL;
     uint32_t *block_nums = NULL;
-    uint64_t time = 0;
 
     config = req->config;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
@@ -261,7 +258,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     //TODO update this
-    share_encode = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //share_encode = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
@@ -309,7 +306,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
     arraytopointer(req->write_blocks, config->num_carrier_blocks, carrier_blocks);
-    gfshare_ctx_enc_getshares(share_encode, req->data_block, carrier_blocks);
+    //gfshare_ctx_enc_getshares(share_encode, req->data_block, carrier_blocks);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -325,17 +322,15 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     
 
     // TODO: Set the entropy hash correctly.
-    time = ktime_get_ns();
     //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
     hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
-    afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
     memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     //memcpy(map_entry_hash, digest, SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
     kfree(carrier_blocks);
     kfree(block_nums);
-    gfshare_ctx_free(share_encode);
+    //gfshare_ctx_free(share_encode);
     return ret;
 
 reset_entry:
@@ -349,6 +344,6 @@ reset_entry:
 err:
     kfree(carrier_blocks);
     kfree(block_nums);
-    gfshare_ctx_free(share_encode);
+    //gfshare_ctx_free(share_encode);
     return ret;
 }
