@@ -9,13 +9,21 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 
+struct afs_completion{
+    struct completion work;
+    atomic_t bios_pending;
+};
 
 /**
- * For function for releasing an IO structure once submitted with generic_make_request
+ * Custom end_io function to signal completion of all bio operations in a batch
  */
-static void afs_write_endio(struct bio *bio){
-    bio_put(bio);
+static void afs_endio(struct bio *bio){
+    struct afs_completion *work = bio->bi_private; 
+    if(atomic_dec_and_test(&work->bios_pending)){
+        complete(&work->work);
+    }
 }
+
 
 /**
  * Read or write to an block device.
@@ -101,10 +109,12 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
     int i = 0;
     int ret = 0;
     struct bio **bio = NULL;
-    struct bio_list req_list;
+    struct afs_completion completion;
 
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    bio_list_init(&req_list);
+
+    completion.work = COMPLETION_INITIALIZER_ONSTACK(completion.work);
+    atomic_set(&completion.bios_pending, num_pages);
 
     for(i = 0; i < num_pages; i++){
 	struct page *page_structure;
@@ -123,15 +133,17 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
         bio_set_dev(bio[i], bdev);
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
-        bio[i]->bi_end_io = afs_write_endio;
 
-        submit_bio_wait(bio[i]);
+        bio[i]->bi_private = &completion;
+        bio[i]->bi_end_io = afs_endio;
+        bio[i]->bi_opf |= REQ_SYNC;
+
+        submit_bio(bio[i]);
+    }
+    wait_for_completion_io(&completion.work);
+    for(i = 0; i < num_pages; i++){
         bio_put(bio[i]);
     }
-    //submit_bio_wait(req_list.head);
-    //bio_list_for_each(iterator, &req_list){
-    //    bio_put(iterator);
-    //}
 done:
     kfree(bio);
     return ret;
@@ -176,11 +188,11 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
     int i = 0;
     const int page_offset = 0;
     struct bio **bio = NULL;
-    struct bio_list req_list;
-
+    struct afs_completion completion;
 
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    bio_list_init(&req_list);
+    completion.work = COMPLETION_INITIALIZER_ONSTACK(completion.work);
+    atomic_set(&completion.bios_pending, num_pages);
 
     for(i = 0; i < num_pages; i++){
         struct page *page_structure;
@@ -199,11 +211,20 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
         bio_set_dev(bio[i], bdev);
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
-        bio[i]->bi_end_io = afs_write_endio;
 
-	//TODO, in order to call this we may have to set a bio_end_io function
-	//TODO, also look at submit_bio and how they handle bio chaining
-	generic_make_request(bio[i]);
+        //remove these and just use generic_make_request() for completely async io
+        bio[i]->bi_private = &completion;
+        bio[i]->bi_end_io = afs_endio;
+        bio[i]->bi_opf |= REQ_SYNC;
+        
+        submit_bio(bio[i]);
+
+        //To make generic_make_request work one must define and end_io function that runs bio_put to release dm_afs's reference
+	//generic_make_request(bio[i]);
+    }
+    wait_for_completion_io(&completion.work);
+    for(i = 0; i < num_pages; i++){
+        bio_put(bio[i]);
     }
 done:
     kfree(bio);

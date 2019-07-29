@@ -327,19 +327,15 @@ int gfshare_ctx_enc_getshares(const gfshare_ctx* ctx,
 {
   uint32_t pos, coefficient;
   uint8_t *share_ptr;
-  uint64_t time;
   int i;
 
-  time = ktime_get_ns();  
   memcpy(ctx->buffer + ((ctx->threshold-1) * ctx->maxsize), secret, ctx->size);
   gfshare_fill_rand(ctx->buffer, (ctx->threshold-1) * ctx->maxsize);
-  printk(KERN_INFO "time to generate random bytes: %lld", ktime_get_ns() - time);
 
   for(i = 0; i < ctx->sharecount; i++) {
     uint32_t ilog = logs[ctx->sharenrs[i]];
     uint8_t *coefficient_ptr = ctx->buffer;
 
-    //time = ktime_get_ns();
     memcpy(shares[i], coefficient_ptr++, ctx->size);
     coefficient_ptr += ctx->size - 1;
 
@@ -354,7 +350,6 @@ int gfshare_ctx_enc_getshares(const gfshare_ctx* ctx,
         *share_ptr++ = share_byte ^ *coefficient_ptr++;
       }
     }
-    //printk(KERN_INFO "time to generate share: %lld", ktime_get_ns() - time);
   }
   return 0;
 }
