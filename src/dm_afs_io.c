@@ -25,6 +25,9 @@ static void afs_endio(struct bio *bio){
     }
 }
 
+static void afs_write_endio(struct bio *bio){
+    bio_put(bio);
+}
 
 /**
  * Read or write to an block device.
@@ -212,16 +215,17 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
         //remove these and just use generic_make_request() for completely async io
-        bio[i]->bi_private = &completion;
-        bio[i]->bi_end_io = afs_endio;
-        bio[i]->bi_opf |= REQ_SYNC;
+        //bio[i]->bi_private = &completion;
+        //bio[i]->bi_end_io = afs_endio;
+        //bio[i]->bi_opf |= REQ_SYNC;
         
-        submit_bio(bio[i]);
+        //submit_bio(bio[i]);
 
         //To make generic_make_request work one must define and end_io function that runs bio_put to release dm_afs's reference
-	//generic_make_request(bio[i]);
+        bio[i]->bi_end_io = afs_write_endio;
+	generic_make_request(bio[i]);
     }
-    wait_for_completion_io(&completion.work);
+    //wait_for_completion_io(&completion.work);
 
 done:
     kfree(bio);
