@@ -95,10 +95,11 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
     int i = 0;
     int ret = 0;
     struct bio **bio = NULL;
-
-    //DECLARE_COMPLETION_ONSTACK_MAP(done, bio->bi_disk->lockdep_map);
+    struct bio *iterator = NULL;
+    struct bio_list req_list;
 
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
+    bio_list_init(&req_list);
 
     for(i = 0; i < num_pages; i++){
 	struct page *page_structure;
@@ -119,17 +120,15 @@ read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-	//bio[i]->bi_private = &done;
-        //bio[i]->bi_end_io = submit_bio_wait_endio;
-        //bio[i]->bi_opf |= REQ_SYNC;
-        submit_bio_wait(bio[i]);
-        bio_put(bio[i]);
+	bio_list_add(&req_list, bio[i]);
+        //submit_bio_wait(bio[i]);
+        //bio_put(bio[i]);
 	//kfree(bio[i]);
-        //if(bio[i]){
-        //    afs_debug("bio size %p %ld", bio[i], sizeof(struct bio));
-        //}
     }
-    //wait_for_completion_io(&done);
+    submit_bio_wait(req_list.head);
+    bio_list_for_each(iterator, &req_list){
+        bio_put(iterator);
+    }
 done:
     kfree(bio);
     //if(bio[0]){
@@ -177,10 +176,12 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
     int i = 0;
     const int page_offset = 0;
     struct bio **bio = NULL;
+    struct bio *iterator = NULL;
+    struct bio_list req_list;
 
-    //DECLARE_COMPLETION_ONSTACK_MAP(done, bio->bi_disk->lockdep_map);
 
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
+    bio_list_init(&req_list);
 
     for(i = 0; i < num_pages; i++){
         struct page *page_structure;
@@ -200,17 +201,14 @@ write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums,
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        //bio[i]->bi_private = &done;
-        //bio[i]->bi_end_io = submit_bio_wait_endio;
-        //bio[i]->bi_opf |= REQ_SYNC;
-        submit_bio_wait(bio[i]);
-	//bio_reset(bio);
-        //kfree(bio);
-        //generic_make_request(bio[i]);
-        //ndelay(300);
-	bio_put(bio[i]);
+	bio_list_add(&req_list, bio[i]);
+        //submit_bio_wait(bio[i]);
+	//bio_put(bio[i]);
     }
-//    wait_for_completion_io(&done);
+    submit_bio_wait(req_list.head);
+    bio_list_for_each(iterator, &req_list){
+        bio_put(iterator);
+    }
 done:
     kfree(bio);
     return ret;
