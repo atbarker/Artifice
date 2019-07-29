@@ -67,7 +67,10 @@ debug_mount:
 	@echo 0 1048576 artifice 1 pass /dev/sdb1 | sudo dmsetup create artifice
 
 debug_bench: build_bench
-	(cd scripts/bench; sudo python bench.py)
+	(cd scripts/bench; sudo python bench.py -i 5)
+
+debug_bench_full: build_bench
+	(cd scripts/bench; sudo python bench.py -i 5; sudo python bench.py -i 5 -o r; sudo python bench.py -i 5 -o rw)
 
 debug_end:
 	@sudo dmsetup remove artifice || true

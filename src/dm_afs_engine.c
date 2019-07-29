@@ -126,10 +126,12 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     gfshare_ctx *share_decode = NULL;
 
     uint8_t** carrier_blocks;
+    uint32_t *block_nums;
 
     config = req->config;
     //TODO change this when entropy handling is added
     carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
+    block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
     share_decode = gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //set up map entry stuff
@@ -138,17 +140,20 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     map_entry_hash = map_entry + (config->num_carrier_blocks * sizeof(*map_entry_tuple));
     map_entry_entropy = map_entry_hash + SHA128_SZ;
 
+    arraytopointer(req->read_blocks, config->num_carrier_blocks, carrier_blocks);
+
     if (map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
     } else {
         for (i = 0; i < config->num_carrier_blocks; i++) {
-            ret = read_page(req->read_blocks[i], req->bdev, map_entry_tuple[i].carrier_block_ptr, req->fs->data_start_off, false);
-            afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", map_entry_tuple[i].carrier_block_ptr);
+	    block_nums[i] = map_entry_tuple[i].carrier_block_ptr;
         }
+        ret = read_pages((void **)carrier_blocks, req->bdev, block_nums, req->fs->data_start_off, false, config->num_carrier_blocks);
+        afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", map_entry_tuple[i].carrier_block_ptr);
+        
 
         // TODO: Read entropy blocks as well.
-	memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
-	arraytopointer(req->read_blocks, config->num_carrier_blocks, carrier_blocks);
+	//memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
 	gfshare_ctx_dec_decode(share_decode, sharenrs, carrier_blocks, req->data_block);
 	
 
@@ -160,10 +165,11 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
         afs_action(!ret, ret = -ENOENT, done, "data block is corrupted [%u]", block);
     }
     ret = 0;
-    kfree(carrier_blocks);
-    gfshare_ctx_free(share_decode);
 
 done:
+    kfree(carrier_blocks);
+    gfshare_ctx_free(share_decode);
+    kfree(block_nums);
     return ret;
 }
 
@@ -239,17 +245,19 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     gfshare_ctx *share_encode = NULL;
 
     uint8_t** carrier_blocks = NULL;
-    uint64_t time = 0;
+    uint32_t *block_nums = NULL;
 
     config = req->config;
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
     sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
     req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+    
+    carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
+    block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
+
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     //TODO update this
-    carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL); 
-
     share_encode = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
@@ -263,8 +271,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     // read of the block regardless because if the block is indeed unmapped, then
     // the data block will be simply zero'ed out.
 
-    ret = __afs_read_block(req, block_num);
-    afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
+    //ret = __afs_read_block(req, block_num);
+    //afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
 
     if (map_entry_tuple[0].carrier_block_ptr != AFS_INVALID_BLOCK) {
         modification = true;
@@ -306,22 +314,22 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
-
-	//ret = write_page(req->data_block, req->bdev, block_num, req->fs->data_start_off, false);
-        ret = write_page(carrier_blocks[i], req->bdev, block_num, req->fs->data_start_off, false);
-        afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
+	block_nums[i] = block_num;
     }
+    //ret = write_page(req->data_block, req->bdev, block_num, req->fs->data_start_off, false);
+    ret = write_pages((const void **)carrier_blocks, req->bdev, block_nums, req->fs->data_start_off, false, config->num_carrier_blocks);
+    afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
+    
 
-    // TODO: Set the entropy hash correctly.
-    time = ktime_get_ns();
-    //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
-    hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
-    afs_debug("time to calculate hash %lld", ktime_get_ns() - time);
-    memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
-    //memcpy(map_entry_hash, digest, SHA128_SZ);
+    // TODO: Set the entropy hash correctly, may not be needed
+    digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
+    memcpy(map_entry_hash, digest, SHA128_SZ);
+    //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
+    //memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
     memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
 
     kfree(carrier_blocks);
+    kfree(block_nums);
     gfshare_ctx_free(share_encode);
     return ret;
 
@@ -335,6 +343,7 @@ reset_entry:
 
 err:
     kfree(carrier_blocks);
+    kfree(block_nums);
     gfshare_ctx_free(share_encode);
     return ret;
 }
