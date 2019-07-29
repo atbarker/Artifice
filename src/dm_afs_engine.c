@@ -321,7 +321,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
     
 
-    // TODO: Set the entropy hash correctly.
+    // TODO: Set the entropy hash correctly, may not be needed
     digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
     memcpy(map_entry_hash, digest, SHA128_SZ);
     //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
