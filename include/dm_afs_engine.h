@@ -57,6 +57,8 @@ struct afs_map_request {
 
     //carrier block offsets
     uint32_t *block_nums;
+  
+    uint8_t pending;
 };
 
 // Map request queue. This is an intrusive

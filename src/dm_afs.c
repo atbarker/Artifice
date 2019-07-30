@@ -169,10 +169,12 @@ afs_flightq(struct work_struct *ws)
 
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
+        req->pending = 1;
         ret = afs_read_request(req, req->bio);
         break;
 
     case REQ_OP_WRITE:
+        req->pending = 1;
         ret = afs_write_request(req, req->bio);
         break;
 
@@ -181,10 +183,14 @@ afs_flightq(struct work_struct *ws)
         afs_debug("This case should never be encountered!");
     }
     //atomic64_set(&req->state, REQ_STATE_COMPLETED);
+    if(req->pending == 0){
+        goto done;
+    }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
     return;
 
 done:
+    atomic64_set(&req->state, REQ_STATE_COMPLETED);
     bio_endio(req->bio);
 
     // Write requests may have an allocated page with them. This needs
@@ -192,7 +198,7 @@ done:
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
     }
-    //TODO maybe use this as cleanup for when we must wait for IO
+
     schedule_work(element->clean_ws);
 }
 
