@@ -170,9 +170,9 @@ static void afs_read_endio(struct bio *bio){
         
         //cleanup
         afs_debug("Io function processed");
-        element = container_of(req, struct afs_map_queue, req);
-        afs_req_clean(req);
-        schedule_work(element->clean_ws);
+        //element = container_of(req, struct afs_map_queue, req);
+        //afs_req_clean(req);
+        //schedule_work(element->clean_ws);
         afs_debug("endio function cleaned up");
     }
     return;
@@ -192,26 +192,28 @@ static void afs_write_endio(struct bio *bio){
     uint8_t *map_entry_entropy = NULL;
     struct afs_map_queue *element = NULL;
 
-    afs_debug("reached endio function");
+    afs_debug("reached endio function, bios_pending %d", atomic_read(&ctx->bios_pending));
     bio_put(bio); 
     if(atomic_dec_and_test(&ctx->bios_pending)){
+	afs_debug("started in endio function");
         map_entry = afs_get_map_entry(req->map, req->config, req->block);
         map_entry_tuple = (struct afs_map_tuple *)map_entry;
         map_entry_hash = map_entry + (req->config->num_carrier_blocks * sizeof(*map_entry_tuple));
         map_entry_entropy = map_entry_hash + SHA128_SZ;
 
+	afs_debug("computing hash");
         // TODO: Set the entropy hash correctly, may not be needed
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         memcpy(map_entry_hash, digest, SHA128_SZ);
         //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
         //memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
-
+        
         afs_debug("write endio function processed");
         //cleanup
-        element = container_of(req, struct afs_map_queue, req);
-        afs_req_clean(req);
-        schedule_work(element->clean_ws);
+        //element = container_of(req, struct afs_map_queue, req);
+        //afs_req_clean(req);
+        //schedule_work(element->clean_ws);
         afs_debug("write endio function cleaned up");
     }
     return;
@@ -252,7 +254,8 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, size_t num_pages){
         bio[i]->bi_private = &completion;
         bio[i]->bi_end_io = afs_read_endio;
         afs_debug("submitting bio %d", i);
-        generic_make_request(bio[i]);
+        //generic_make_request(bio[i]);
+	//submit_bio(bio[i]);
         afs_debug("submitted bio %d", i);
     }
     afs_debug("All read bios submitted");
@@ -264,7 +267,7 @@ done:
 
 
 int
-write_pages(struct afs_map_request *req, bool used_vmalloc, size_t num_pages){
+write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmalloc, size_t num_pages){
     uint64_t sector_num;
     int ret = 0;
     int i = 0;
@@ -272,6 +275,7 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, size_t num_pages){
     struct bio **bio = NULL;
     struct afs_bio_private *completion = NULL;
     
+    afs_debug("preparing to write %ld pages", num_pages); 
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     completion = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
     atomic_set(&completion->bios_pending, num_pages);
@@ -284,11 +288,13 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, size_t num_pages){
         afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
 
         // Make sure page is aligned.
-        afs_action(!((uint64_t)req->carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+        afs_action(!((uint64_t)carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
         // Acquire page structure and sector offset.
-        page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
+        page_structure = (used_vmalloc) ? vmalloc_to_page(carrier_blocks[i]) : virt_to_page(carrier_blocks[i]);
         sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
+
+        afs_debug("pages set up");
 
         bio[i]->bi_opf |= REQ_OP_WRITE;
         bio_set_dev(bio[i], req->bdev);
@@ -297,6 +303,7 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, size_t num_pages){
 
         bio[i]->bi_private = &completion;
         bio[i]->bi_end_io = afs_write_endio;
+	afs_debug("Write set up");
         generic_make_request(bio[i]);
     }
     afs_debug("All write bios submitted");
@@ -495,10 +502,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 	    req->block_nums[i] = block_num;
         memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
-    
-    ret = write_pages(req, false, config->num_carrier_blocks);
+    afs_debug("writing pages");
+    ret = write_pages(req, (void**)req->carrier_blocks, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
-
     afs_debug("Write request processed");
     return ret;
 
