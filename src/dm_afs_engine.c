@@ -193,7 +193,7 @@ static void afs_write_endio(struct bio *bio){
     struct afs_map_queue *element = NULL;
 
     afs_debug("reached endio function, bios_pending %d", atomic_read(&ctx->bios_pending));
-    bio_put(bio); 
+    //bio_put(bio); 
     if(atomic_dec_and_test(&ctx->bios_pending)){
 	afs_debug("started in endio function");
         map_entry = afs_get_map_entry(req->map, req->config, req->block);
@@ -267,7 +267,7 @@ done:
 
 
 int
-write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmalloc, size_t num_pages){
+write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmalloc, uint32_t num_pages){
     uint64_t sector_num;
     int ret = 0;
     int i = 0;
@@ -275,10 +275,11 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
     struct bio **bio = NULL;
     struct afs_bio_private *completion = NULL;
     
-    afs_debug("preparing to write %ld pages", num_pages); 
+    afs_debug("preparing to write %d pages", num_pages); 
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     completion = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
     atomic_set(&completion->bios_pending, num_pages);
+    afs_debug("current value of atomic %d", atomic_read(&completion->bios_pending));
     completion->req = req;
 
     for(i = 0; i < num_pages; i++){
