@@ -35,14 +35,10 @@ int afs_blkdev_io(struct afs_io *request);
  */
 int read_page(void *page, struct block_device *bdev, uint32_t block_num, uint32_t sector_offset, bool used_vmalloc);
 
-int read_pages(void **pages, struct block_device *bdev, uint32_t *block_nums, uint32_t sector_offset, bool used_vmalloc, size_t num_pages);
-
 /**
  * Write a single page.
  * The sector offset argument is for just in case everything is not block alinged (FAT32)
  */
 int write_page(const void *page, struct block_device *bdev, uint32_t block_num, uint32_t sector_offset,  bool used_vmalloc);
-
-int write_pages(const void **pages, struct block_device *bdev, uint32_t *block_nums, uint32_t sector_offset, bool used_vmalloc, size_t num_pages);
 
 #endif /* DM_AFS_IO_H */
