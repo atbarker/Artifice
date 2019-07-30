@@ -24,6 +24,7 @@ struct afs_map_request {
     // allocating all of them in case we didn't have to, but this
     // way it is easier to manage. These blocks needs to be page
     // aligned.
+    // TODO make these double pointers aligned to page boundaries
     uint8_t __attribute__((aligned(4096))) entropy_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
     uint8_t __attribute__((aligned(4096))) read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
     uint8_t __attribute__((aligned(4096))) write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
@@ -46,6 +47,16 @@ struct afs_map_request {
     //encoding context and parameters
     gfshare_ctx *encoder;
     uint8_t *sharenrs;
+
+    //double pointers because static 2d arrays have a different layout in memory
+    //TODO get rid of this 
+    uint8_t **carrier_blocks;
+
+    //data block number in the map
+    uint32_t block;
+
+    //carrier block offsets
+    uint32_t *block_nums;
 };
 
 // Map request queue. This is an intrusive

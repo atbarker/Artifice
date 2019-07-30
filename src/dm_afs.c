@@ -180,8 +180,9 @@ afs_flightq(struct work_struct *ws)
         ret = -EINVAL;
         afs_debug("This case should never be encountered!");
     }
-    atomic64_set(&req->state, REQ_STATE_COMPLETED);
+    //atomic64_set(&req->state, REQ_STATE_COMPLETED);
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
+    return;
 
 done:
     bio_endio(req->bio);
