@@ -8,7 +8,6 @@
 #include <dm_afs_io.h>
 #include <linux/delay.h>
 #include <linux/timekeeping.h>
-#include "lib/cauchy_rs.h"
 #include "lib/libgfshare.h"
 #include "lib/city.h"
 
@@ -236,18 +235,16 @@ __afs_read_block(struct afs_map_request *req, uint32_t block)
     //uint8_t digest[SHA1_SZ];
     uint8_t *digest;
     int ret, i;
-    //TODO needs to calculate sharenrs and adjust as needed
-    uint8_t* sharenrs = "0123";
-    //gfshare_ctx *share_decode = NULL;
-
     uint8_t** carrier_blocks;
     uint32_t *block_nums;
 
     config = req->config;
     //TODO change this when entropy handling is added
+    //TODO needs to calculate sharenrs and adjust as needed
     carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
     block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
-    //share_decode = gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //req->encoder = gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //req->sharenrs = "0123";
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, block);
@@ -355,10 +352,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint32_t segment_offset;
     bool modification = false;
     int ret = 0, i;
-
-    uint8_t* sharenrs = "0123";
-    //gfshare_ctx *share_encode = NULL;
-
     uint8_t** carrier_blocks = NULL;
     uint32_t *block_nums = NULL;
 
@@ -373,7 +366,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
 
     //TODO update this
-    //share_encode = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //req->encoder = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //req->sharenrs = "0123";
 
     map_entry = afs_get_map_entry(req->map, config, block_num);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;

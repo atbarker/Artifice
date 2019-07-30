@@ -4,6 +4,7 @@
  */
 #include <dm_afs_config.h>
 #include <dm_afs_modules.h>
+#include <lib/libgfshare.h>
 #include <linux/types.h>
 
 #ifndef DM_AFS_ENGINE_H
@@ -41,6 +42,10 @@ struct afs_map_request {
 
     // Write requests allocate a new page for a bio.
     uint8_t *allocated_write_page;
+
+    //encoding context and parameters
+    gfshare_ctx *encoder;
+    uint8_t *sharenrs;
 };
 
 // Map request queue. This is an intrusive
