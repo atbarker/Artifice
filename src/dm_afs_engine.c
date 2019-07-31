@@ -173,9 +173,9 @@ static void afs_read_endio(struct bio *bio){
         
         //cleanup
         afs_debug("Io function processed");
-        //element = container_of(req, struct afs_map_queue, req);
-        //afs_req_clean(req);
-        //schedule_work(element->clean_ws);
+        element = container_of(req, struct afs_map_queue, req);
+        afs_req_clean(req);
+        schedule_work(element->clean_ws);
         afs_debug("endio function cleaned up");
     }
     return;
@@ -196,7 +196,7 @@ static void afs_write_endio(struct bio *bio){
     struct afs_map_queue *element = NULL;
 
     afs_debug("reached endio function, bios_pending %d, context %p", atomic_read(&ctx->bios_pending), ctx);
-    //bio_put(bio); 
+    bio_put(bio); 
     if(atomic_dec_and_test(&ctx->bios_pending)){
 	afs_debug("started in endio function");
         map_entry = afs_get_map_entry(req->map, req->config, req->block);
@@ -214,9 +214,9 @@ static void afs_write_endio(struct bio *bio){
         
         afs_debug("write endio function processed");
         //cleanup
-        //element = container_of(req, struct afs_map_queue, req);
-        //afs_req_clean(req);
-        //schedule_work(element->clean_ws);
+        element = container_of(req, struct afs_map_queue, req);
+        afs_req_clean(req);
+        schedule_work(element->clean_ws);
         afs_debug("write endio function cleaned up");
     }
     return;
@@ -257,14 +257,14 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
         bio[i]->bi_private = completion;
         bio[i]->bi_end_io = afs_read_endio;
         afs_debug("submitting bio %d", i);
-        //generic_make_request(bio[i]);
+        generic_make_request(bio[i]);
 	//submit_bio(bio[i]);
         afs_debug("submitted bio %d", i);
     }
     afs_debug("All read bios submitted");
 
 done:
-    //kfree(bio);
+    kfree(bio);
     return ret;
 }
 
@@ -312,7 +312,7 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
     afs_debug("All write bios submitted");
 
 done:
-    //kfree(bio);
+    kfree(bio);
     return ret;
 }
 
