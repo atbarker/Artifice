@@ -329,8 +329,8 @@ __afs_read_block(struct afs_map_request *req)
 
         req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
         req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
+	req->sharenrs = "0123";
         req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-        req->sharenrs = "0123";
 
         arraytopointer(req->read_blocks, config->num_carrier_blocks, req->carrier_blocks);
 
@@ -469,8 +469,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
     req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
     //TODO update this
-    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
     req->sharenrs = "0123";
+    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
     arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
