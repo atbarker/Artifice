@@ -372,6 +372,9 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
 
     // Read the raw block.
     ret = __afs_read_block(req);
+    if(req->pending == 0){
+	goto done;
+    }
     afs_assert(!ret, done, "could not read data block [%d:%u]", ret, req->block);
 
     // Copy back into the segments.
