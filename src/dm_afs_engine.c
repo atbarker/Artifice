@@ -254,7 +254,7 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        bio[i]->bi_private = &completion;
+        bio[i]->bi_private = completion;
         bio[i]->bi_end_io = afs_read_endio;
         afs_debug("submitting bio %d", i);
         //generic_make_request(bio[i]);
@@ -304,7 +304,7 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        bio[i]->bi_private = &completion;
+        bio[i]->bi_private = completion;
         bio[i]->bi_end_io = afs_write_endio;
 	afs_debug("Write set up bi_private %p", bio[i]->bi_private);
         generic_make_request(bio[i]);
