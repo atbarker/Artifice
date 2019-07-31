@@ -268,7 +268,6 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
     completion = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     atomic_set(&completion->bios_pending, num_pages);
-    afs_debug("current value of atomic %d, completion %p", atomic_read(&completion->bios_pending), completion);
     completion->req = req;
 
     for(i = 0; i < num_pages; i++){

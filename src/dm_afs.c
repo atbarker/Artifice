@@ -559,7 +559,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     switch (args->instance_type) {
     case TYPE_CREATE:
         // TODO: Acquire carrier block count from RS parameters.
-        build_configuration(context, 1, 1);
+        build_configuration(context, 4, 1);
         ret = write_super_block(sb, fs, context);
         afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
         break;
