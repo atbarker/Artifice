@@ -195,7 +195,7 @@ static void afs_write_endio(struct bio *bio){
     uint8_t *map_entry_entropy = NULL;
     struct afs_map_queue *element = NULL;
 
-    afs_debug("reached endio function, bios_pending %d", atomic_read(&ctx->bios_pending));
+    afs_debug("reached endio function, bios_pending %d, context %p", atomic_read(&ctx->bios_pending), ctx);
     //bio_put(bio); 
     if(atomic_dec_and_test(&ctx->bios_pending)){
 	afs_debug("started in endio function");
@@ -223,7 +223,7 @@ static void afs_write_endio(struct bio *bio){
 }
 
 int
-read_pages(struct afs_map_request *req, bool used_vmalloc, size_t num_pages){
+read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     uint64_t sector_num;
     const int page_offset = 0;
     int i = 0;
@@ -238,7 +238,7 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, size_t num_pages){
     completion->req = req;
     afs_debug("read bios ready to submit");
     for(i = 0; i < num_pages; i++){
-	    struct page *page_structure;
+	struct page *page_structure;
 
         bio[i] = bio_alloc(GFP_NOIO, 1);
         afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
@@ -283,7 +283,7 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
     completion->bio_list = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     bio = completion->bio_list;
     atomic_set(&completion->bios_pending, num_pages);
-    afs_debug("current value of atomic %d", atomic_read(&completion->bios_pending));
+    afs_debug("current value of atomic %d, completion %p", atomic_read(&completion->bios_pending), completion);
     completion->req = req;
 
     for(i = 0; i < num_pages; i++){
