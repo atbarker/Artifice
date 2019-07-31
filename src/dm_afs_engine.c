@@ -16,7 +16,7 @@
 struct afs_bio_private{
     struct afs_map_request *req;
     atomic_t bios_pending;
-    struct bio **bio_list;
+    //struct bio **bio_list;
 };
 
 /**
@@ -140,7 +140,7 @@ static void afs_req_clean(struct afs_map_request *req){
  * Custom end_io function to signal completion of all bio operations in a batch
  */
 static void afs_read_endio(struct bio *bio){
-    struct afs_bio_private *ctx = CONTAINER_OF(bio, struct afs_bio_private, bio_list);
+    struct afs_bio_private *ctx = bio->bi_private;
     struct afs_map_request *req = ctx->req;
     uint8_t *digest;
     struct afs_map_tuple *map_entry_tuple = NULL;
@@ -186,7 +186,7 @@ err:
 }
 
 static void afs_write_endio(struct bio *bio){
-    struct afs_bio_private *ctx = CONTAINER_OF(&bio, struct afs_bio_private, bio_list);
+    struct afs_bio_private *ctx = bio->bi_private;
     struct afs_map_request *req = ctx->req;
     uint8_t *digest;
     struct afs_map_tuple *map_entry_tuple = NULL;
@@ -232,8 +232,7 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     struct afs_bio_private *completion = NULL;
     
     completion = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
-    completion->bio_list = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    bio = completion->bio_list;
+    bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     atomic_set(&completion->bios_pending, num_pages);
     completion->req = req;
     afs_debug("read bios ready to submit");
@@ -255,7 +254,7 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        //bio[i]->bi_private = &completion;
+        bio[i]->bi_private = &completion;
         bio[i]->bi_end_io = afs_read_endio;
         afs_debug("submitting bio %d", i);
         //generic_make_request(bio[i]);
@@ -280,8 +279,7 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
     struct afs_bio_private *completion = NULL;
    
     completion = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
-    completion->bio_list = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    bio = completion->bio_list;
+    bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     atomic_set(&completion->bios_pending, num_pages);
     afs_debug("current value of atomic %d, completion %p", atomic_read(&completion->bios_pending), completion);
     completion->req = req;
@@ -306,15 +304,15 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        //bio[i]->bi_private = &completion;
+        bio[i]->bi_private = &completion;
         bio[i]->bi_end_io = afs_write_endio;
-	afs_debug("Write set up");
+	afs_debug("Write set up bi_private %p", bio[i]->bi_private);
         generic_make_request(bio[i]);
     }
     afs_debug("All write bios submitted");
 
 done:
-    kfree(bio);
+    //kfree(bio);
     return ret;
 }
 
