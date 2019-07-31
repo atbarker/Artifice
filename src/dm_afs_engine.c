@@ -16,7 +16,6 @@
 struct afs_bio_private{
     struct afs_map_request *req;
     atomic_t bios_pending;
-    //struct bio **bio_list;
 };
 
 /**
@@ -130,7 +129,7 @@ static void afs_req_clean(struct afs_map_request *req){
     }
     //TODO figure out a safer cleanup option
     //re-enable when we want libgfshare
-    //gfshare_ctx_free(req->encoder);   
+    gfshare_ctx_free(req->encoder);   
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
     } 
@@ -160,8 +159,8 @@ static void afs_read_endio(struct bio *bio){
         map_entry_entropy = map_entry_hash + SHA128_SZ;
 
         // TODO: Read entropy blocks as well.
-	    memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
-	    //gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+        //memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
+	gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
 	
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
@@ -330,8 +329,8 @@ __afs_read_block(struct afs_map_request *req)
 
         req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
         req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
-        //req->encoder = gfshare_ctx_init_dec(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-        //req->sharenrs = "0123";
+        req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+        req->sharenrs = "0123";
 
         arraytopointer(req->read_blocks, config->num_carrier_blocks, req->carrier_blocks);
 
@@ -347,7 +346,7 @@ __afs_read_block(struct afs_map_request *req)
 done:
     kfree(req->carrier_blocks);
     kfree(req->block_nums);
-    //gfshare_ctx_free(req->encoder);
+    gfshare_ctx_free(req->encoder);
     return ret;
 }
 
@@ -409,8 +408,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     uint8_t *bio_data = NULL;
-    //uint8_t *digest;
-    //uint8_t digest[SHA1_SZ];
     uint32_t req_size;
     uint32_t block_num;
     uint32_t sector_offset;
@@ -472,12 +469,12 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
     req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
     //TODO update this
-    //req->encoder = gfshare_ctx_init_enc(sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-    //req->sharenrs = "0123";
+    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    req->sharenrs = "0123";
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
     arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
-    //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -485,8 +482,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         block_num = (modification) ? map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
-	    req->block_nums[i] = block_num;
-        memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+	req->block_nums[i] = block_num;
+        //memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
     ret = write_pages(req, (void**)req->carrier_blocks, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
@@ -501,7 +498,7 @@ reset_entry:
     }
     kfree(req->carrier_blocks);
     kfree(req->block_nums);
-    //gfshare_ctx_free(req->encoder);
+    gfshare_ctx_free(req->encoder);
 
 err:
     return ret;
