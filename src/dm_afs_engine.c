@@ -168,17 +168,14 @@ static void afs_read_endio(struct bio *bio){
         //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
         //ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
-        
+                
         //cleanup
+err:
         element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
         schedule_work(element->clean_ws);
     }
     return;
-
-err:
-    //TODO create a data structure for remapping corrupted blocks
-    afs_debug("Corrupted block");
 }
 
 static void afs_write_endio(struct bio *bio){
@@ -443,6 +440,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         modification = true;
     }
 
+    req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
+    req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
+
     // Copy from the segments.
     // NOTE: We don't technically need this complicated way
     // of copying, because write bio's are a single contiguous
@@ -468,16 +468,13 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         segment_offset += bv.bv_len;
         kunmap(bv.bv_page);
     }
-  
-    req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
-    req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
     //TODO update this
     //req->sharenrs = "0123";
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
     arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
-    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -486,7 +483,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         map_entry_tuple[i].carrier_block_ptr = block_num;
 	req->block_nums[i] = block_num;
-        //memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
     ret = write_pages(req, (void**)req->carrier_blocks, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);

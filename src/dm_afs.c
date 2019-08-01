@@ -167,14 +167,17 @@ afs_flightq(struct work_struct *ws)
     element = container_of(ws, struct afs_map_queue, req_ws);
     req = &element->req;
 
+    if(req->pending == 1){
+        afs_debug("already processing");
+        return;
+    }
+    req->pending = 1;    
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
-        req->pending = 1;
         ret = afs_read_request(req, req->bio);
         break;
 
     case REQ_OP_WRITE:
-        req->pending = 1;
         ret = afs_write_request(req, req->bio);
         break;
 
