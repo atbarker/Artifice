@@ -321,6 +321,7 @@ __afs_read_block(struct afs_map_request *req)
 
     if (map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
+        atomic_set(&req->pending, 2);
     } else {
 
         req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);

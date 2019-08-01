@@ -167,17 +167,18 @@ afs_flightq(struct work_struct *ws)
     element = container_of(ws, struct afs_map_queue, req_ws);
     req = &element->req;
 
-    if(atomic_read(&req->pending) == 1){
+    if(atomic_read(&req->pending) != 0){
         afs_debug("already processing");
         return;
     }
-    atomic_set(&req->pending, 1);    
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
+        atomic_set(&req->pending, 1);
         ret = afs_read_request(req, req->bio);
         break;
 
     case REQ_OP_WRITE:
+        atomic_set(&req->pending, 1);
         ret = afs_write_request(req, req->bio);
         break;
 
@@ -186,7 +187,7 @@ afs_flightq(struct work_struct *ws)
         afs_debug("This case should never be encountered!");
     }
     //atomic64_set(&req->state, REQ_STATE_COMPLETED);
-    if(atomic_read(&req->pending) == 0){
+    if(atomic_read(&req->pending) == 2){
         goto done;
     }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
@@ -582,7 +583,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->ground_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Ground WQ");
     afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
-    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE, 8, "Artifice Flight WQ");
+    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE, 1, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     INIT_WORK(&context->ground_ws, afs_groundq);
