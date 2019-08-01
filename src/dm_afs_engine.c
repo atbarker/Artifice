@@ -321,7 +321,6 @@ __afs_read_block(struct afs_map_request *req)
 
     if (map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
-        req->pending = 0;
     } else {
 
         req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
@@ -369,9 +368,6 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
 
     // Read the raw block.
     ret = __afs_read_block(req);
-    if(req->pending == 0){
-	goto done;
-    }
     afs_assert(!ret, done, "could not read data block [%d:%u]", ret, req->block);
 
     // Copy back into the segments.

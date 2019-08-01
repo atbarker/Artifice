@@ -167,11 +167,11 @@ afs_flightq(struct work_struct *ws)
     element = container_of(ws, struct afs_map_queue, req_ws);
     req = &element->req;
 
-    if(req->pending == 1){
+    if(atomic_read(&req->pending) == 1){
         afs_debug("already processing");
         return;
     }
-    req->pending = 1;    
+    atomic_set(&req->pending, 1);    
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
         ret = afs_read_request(req, req->bio);
@@ -186,7 +186,7 @@ afs_flightq(struct work_struct *ws)
         afs_debug("This case should never be encountered!");
     }
     //atomic64_set(&req->state, REQ_STATE_COMPLETED);
-    if(req->pending == 0){
+    if(atomic_read(&req->pending) == 0){
         goto done;
     }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
@@ -425,6 +425,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
     req->fs = &context->passive_fs;
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
+    atomic_set(&req->pending, 0);
     atomic64_set(&req->state, REQ_STATE_GROUND);
 
     switch (bio_op(bio)) {
