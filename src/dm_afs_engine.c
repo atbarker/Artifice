@@ -210,7 +210,7 @@ static void afs_write_endio(struct bio *bio){
     return;
 }
 
-int
+static int
 read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     uint64_t sector_num;
     const int page_offset = 0;
@@ -252,8 +252,8 @@ done:
 }
 
 
-int
-write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmalloc, uint32_t num_pages){
+static int
+write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     uint64_t sector_num;
     int ret = 0;
     int i = 0;
@@ -273,10 +273,10 @@ write_pages(struct afs_map_request *req, void **carrier_blocks, bool used_vmallo
         afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
 
         // Make sure page is aligned.
-        afs_action(!((uint64_t)carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+        afs_action(!((uint64_t)req->carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
         // Acquire page structure and sector offset.
-        page_structure = (used_vmalloc) ? vmalloc_to_page(carrier_blocks[i]) : virt_to_page(carrier_blocks[i]);
+        page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
         sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
 
 
@@ -438,7 +438,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
 
     req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
+    afs_action(req->carrier_blocks, ret = -ENOMEM, err, "could not allocate carrier block array [%d]", ret);
     req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
+    afs_action(req->block_nums, ret = -ENOMEM, block_err, "could not allocate block nums [%d]", ret);
 
     // Copy from the segments.
     // NOTE: We don't technically need this complicated way
@@ -482,7 +484,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 	req->block_nums[i] = block_num;
         memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
-    ret = write_pages(req, (void**)req->carrier_blocks, false, config->num_carrier_blocks);
+    ret = write_pages(req, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
     return ret;
 
@@ -493,9 +495,11 @@ reset_entry:
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    kfree(req->carrier_blocks);
     kfree(req->block_nums);
     //gfshare_ctx_free(req->encoder);
+
+block_err:
+    kfree(req->carrier_blocks);
 
 err:
     return ret;

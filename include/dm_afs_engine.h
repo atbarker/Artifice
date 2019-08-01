@@ -59,6 +59,8 @@ struct afs_map_request {
     uint32_t *block_nums;
   
     atomic_t pending;
+
+    spinlock_t req_lock;
 };
 
 // Map request queue. This is an intrusive
