@@ -151,8 +151,6 @@ static void afs_read_endio(struct bio *bio){
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
-    uint32_t req_size;
-    uint32_t sector_offset;
     uint32_t segment_offset;
 
 
@@ -176,16 +174,13 @@ static void afs_read_endio(struct bio *bio){
         //ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
                 
-        sector_offset = req->bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
-        req_size = bio_sectors(req->bio) * AFS_SECTOR_SIZE;
-
 	segment_offset = 0;
         bio_for_each_segment (bv, req->bio, iter) {
             bio_data = kmap(bv.bv_page);
-            if (bv.bv_len <= (req_size - segment_offset)) {
-                memcpy(bio_data + bv.bv_offset, req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+            if (bv.bv_len <= (req->request_size - segment_offset)) {
+                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
             } else {
-                memcpy(bio_data + bv.bv_offset, req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, req_size - segment_offset);
+                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, req->request_size - segment_offset);
                 kunmap(bv.bv_page);
                 break;
             }
@@ -197,6 +192,7 @@ static void afs_read_endio(struct bio *bio){
 err:
         element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
+	kfree(ctx);
         schedule_work(element->clean_ws);
     }
     return;
@@ -229,6 +225,7 @@ static void afs_write_endio(struct bio *bio){
         //cleanup
         element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
+	kfree(ctx);
         schedule_work(element->clean_ws);
     }
     return;
@@ -380,15 +377,13 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
-    uint32_t req_size;
-    uint32_t sector_offset;
     uint32_t segment_offset;
     int ret;
 
     req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
-    req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
-    afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req_size);
+    req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+    req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+    afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
 
     // Read the raw block.
@@ -397,20 +392,20 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
 
     // Copy back into the segments.
     if(atomic_read(&req->pending) == 2){
-    segment_offset = 0;
-    bio_for_each_segment (bv, bio, iter) {
-        bio_data = kmap(bv.bv_page);
-        if (bv.bv_len <= (req_size - segment_offset)) {
-            memcpy(bio_data + bv.bv_offset, req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
-        } else {
-            memcpy(bio_data + bv.bv_offset, req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, req_size - segment_offset);
+        segment_offset = 0;
+        bio_for_each_segment (bv, bio, iter) {
+            bio_data = kmap(bv.bv_page);
+            if (bv.bv_len <= (req->request_size - segment_offset)) {
+                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+            } else {
+                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, req->request_size - segment_offset);
+                kunmap(bv.bv_page);
+                break;
+            }
+            segment_offset += bv.bv_len;
             kunmap(bv.bv_page);
-            break;
         }
-        segment_offset += bv.bv_len;
-        kunmap(bv.bv_page);
-    }
-    ret = 0;
+        ret = 0;
     }
 
 done:
@@ -431,19 +426,17 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     uint8_t *bio_data = NULL;
-    uint32_t req_size;
     uint32_t block_num;
-    uint32_t sector_offset;
     uint32_t segment_offset;
     bool modification = false;
     int ret = 0, i;
 
     config = req->config;
     req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
-    req_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+    req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+    req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
     
-    afs_action(req_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req_size);
+    afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req->request_size);
 
     map_entry = afs_get_map_entry(req->map, config, req->block);
     map_entry_tuple = (struct afs_map_tuple *)map_entry;
@@ -483,10 +476,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     segment_offset = 0;
     bio_for_each_segment (bv, bio, iter) {
         bio_data = kmap(bv.bv_page);
-        if (bv.bv_len <= (req_size - segment_offset)) {
-            memcpy(req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, bv.bv_len);
+        if (bv.bv_len <= (req->request_size - segment_offset)) {
+            memcpy(req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, bv.bv_len);
         } else {
-            memcpy(req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, req_size - segment_offset);
+            memcpy(req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bio_data + bv.bv_offset, req->request_size - segment_offset);
             kunmap(bv.bv_page);
             break;
         }

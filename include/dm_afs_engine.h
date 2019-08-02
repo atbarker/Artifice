@@ -54,6 +54,8 @@ struct afs_map_request {
 
     //data block number in the map
     uint32_t block;
+    uint32_t request_size;
+    uint32_t sector_offset;
 
     //carrier block offsets
     uint32_t *block_nums;
