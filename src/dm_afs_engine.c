@@ -148,6 +148,13 @@ static void afs_read_endio(struct bio *bio){
     uint8_t *map_entry_entropy = NULL;
     struct afs_map_queue *element = NULL;
     int ret;
+    struct bio_vec bv;
+    struct bvec_iter iter;
+    uint8_t *bio_data = NULL;
+    uint32_t req_size;
+    uint32_t sector_offset;
+    uint32_t segment_offset;
+
 
     bio_put(bio);
  
@@ -169,6 +176,23 @@ static void afs_read_endio(struct bio *bio){
         //ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
                 
+        sector_offset = req->bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+        req_size = bio_sectors(req->bio) * AFS_SECTOR_SIZE;
+
+	segment_offset = 0;
+        bio_for_each_segment (bv, req->bio, iter) {
+            bio_data = kmap(bv.bv_page);
+            if (bv.bv_len <= (req_size - segment_offset)) {
+                memcpy(bio_data + bv.bv_offset, req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+            } else {
+                memcpy(bio_data + bv.bv_offset, req->data_block + (sector_offset * AFS_SECTOR_SIZE) + segment_offset, req_size - segment_offset);
+                kunmap(bv.bv_page);
+                break;
+            }
+            segment_offset += bv.bv_len;
+            kunmap(bv.bv_page);
+        }
+
         //cleanup
 err:
         element = container_of(req, struct afs_map_queue, req);
@@ -372,6 +396,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
     afs_assert(!ret, done, "could not read data block [%d:%u]", ret, req->block);
 
     // Copy back into the segments.
+    if(atomic_read(&req->pending) == 2){
     segment_offset = 0;
     bio_for_each_segment (bv, bio, iter) {
         bio_data = kmap(bv.bv_page);
@@ -386,6 +411,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
         kunmap(bv.bv_page);
     }
     ret = 0;
+    }
 
 done:
     return ret;
