@@ -584,10 +584,9 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     }
 
     // We are now ready to process map requests.
-    context->ground_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
+    context->ground_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
     afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
-    //maybe remove the WQ_CPU_INTENSIVE option
     context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
