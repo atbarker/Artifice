@@ -167,7 +167,6 @@ afs_flightq(struct work_struct *ws)
     element = container_of(ws, struct afs_map_queue, req_ws);
     req = &element->req;
 
-    spin_lock(&req->req_lock);
     if(atomic_read(&req->pending) != 0){
         afs_debug("already processing");
         return;
@@ -193,7 +192,6 @@ afs_flightq(struct work_struct *ws)
         goto done;
     }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
-    spin_unlock(&req->req_lock);
     return;
 
 done:
@@ -430,7 +428,6 @@ afs_map(struct dm_target *ti, struct bio *bio)
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
     atomic_set(&req->pending, 0);
-    spin_lock_init(&req->req_lock);
     atomic64_set(&req->state, REQ_STATE_GROUND);
 
     switch (bio_op(bio)) {
