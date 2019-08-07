@@ -238,12 +238,12 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     int i = 0;
     int ret = 0;
     struct bio **bio = NULL;
-    struct afs_bio_private *completion = NULL;
+    struct afs_bio_private *ctx = NULL;
     
-    completion = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
+    ctx = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    atomic_set(&completion->bios_pending, num_pages);
-    completion->req = req;
+    atomic_set(&ctx->bios_pending, num_pages);
+    ctx->req = req;
     for(i = 0; i < num_pages; i++){
 	struct page *page_structure;
 
@@ -262,13 +262,16 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        bio[i]->bi_private = completion;
+        bio[i]->bi_private = ctx;
         bio[i]->bi_end_io = afs_read_endio;
         generic_make_request(bio[i]);
     }
+    kfree(bio);
+    return ret;
 
 done:
-    //kfree(bio);
+    kfree(bio);
+    kfree(ctx);
     return ret;
 }
 
@@ -280,12 +283,12 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     int i = 0;
     const int page_offset = 0;
     struct bio **bio = NULL;
-    struct afs_bio_private *completion = NULL;
+    struct afs_bio_private *ctx = NULL;
    
-    completion = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
+    ctx = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    atomic_set(&completion->bios_pending, num_pages);
-    completion->req = req;
+    atomic_set(&ctx->bios_pending, num_pages);
+    ctx->req = req;
 
     for(i = 0; i < num_pages; i++){
         struct page *page_structure;
@@ -306,13 +309,16 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        bio[i]->bi_private = completion;
+        bio[i]->bi_private = ctx;
         bio[i]->bi_end_io = afs_write_endio;
         generic_make_request(bio[i]);
     }
+    kfree(bio);
+    return ret;
 
 done:
-    //kfree(bio);
+    kfree(bio);
+    kfree(ctx);
     return ret;
 }
 
@@ -362,8 +368,8 @@ __afs_read_block(struct afs_map_request *req)
     return ret;
 
 done:
-    //kfree(req->carrier_blocks);
-    //kfree(req->block_nums);
+    kfree(req->carrier_blocks);
+    kfree(req->block_nums);
     //gfshare_ctx_free(req->encoder);
     return ret;
 }
@@ -514,11 +520,11 @@ reset_entry:
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    //kfree(req->block_nums);
+    kfree(req->block_nums);
     //gfshare_ctx_free(req->encoder);
 
 block_err:
-    //kfree(req->carrier_blocks);
+    kfree(req->carrier_blocks);
 
 err:
     return ret;
