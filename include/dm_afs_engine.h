@@ -4,6 +4,7 @@
  */
 #include <dm_afs_config.h>
 #include <dm_afs_modules.h>
+#include <lib/libgfshare.h>
 #include <linux/types.h>
 
 #ifndef DM_AFS_ENGINE_H
@@ -23,6 +24,7 @@ struct afs_map_request {
     // allocating all of them in case we didn't have to, but this
     // way it is easier to manage. These blocks needs to be page
     // aligned.
+    // TODO make these double pointers aligned to page boundaries
     uint8_t __attribute__((aligned(4096))) entropy_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
     uint8_t __attribute__((aligned(4096))) read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
     uint8_t __attribute__((aligned(4096))) write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
@@ -41,6 +43,26 @@ struct afs_map_request {
 
     // Write requests allocate a new page for a bio.
     uint8_t *allocated_write_page;
+
+    //encoding context and parameters
+    gfshare_ctx *encoder;
+    uint8_t *sharenrs;
+
+    //double pointers because static 2d arrays have a different layout in memory
+    //TODO get rid of this 
+    uint8_t **carrier_blocks;
+
+    //data block number in the map
+    uint32_t block;
+    uint32_t request_size;
+    uint32_t sector_offset;
+
+    //carrier block offsets
+    uint32_t *block_nums;
+  
+    atomic_t pending;
+
+    spinlock_t req_lock;
 };
 
 // Map request queue. This is an intrusive

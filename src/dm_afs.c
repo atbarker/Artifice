@@ -162,17 +162,24 @@ afs_flightq(struct work_struct *ws)
 {
     struct afs_map_queue *element = NULL;
     struct afs_map_request *req = NULL;
-    int ret;
+    int ret = 0;
 
     element = container_of(ws, struct afs_map_queue, req_ws);
     req = &element->req;
 
+    if(atomic_read(&req->pending) != 0){
+        afs_debug("already processing");
+        return;
+    }
+    
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
+        atomic_set(&req->pending, 1);
         ret = afs_read_request(req, req->bio);
         break;
 
     case REQ_OP_WRITE:
+        atomic_set(&req->pending, 1);
         ret = afs_write_request(req, req->bio);
         break;
 
@@ -180,10 +187,15 @@ afs_flightq(struct work_struct *ws)
         ret = -EINVAL;
         afs_debug("This case should never be encountered!");
     }
-    atomic64_set(&req->state, REQ_STATE_COMPLETED);
+    //atomic64_set(&req->state, REQ_STATE_COMPLETED);
+    if(atomic_read(&req->pending) == 2){
+        goto done;
+    }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
+    return;
 
 done:
+    atomic64_set(&req->state, REQ_STATE_COMPLETED);
     bio_endio(req->bio);
 
     // Write requests may have an allocated page with them. This needs
@@ -191,7 +203,7 @@ done:
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
     }
-    //TODO maybe use this as cleanup for when we must wait for IO
+
     schedule_work(element->clean_ws);
 }
 
@@ -415,6 +427,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
     req->fs = &context->passive_fs;
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
+    atomic_set(&req->pending, 0);
     atomic64_set(&req->state, REQ_STATE_GROUND);
 
     switch (bio_op(bio)) {
@@ -552,7 +565,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     switch (args->instance_type) {
     case TYPE_CREATE:
         // TODO: Acquire carrier block count from RS parameters.
-        build_configuration(context, 1, 1);
+        build_configuration(context, 4, 1);
         ret = write_super_block(sb, fs, context);
         afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
         break;
@@ -568,10 +581,10 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     }
 
     // We are now ready to process map requests.
-    context->ground_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI, 1, "Artifice Ground WQ");
+    context->ground_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
     afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
-    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE, 8, "Artifice Flight WQ");
+    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     INIT_WORK(&context->ground_ws, afs_groundq);
