@@ -268,7 +268,7 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     }
 
 done:
-    kfree(bio);
+    //kfree(bio);
     return ret;
 }
 
@@ -312,7 +312,7 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     }
 
 done:
-    kfree(bio);
+    //kfree(bio);
     return ret;
 }
 
@@ -362,8 +362,8 @@ __afs_read_block(struct afs_map_request *req)
     return ret;
 
 done:
-    kfree(req->carrier_blocks);
-    kfree(req->block_nums);
+    //kfree(req->carrier_blocks);
+    //kfree(req->block_nums);
     //gfshare_ctx_free(req->encoder);
     return ret;
 }
@@ -514,11 +514,11 @@ reset_entry:
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    kfree(req->block_nums);
+    //kfree(req->block_nums);
     //gfshare_ctx_free(req->encoder);
 
 block_err:
-    kfree(req->carrier_blocks);
+    //kfree(req->carrier_blocks);
 
 err:
     return ret;
