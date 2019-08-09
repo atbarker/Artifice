@@ -138,6 +138,7 @@ afs_cleanq(struct work_struct *ws)
     struct afs_private *context = NULL;
     struct afs_engine_queue *flight_eq = NULL;
     struct afs_map_queue *node = NULL, *node_extra = NULL;
+    struct afs_map_request *req = NULL;
     long long state;
 
     context = container_of(ws, struct afs_private, clean_ws);
@@ -147,6 +148,7 @@ afs_cleanq(struct work_struct *ws)
     list_for_each_entry_safe (node, node_extra, &flight_eq->mq.list, list) {
         state = atomic64_read(&node->req.state);
         if (state == REQ_STATE_COMPLETED) {
+            req = &node->req;
             list_del(&node->list);
             kfree(node);
         }
@@ -428,6 +430,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
     atomic_set(&req->pending, 0);
+    req->carrier_blocks = NULL;
     atomic64_set(&req->state, REQ_STATE_GROUND);
 
     switch (bio_op(bio)) {

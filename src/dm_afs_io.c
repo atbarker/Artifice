@@ -8,6 +8,7 @@
 #include <dm_afs_format.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/gfp.h>
 
 /**
  * Read or write to an block device.
@@ -64,12 +65,20 @@ read_page(void *page, struct block_device *bdev, uint32_t block_num, uint32_t se
     struct page *page_structure;
     uint64_t sector_num;
     int ret;
+    uint64_t page_number = 0;
 
     // Make sure page is aligned.
-    afs_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+    //afs_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+    if(((uint64_t)page & (AFS_BLOCK_SIZE - 1))){
+        page_number = __get_free_page(GFP_KERNEL);
+        //afs_debug("page was not aligned");
+        page_structure = virt_to_page((void*)page_number);
+    }else{
+        page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
+    }        
 
     // Acquire page structure and sector offset.
-    page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
+    //page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
     sector_num = ((block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + sector_offset;
 
     // Build the request.
@@ -83,6 +92,10 @@ read_page(void *page, struct block_device *bdev, uint32_t block_num, uint32_t se
     afs_assert(!ret, done, "error in reading block device [%d]", ret);
 
 done:
+    if(page_number){
+        memcpy(page, (void*)page_number, AFS_BLOCK_SIZE);
+        free_page(page_number);
+    }
     return ret;
 }
 
@@ -96,12 +109,21 @@ write_page(const void *page, struct block_device *bdev, uint32_t block_num, uint
     struct page *page_structure;
     uint64_t sector_num;
     int ret;
+    uint64_t page_number = 0;
 
     // Make sure page is aligned.
-    afs_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+    //afs_action(!((uint64_t)page & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+    if(((uint64_t)page & (AFS_BLOCK_SIZE - 1))){
+        page_number = __get_free_page(GFP_KERNEL);
+        //afs_debug("page was not aligned");
+        memcpy((void*)page_number, page, AFS_BLOCK_SIZE);
+        page_structure = virt_to_page((void*)page_number);
+    }else{
+        page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
+    } 
 
     // Acquire page structure and sector offset.
-    page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
+    //page_structure = (used_vmalloc) ? vmalloc_to_page(page) : virt_to_page(page);
     sector_num = ((block_num * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE)  + sector_offset;
 
     // Build the request.
@@ -115,5 +137,8 @@ write_page(const void *page, struct block_device *bdev, uint32_t block_num, uint
     afs_assert(!ret, done, "error in writing block device [%d]", ret);
 
 done:
+    if(page_number){
+        free_page(page_number);
+    }
     return ret;
 }

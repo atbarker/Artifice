@@ -58,7 +58,7 @@ struct afs_map_request {
     uint32_t sector_offset;
 
     //carrier block offsets
-    uint32_t *block_nums;
+    uint32_t block_nums[NUM_MAX_CARRIER_BLKS];
   
     atomic_t pending;
 

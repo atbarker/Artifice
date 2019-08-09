@@ -117,16 +117,17 @@ static void afs_req_clean(struct afs_map_request *req){
     //set the state of the request to completed
     atomic64_set(&req->state, REQ_STATE_COMPLETED);
 
+    if(req->carrier_blocks != NULL){
+       kfree(req->carrier_blocks);
+    }
+    
     //end the virtual block device's recieved bio
     bio_endio(req->bio);
 
     //free any dynamically allocated objects in the request struct
-    if(req->carrier_blocks){
-        kfree(req->carrier_blocks);
-    }
-    if(req->block_nums){
-        kfree(req->block_nums);
-    }
+    //if(req->carrier_blocks){
+    //    kfree(req->carrier_blocks);
+    //}
     //TODO figure out a safer cleanup option
     //re-enable when we want libgfshare
     //gfshare_ctx_free(req->encoder);   
@@ -352,7 +353,7 @@ __afs_read_block(struct afs_map_request *req)
     } else {
 
         req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
-        req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
+        //req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
 	//req->sharenrs = "0123";
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
@@ -369,7 +370,7 @@ __afs_read_block(struct afs_map_request *req)
 
 done:
     kfree(req->carrier_blocks);
-    kfree(req->block_nums);
+    req->carrier_blocks = NULL;
     //gfshare_ctx_free(req->encoder);
     return ret;
 }
@@ -464,8 +465,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
     afs_action(req->carrier_blocks, ret = -ENOMEM, err, "could not allocate carrier block array [%d]", ret);
-    req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
-    afs_action(req->block_nums, ret = -ENOMEM, block_err, "could not allocate block nums [%d]", ret);
 
     // Copy from the segments.
     // NOTE: We don't technically need this complicated way
@@ -520,11 +519,7 @@ reset_entry:
         }
         map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    kfree(req->block_nums);
     //gfshare_ctx_free(req->encoder);
-
-block_err:
-    kfree(req->carrier_blocks);
 
 err:
     return ret;
