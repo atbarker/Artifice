@@ -198,6 +198,7 @@ afs_flightq(struct work_struct *ws)
 
 done:
     atomic64_set(&req->state, REQ_STATE_COMPLETED);
+
     bio_endio(req->bio);
 
     // Write requests may have an allocated page with them. This needs

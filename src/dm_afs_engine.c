@@ -124,10 +124,6 @@ static void afs_req_clean(struct afs_map_request *req){
     //end the virtual block device's recieved bio
     bio_endio(req->bio);
 
-    //free any dynamically allocated objects in the request struct
-    //if(req->carrier_blocks){
-    //    kfree(req->carrier_blocks);
-    //}
     //TODO figure out a safer cleanup option
     //re-enable when we want libgfshare
     //gfshare_ctx_free(req->encoder);   
@@ -170,7 +166,7 @@ static void afs_read_endio(struct bio *bio){
 	
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
-	    ret = memcmp(map_entry_hash, digest, SHA128_SZ);
+        ret = memcmp(map_entry_hash, digest, SHA128_SZ);
         //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
         //ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
