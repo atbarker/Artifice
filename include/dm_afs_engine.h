@@ -41,6 +41,11 @@ struct afs_map_request {
     struct afs_passive_fs *fs;
     struct afs_allocation_vector *vector;
 
+    struct afs_map_tuple *map_entry_tuple;
+    uint8_t *map_entry;
+    uint8_t *map_entry_hash;
+    uint8_t *map_entry_entropy;
+
     // Write requests allocate a new page for a bio.
     uint8_t *allocated_write_page;
 
@@ -63,8 +68,6 @@ struct afs_map_request {
     //used to tell if a request is currently pending and return status on invalid block write
     //TODO create seperate invalid/pending flags
     atomic_t pending;
-
-    spinlock_t req_lock;
 
     //flag to mark if rebuild is required and array to keep track of block status
     //0 is the block is yet to be processed, 1 is the block is fine, 2 is corrupted
@@ -93,7 +96,10 @@ struct afs_engine_queue {
     spinlock_t mq_lock;
 };
 
-int write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages);
+/**
+ * Rebuild a set of corrupted blocks
+ */
+int rebuild_blocks(struct afs_map_request *req);
 
 /**
  * Map a read request from userspace.
