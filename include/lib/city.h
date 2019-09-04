@@ -112,5 +112,10 @@ static inline uint8_t* cityhash128_to_array(uint128 hash){
     return (uint8_t*)array;
 }
 
+static inline uint16_t cityhash32_to_16(uint8_t *s, size_t len){
+    static uint32_t data = 0;
+    data = CityHash32(s, len);
+    return (data & 0xffff) ^ ((data >> 16) & 0xffff);
+}
 
 #endif  // CITY_HASH_H_

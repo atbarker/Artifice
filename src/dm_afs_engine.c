@@ -144,11 +144,12 @@ static void afs_read_endio(struct bio *bio){
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     struct afs_map_queue *element = NULL;
-    int ret;
+    int ret, i;
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
     uint32_t segment_offset;
+    uint16_t checksum;
 
 
     bio_put(bio);
@@ -160,6 +161,15 @@ static void afs_read_endio(struct bio *bio){
         map_entry_hash = map_entry + (req->config->num_carrier_blocks * sizeof(*map_entry_tuple));
         map_entry_entropy = map_entry_hash + SHA128_SZ;
 
+	for(i = 0; i < req->config->num_carrier_blocks; i++){
+            checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
+	    if(memcmp(&map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))){
+		afs_debug("corrupted block %d, stored checksum %d, checksum %d", i, map_entry_tuple[i].checksum, checksum);
+                atomic_set(&req->rebuild_flag, 1);
+		req->sharenrs[i] = '0';
+	    }
+	}
+
         // TODO: Read entropy blocks as well.
         memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
 	//gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
@@ -167,8 +177,6 @@ static void afs_read_endio(struct bio *bio){
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         ret = memcmp(map_entry_hash, digest, SHA128_SZ);
-        //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
-        //ret = memcmp(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
                 
 	segment_offset = 0;
@@ -184,6 +192,12 @@ static void afs_read_endio(struct bio *bio){
             segment_offset += bv.bv_len;
             kunmap(bv.bv_page);
         }
+	if(atomic_read(&req->rebuild_flag)){
+            //write a new function called write blocks, should have a flag to remap blocks
+	    //only after that is finished can we clean up the request so we return
+	    write_pages(req, false, req->config->num_carrier_blocks);
+	    return;
+	}
 
         //cleanup
 err:
@@ -204,6 +218,7 @@ static void afs_write_endio(struct bio *bio){
     uint8_t *map_entry_hash = NULL;
     uint8_t *map_entry_entropy = NULL;
     struct afs_map_queue *element = NULL;
+    int i = 0;
 
     bio_put(bio); 
     if(atomic_dec_and_test(&ctx->bios_pending)){
@@ -215,10 +230,11 @@ static void afs_write_endio(struct bio *bio){
         // TODO: Set the entropy hash correctly, may not be needed
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         memcpy(map_entry_hash, digest, SHA128_SZ);
-        //hash_sha1(req->data_block, AFS_BLOCK_SIZE, digest);
-        //memcpy(map_entry_hash, digest + (SHA1_SZ - SHA128_SZ), SHA128_SZ);
         memset(map_entry_entropy, 0, ENTROPY_HASH_SZ);
-        
+        for(i = 0; i < req->config->num_carrier_blocks; i++){
+            map_entry_tuple[i].checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
+	}
+
         //cleanup
         element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
@@ -273,7 +289,7 @@ done:
 }
 
 
-static int
+int
 write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     uint64_t sector_num;
     int ret = 0;
@@ -334,8 +350,6 @@ __afs_read_block(struct afs_map_request *req)
     int ret, i;
 
     config = req->config;
-    //TODO change this when entropy handling is added
-    //TODO needs to calculate sharenrs and adjust as needed
 
     //set up map entry stuff
     map_entry = afs_get_map_entry(req->map, config, req->block);
@@ -350,7 +364,7 @@ __afs_read_block(struct afs_map_request *req)
 
         req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
         //req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
-	//req->sharenrs = "0123";
+	req->sharenrs = "0123";
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
         arraytopointer(req->read_blocks, config->num_carrier_blocks, req->carrier_blocks);
@@ -415,6 +429,7 @@ done:
     return ret;
 }
 
+//TODO perform a check based on a remap or corrupt block flag to remap corrupted blocks on read
 /**
  * Map a write request from userspace.
  */
@@ -487,8 +502,12 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         segment_offset += bv.bv_len;
         kunmap(bv.bv_page);
     }
-    //TODO update this
-    //req->sharenrs = "0123";
+    //TODO update this to better reflect the total number of carrier blocks
+    for(i = 0; i < config->num_carrier_blocks; i++){
+	char sharenr[2];
+	snprintf(sharenr, 1, "%d", i);
+        req->sharenrs[i] = sharenr[0];
+    }
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing

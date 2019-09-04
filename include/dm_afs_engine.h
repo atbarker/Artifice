@@ -60,10 +60,17 @@ struct afs_map_request {
     //carrier block offsets
     uint32_t block_nums[NUM_MAX_CARRIER_BLKS];
   
+    //used to tell if a request is currently pending and return status on invalid block write
+    //TODO create seperate invalid/pending flags
     atomic_t pending;
 
     spinlock_t req_lock;
-};
+
+    //flag to mark if rebuild is required and array to keep track of block status
+    //0 is the block is yet to be processed, 1 is the block is fine, 2 is corrupted
+    //TODO set this flag
+    atomic_t rebuild_flag;
+} __attribute__((aligned(4096)));
 
 // Map request queue. This is an intrusive
 // linked list.
@@ -85,6 +92,8 @@ struct afs_engine_queue {
     struct afs_map_queue mq;
     spinlock_t mq_lock;
 };
+
+int write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages);
 
 /**
  * Map a read request from userspace.

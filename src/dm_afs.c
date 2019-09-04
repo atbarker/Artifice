@@ -431,6 +431,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
     atomic_set(&req->pending, 0);
+    atomic_set(&req->rebuild_flag, 0);
     req->carrier_blocks = NULL;
     atomic64_set(&req->state, REQ_STATE_GROUND);
 
