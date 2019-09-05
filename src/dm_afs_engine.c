@@ -13,7 +13,7 @@
 
 #define CONTAINER_OF(MemberPtr, StrucType, MemberName) ((StrucType*)( (char*)(MemberPtr) - offsetof(StrucType, MemberName)))
 
-struct afs_bio_private{
+struct afs_bio_private {
     struct afs_map_request *req;
     atomic_t bios_pending;
 };
@@ -22,9 +22,10 @@ struct afs_bio_private{
  * Convert 2 dimensional static array to double pointer 2d array.
  * TODO this can be thrown out once we get map request block arrays as double pointers instead of static arrays
  */
-static inline void arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uint8_t* output[AFS_BLOCK_SIZE]){
+static inline void 
+arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uint8_t* output[AFS_BLOCK_SIZE]) {
     int i;
-    for(i = 0; i < size; i++){
+    for(i = 0; i < size; i++) {
         output[i] = array[i];
     }
 }
@@ -33,8 +34,7 @@ static inline void arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uin
  * Initialize an engine queue.
  */
 void
-afs_eq_init(struct afs_engine_queue *eq)
-{
+afs_eq_init(struct afs_engine_queue *eq) {
     INIT_LIST_HEAD(&eq->mq.list);
     spin_lock_init(&eq->mq_lock);
 }
@@ -43,8 +43,7 @@ afs_eq_init(struct afs_engine_queue *eq)
  * Add a map element to a map queue.
  */
 void
-afs_eq_add(struct afs_engine_queue *eq, struct afs_map_queue *element)
-{
+afs_eq_add(struct afs_engine_queue *eq, struct afs_map_queue *element) {
     spin_lock(&eq->mq_lock);
     list_add_tail(&element->list, &eq->mq.list);
     spin_unlock(&eq->mq_lock);
@@ -54,8 +53,7 @@ afs_eq_add(struct afs_engine_queue *eq, struct afs_map_queue *element)
  * Check if an engine queue is empty without locking.
  */
 bool
-afs_eq_empty_unsafe(struct afs_engine_queue *eq)
-{
+afs_eq_empty_unsafe(struct afs_engine_queue *eq) {
     return list_empty(&eq->mq.list);
 }
 
@@ -63,9 +61,8 @@ afs_eq_empty_unsafe(struct afs_engine_queue *eq)
  * Check if an engine queue is empty.
  */
 bool
-afs_eq_empty(struct afs_engine_queue *eq)
-{
-    bool ret;
+afs_eq_empty(struct afs_engine_queue *eq) {
+    bool ret = false;
 
     spin_lock(&eq->mq_lock);
     ret = afs_eq_empty_unsafe(eq);
@@ -79,8 +76,7 @@ afs_eq_empty(struct afs_engine_queue *eq)
  * bio.
  */
 bool
-afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio)
-{
+afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     bool ret = false;
     struct afs_map_queue *node;
     struct bio *node_bio;
@@ -107,17 +103,16 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio)
  * TODO: Protect by a lock.
  */
 static inline uint8_t *
-afs_get_map_entry(uint8_t *map, struct afs_config *config, uint32_t index)
-{
+afs_get_map_entry(uint8_t *map, struct afs_config *config, uint32_t index) {
     return map + (index * config->map_entry_sz);
 }
 
-static void afs_req_clean(struct afs_map_request *req){
-
+static void 
+afs_req_clean(struct afs_map_request *req) {
     //set the state of the request to completed
     atomic64_set(&req->state, REQ_STATE_COMPLETED);
 
-    if(req->carrier_blocks != NULL){
+    if(req->carrier_blocks != NULL) {
        kfree(req->carrier_blocks);
     }
     
@@ -135,16 +130,13 @@ static void afs_req_clean(struct afs_map_request *req){
 /**
  * Custom end_io function to signal completion of all bio operations in a batch
  */
-static void afs_read_endio(struct bio *bio){
+static void 
+afs_read_endio(struct bio *bio) {
     struct afs_bio_private *ctx = bio->bi_private;
     struct afs_map_request *req = ctx->req;
     uint8_t *digest;
-    //struct afs_map_tuple *map_entry_tuple = NULL;
-    //uint8_t *map_entry = NULL;
-    //uint8_t *map_entry_hash = NULL;
-    //uint8_t *map_entry_entropy = NULL;
     struct afs_map_queue *element = NULL;
-    int ret, i;
+    int ret = 0, i;
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
@@ -154,16 +146,11 @@ static void afs_read_endio(struct bio *bio){
 
     bio_put(bio);
  
-    if(atomic_dec_and_test(&ctx->bios_pending)){
-        //set up map entry stuff
-        //map_entry = afs_get_map_entry(req->map, req->config, req->block);
-        //map_entry_tuple = (struct afs_map_tuple *)map_entry;
-        //map_entry_hash = map_entry + (req->config->num_carrier_blocks * sizeof(*map_entry_tuple));
-        //map_entry_entropy = map_entry_hash + SHA128_SZ;
+    if(atomic_dec_and_test(&ctx->bios_pending)) {
 
-	for(i = 0; i < req->config->num_carrier_blocks; i++){
+	for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
-	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))){
+	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
 		afs_debug("corrupted block %d, stored checksum %d, checksum %d", i, req->map_entry_tuple[i].checksum, checksum);
                 atomic_set(&req->rebuild_flag, 1);
 		req->sharenrs[i] = '0';
@@ -192,10 +179,9 @@ static void afs_read_endio(struct bio *bio){
             segment_offset += bv.bv_len;
             kunmap(bv.bv_page);
         }
-	if(atomic_read(&req->rebuild_flag)){
+	if(atomic_read(&req->rebuild_flag)) {
             //write a new function called write blocks, should have a flag to remap blocks
 	    //only after that is finished can we clean up the request so we return
-	    //TODO make it so that write request checks the rebuild flag
 	    rebuild_blocks(req);
 	    return;
 	}
@@ -210,29 +196,21 @@ err:
     return;
 }
 
-static void afs_write_endio(struct bio *bio){
+static void 
+afs_write_endio(struct bio *bio) {
     struct afs_bio_private *ctx = bio->bi_private;
     struct afs_map_request *req = ctx->req;
     uint8_t *digest;
-    //struct afs_map_tuple *map_entry_tuple = NULL;
-    //uint8_t *map_entry = NULL;
-    //uint8_t *map_entry_hash = NULL;
-    //uint8_t *map_entry_entropy = NULL;
     struct afs_map_queue *element = NULL;
-    int i = 0;
+    int i;
 
     bio_put(bio); 
-    if(atomic_dec_and_test(&ctx->bios_pending)){
-        //map_entry = afs_get_map_entry(req->map, req->config, req->block);
-        //map_entry_tuple = (struct afs_map_tuple *)map_entry;
-        //map_entry_hash = map_entry + (req->config->num_carrier_blocks * sizeof(*map_entry_tuple));
-        //map_entry_entropy = map_entry_hash + SHA128_SZ;
-
+    if(atomic_dec_and_test(&ctx->bios_pending)) {
         // TODO: Set the entropy hash correctly, may not be needed
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         memcpy(req->map_entry_hash, digest, SHA128_SZ);
         memset(req->map_entry_entropy, 0, ENTROPY_HASH_SZ);
-        for(i = 0; i < req->config->num_carrier_blocks; i++){
+        for(i = 0; i < req->config->num_carrier_blocks; i++) {
             req->map_entry_tuple[i].checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	}
 
@@ -246,11 +224,10 @@ static void afs_write_endio(struct bio *bio){
 }
 
 static int
-read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
+read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
     uint64_t sector_num;
     const int page_offset = 0;
-    int i = 0;
-    int ret = 0;
+    int i, ret = 0;
     struct bio **bio = NULL;
     struct afs_bio_private *ctx = NULL;
     
@@ -258,12 +235,12 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     atomic_set(&ctx->bios_pending, num_pages);
     ctx->req = req;
-    for(i = 0; i < num_pages; i++){
+
+    for(i = 0; i < num_pages; i++) {
 	struct page *page_structure;
 
         bio[i] = bio_alloc(GFP_NOIO, 1);
         afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
-
         // Make sure page is aligned.
         afs_action(!((uint64_t)req->carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
@@ -275,7 +252,6 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
         bio_set_dev(bio[i], req->bdev);
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
-
         bio[i]->bi_private = ctx;
         bio[i]->bi_end_io = afs_read_endio;
         generic_make_request(bio[i]);
@@ -291,10 +267,9 @@ done:
 
 
 static int
-write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
+write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
     uint64_t sector_num;
-    int ret = 0;
-    int i = 0;
+    int i, ret = 0;
     const int page_offset = 0;
     struct bio **bio = NULL;
     struct afs_bio_private *ctx = NULL;
@@ -304,7 +279,7 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
     atomic_set(&ctx->bios_pending, num_pages);
     ctx->req = req;
 
-    for(i = 0; i < num_pages; i++){
+    for(i = 0; i < num_pages; i++) {
         struct page *page_structure;
 
         bio[i] = bio_alloc(GFP_NOIO, 1);
@@ -316,7 +291,6 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages){
         // Acquire page structure and sector offset.
         page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
         sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
-
 
         bio[i]->bi_opf |= REQ_OP_WRITE;
         bio_set_dev(bio[i], req->bdev);
@@ -340,25 +314,24 @@ done:
  * Rebuilds and remaps a block that has already been read and reconstructed.
  *
  */
-int rebuild_blocks(struct afs_map_request *req){
+int 
+rebuild_blocks(struct afs_map_request *req) {
     struct afs_config *config = NULL;
-    int ret, i;
+    int ret= 0, i;
     uint32_t block_num;
 
-
-    for(i = 0; i < config->num_carrier_blocks; i++){
-        char sharenr[2];
-        snprintf(sharenr, 1, "%d", i);
-        req->sharenrs[i] = sharenr[0];
-    }
+    //TODO, make sure this doesn't cause a null pointer error
+    //for(i = 0; i < config->num_carrier_blocks; i++) {
+    //    char sharenr[2];
+    //    snprintf(sharenr, 1, "%d", i);
+    //    req->sharenrs[i] = sharenr[0];
+    //}
 
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-
     // TODO: Read entropy blocks as well., if needed with secret sharing
     arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
     //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
-    // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
         block_num = acquire_block(req->fs, req->vector);
@@ -387,14 +360,9 @@ reset_entry:
  * In case a block is unmapped, zero-fill it.
  */
 static int
-__afs_read_block(struct afs_map_request *req)
-{
+__afs_read_block(struct afs_map_request *req) {
     struct afs_config *config = NULL;
-    //struct afs_map_tuple *map_entry_tuple = NULL;
-    //uint8_t *map_entry = NULL;
-    //uint8_t *map_entry_hash = NULL;
-    //uint8_t *map_entry_entropy = NULL;
-    int ret, i;
+    int ret = 0, i;
 
     config = req->config;
 
@@ -408,12 +376,10 @@ __afs_read_block(struct afs_map_request *req)
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
         atomic_set(&req->pending, 2);
     } else {
-
         req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
         //req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
 	req->sharenrs = "0123";
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-
         arraytopointer(req->read_blocks, config->num_carrier_blocks, req->carrier_blocks);
 
         for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -436,13 +402,12 @@ done:
  * Map a read request from userspace.
  */
 int
-afs_read_request(struct afs_map_request *req, struct bio *bio)
-{
+afs_read_request(struct afs_map_request *req, struct bio *bio) {
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
     uint32_t segment_offset;
-    int ret;
+    int ret = 0;
 
     req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
     req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
@@ -450,12 +415,11 @@ afs_read_request(struct afs_map_request *req, struct bio *bio)
     afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
 
-    // Read the raw block.
     ret = __afs_read_block(req);
     afs_assert(!ret, done, "could not read data block [%d:%u]", ret, req->block);
 
     // Copy back into the segments.
-    if(atomic_read(&req->pending) == 2){
+    if(atomic_read(&req->pending) == 2) {
         segment_offset = 0;
         bio_for_each_segment (bv, bio, iter) {
             bio_data = kmap(bv.bv_page);
@@ -486,10 +450,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     struct afs_config *config = NULL;
     struct bio_vec bv;
     struct bvec_iter iter;
-    //struct afs_map_tuple *map_entry_tuple = NULL;
-    //uint8_t *map_entry = NULL;
-    //uint8_t *map_entry_hash = NULL;
-    //uint8_t *map_entry_entropy = NULL;
     uint8_t *bio_data = NULL;
     uint32_t block_num;
     uint32_t segment_offset;
@@ -550,18 +510,17 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         kunmap(bv.bv_page);
     }
     //TODO update this to better reflect the total number of carrier blocks
-    for(i = 0; i < config->num_carrier_blocks; i++){
+    /*for(i = 0; i < config->num_carrier_blocks; i++){
 	char sharenr[2];
 	snprintf(sharenr, 1, "%d", i);
         req->sharenrs[i] = sharenr[0];
-    }
+    }*/
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
     arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
     //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
-    // Issue the writes.
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
         block_num = (modification) ? req->map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
