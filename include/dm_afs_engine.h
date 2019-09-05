@@ -25,9 +25,11 @@ struct afs_map_request {
     // way it is easier to manage. These blocks needs to be page
     // aligned.
     // TODO make these double pointers aligned to page boundaries
-    uint8_t __attribute__((aligned(4096))) entropy_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    uint8_t __attribute__((aligned(4096))) read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    uint8_t __attribute__((aligned(4096))) write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
+    //uint8_t __attribute__((aligned(4096))) entropy_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
+    //uint8_t __attribute__((aligned(4096))) read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
+    //uint8_t __attribute__((aligned(4096))) write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
+    //uint8_t __attribute__((aligned(4096))) data_block[AFS_BLOCK_SIZE];
+    uint8_t *carrier_blocks[NUM_MAX_CARRIER_BLKS];
     uint8_t __attribute__((aligned(4096))) data_block[AFS_BLOCK_SIZE];
 
     // Multiple requests to the same block will need to be synchronized.
@@ -55,7 +57,7 @@ struct afs_map_request {
 
     //double pointers because static 2d arrays have a different layout in memory
     //TODO get rid of this 
-    uint8_t **carrier_blocks;
+    //uint8_t **carrier_blocks;
 
     //data block number in the map
     uint32_t block;

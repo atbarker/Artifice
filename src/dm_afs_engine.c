@@ -23,7 +23,7 @@ struct afs_bio_private {
  * TODO this can be thrown out once we get map request block arrays as double pointers instead of static arrays
  */
 static inline void 
-arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uint8_t* output[AFS_BLOCK_SIZE]) {
+arraytopointer(uint8_t array[][AFS_BLOCK_SIZE], int size, uint8_t *output[AFS_BLOCK_SIZE]) {
     int i;
     for(i = 0; i < size; i++) {
         output[i] = array[i];
@@ -109,13 +109,18 @@ afs_get_map_entry(uint8_t *map, struct afs_config *config, uint32_t index) {
 
 static void 
 afs_req_clean(struct afs_map_request *req) {
+    int i;
+
     //set the state of the request to completed
     atomic64_set(&req->state, REQ_STATE_COMPLETED);
 
-    if(req->carrier_blocks != NULL) {
-       kfree(req->carrier_blocks);
-    }
-    
+    //if(req->carrier_blocks != NULL) {
+    //   kfree(req->carrier_blocks);
+    //}
+
+    for(i = 0; i < req->config->num_carrier_blocks; i++){
+       free_page((uint64_t)req->carrier_blocks[i]);
+    }  
     //end the virtual block device's recieved bio
     bio_endio(req->bio);
 
@@ -143,11 +148,9 @@ afs_read_endio(struct bio *bio) {
     uint32_t segment_offset;
     uint16_t checksum;
 
-
     bio_put(bio);
  
     if(atomic_dec_and_test(&ctx->bios_pending)) {
-
 	for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
@@ -158,7 +161,7 @@ afs_read_endio(struct bio *bio) {
 	}
 
         // TODO: Read entropy blocks as well.
-        memcpy(req->data_block, req->read_blocks[0], AFS_BLOCK_SIZE);
+        memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
 	//gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
 	
         // Confirm hash matches.
@@ -329,7 +332,7 @@ rebuild_blocks(struct afs_map_request *req) {
 
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
     // TODO: Read entropy blocks as well., if needed with secret sharing
-    arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
+    //arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
     //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -376,11 +379,11 @@ __afs_read_block(struct afs_map_request *req) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
         atomic_set(&req->pending, 2);
     } else {
-        req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
+        //req->carrier_blocks = kmalloc(sizeof(uint8_t*)*config->num_carrier_blocks, GFP_KERNEL);
         //req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
 	req->sharenrs = "0123";
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-        arraytopointer(req->read_blocks, config->num_carrier_blocks, req->carrier_blocks);
+        //arraytopointer(req->read_blocks, config->num_carrier_blocks, req->carrier_blocks);
 
         for (i = 0; i < config->num_carrier_blocks; i++) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
@@ -392,8 +395,8 @@ __afs_read_block(struct afs_map_request *req) {
     return ret;
 
 done:
-    kfree(req->carrier_blocks);
-    req->carrier_blocks = NULL;
+    //kfree(req->carrier_blocks);
+    //req->carrier_blocks = NULL;
     //gfshare_ctx_free(req->encoder);
     return ret;
 }
@@ -481,8 +484,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         modification = true;
     }
 
-    req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
-    afs_action(req->carrier_blocks, ret = -ENOMEM, err, "could not allocate carrier block array [%d]", ret);
+    //req->carrier_blocks = kmalloc(sizeof(uint8_t*) * config->num_carrier_blocks, GFP_KERNEL);
+    //afs_action(req->carrier_blocks, ret = -ENOMEM, err, "could not allocate carrier block array [%d]", ret);
 
     // Copy from the segments.
     // NOTE: We don't technically need this complicated way
@@ -518,7 +521,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
-    arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
+    //arraytopointer(req->write_blocks, config->num_carrier_blocks, req->carrier_blocks);
     //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
