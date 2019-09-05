@@ -20,16 +20,12 @@ struct afs_engine_queue;
 
 // A mapping request used to handle a single bio.
 struct afs_map_request {
-    // At max, we can have eight carrier blocks. We do waste space
-    // allocating all of them in case we didn't have to, but this
-    // way it is easier to manage. These blocks needs to be page
-    // aligned.
-    // TODO make these double pointers aligned to page boundaries
-    //uint8_t __attribute__((aligned(4096))) entropy_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    //uint8_t __attribute__((aligned(4096))) read_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    //uint8_t __attribute__((aligned(4096))) write_blocks[NUM_MAX_CARRIER_BLKS][AFS_BLOCK_SIZE];
-    //uint8_t __attribute__((aligned(4096))) data_block[AFS_BLOCK_SIZE];
+    // The array of pointers to blocks is populated by calling __get_free_page()
+    // as Artifice blocks are the same size as Linux memory pages we can easily 
+    // have aligned pages. On destruction these arrays should be cleaned by 
+    // calling free_page() on each member.
     uint8_t *carrier_blocks[NUM_MAX_CARRIER_BLKS];
+    //uint8_t *entropy_blocks[NUM_MAX_CARRIER_BLKS];
     uint8_t __attribute__((aligned(4096))) data_block[AFS_BLOCK_SIZE];
 
     // Multiple requests to the same block will need to be synchronized.
@@ -54,10 +50,6 @@ struct afs_map_request {
     //encoding context and parameters
     gfshare_ctx *encoder;
     uint8_t *sharenrs;
-
-    //double pointers because static 2d arrays have a different layout in memory
-    //TODO get rid of this 
-    //uint8_t **carrier_blocks;
 
     //data block number in the map
     uint32_t block;

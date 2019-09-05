@@ -432,7 +432,6 @@ afs_map(struct dm_target *ti, struct bio *bio)
     req->allocated_write_page = NULL;
     atomic_set(&req->pending, 0);
     atomic_set(&req->rebuild_flag, 0);
-    //req->carrier_blocks = NULL;
     atomic64_set(&req->state, REQ_STATE_GROUND);
     for(i = 0; i < req->config->num_carrier_blocks; i++) {
         req->carrier_blocks[i] = (uint8_t*)__get_free_page(GFP_KERNEL);
