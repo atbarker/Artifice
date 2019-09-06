@@ -49,7 +49,7 @@ struct afs_map_request {
 
     //encoding context and parameters
     gfshare_ctx *encoder;
-    uint8_t *sharenrs;
+    uint8_t sharenrs[NUM_MAX_CARRIER_BLKS];
 
     //data block number in the map
     uint32_t block;

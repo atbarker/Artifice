@@ -309,11 +309,9 @@ rebuild_blocks(struct afs_map_request *req) {
     uint32_t block_num;
 
     //TODO, make sure this doesn't cause a null pointer error
-    //for(i = 0; i < config->num_carrier_blocks; i++) {
-    //    char sharenr[2];
-    //    snprintf(sharenr, 1, "%d", i);
-    //    req->sharenrs[i] = sharenr[0];
-    //}
+    for(i = 0; i < config->num_carrier_blocks; i++) {
+        req->sharenrs[i] = i + '0';
+    }
 
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
     // TODO: Read entropy blocks as well., if needed with secret sharing
@@ -364,11 +362,11 @@ __afs_read_block(struct afs_map_request *req) {
         atomic_set(&req->pending, 2);
     } else {
         //req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
-	req->sharenrs = "0123";
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
         for (i = 0; i < config->num_carrier_blocks; i++) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
+            req->sharenrs[i] = i + '0';
         }
         ret = read_pages(req, false, config->num_carrier_blocks);
         afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
@@ -490,11 +488,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         kunmap(bv.bv_page);
     }
     //TODO update this to better reflect the total number of carrier blocks
-    /*for(i = 0; i < config->num_carrier_blocks; i++){
-	char sharenr[2];
-	snprintf(sharenr, 1, "%d", i);
-        req->sharenrs[i] = sharenr[0];
-    }*/
+    for(i = 0; i < config->num_carrier_blocks; i++){
+        req->sharenrs[i] = i + '0';
+    }
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
