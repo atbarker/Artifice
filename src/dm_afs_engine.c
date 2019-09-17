@@ -107,7 +107,9 @@ afs_req_clean(struct afs_map_request *req) {
     }
   
     //end the virtual block device's recieved bio
-    bio_endio(req->bio);
+    if(req->bio) {
+        bio_endio(req->bio);
+    }
 
     //TODO figure out a safer cleanup option
     //re-enable when we want libgfshare
@@ -170,7 +172,7 @@ afs_read_endio(struct bio *bio) {
 	if(atomic_read(&req->rebuild_flag)) {
             //write a new function called write blocks, should have a flag to remap blocks
 	    //only after that is finished can we clean up the request so we return
-	    rebuild_blocks(req);
+	    //rebuild_blocks(req);
 	    return;
 	}
 

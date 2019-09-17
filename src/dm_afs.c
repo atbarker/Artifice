@@ -217,7 +217,7 @@ done:
  * If the queue is not empty, make sure the request is not
  * contended, and then schedule it.
  */
-static void
+/*static void
 afs_groundq(struct work_struct *ws)
 {
     struct afs_private *context = NULL;
@@ -287,7 +287,7 @@ afs_groundq(struct work_struct *ws)
     // NOTE: I am not sure if this is actually true. If workqueues remove the work
     // struct when they call the work struct function, then there is no problem since
     // 'ground_ws' will successfully be queued during afs_groundq's execution.
-}
+}*/
 
 /**
  * Allocate a new bio and copy in the contents from another
@@ -442,15 +442,25 @@ afs_map(struct dm_target *ti, struct bio *bio)
     case REQ_OP_WRITE:
         req->bio = __clone_bio(bio, &req->allocated_write_page, true);
         afs_action(req->bio, ret = DM_MAPIO_KILL, done, "could not clone bio");
-        afs_eq_add(&context->ground_eq, map_element);
+        //afs_eq_add(&context->ground_eq, map_element);
 
         // Defer bio to be completed later.
-        queue_work(context->ground_wq, &context->ground_ws);
+        // queue_work(context->ground_wq, &context->ground_ws);
+
+        map_element->eq = &context->flight_eq;
+        map_element->clean_ws = &context->clean_ws;
+        INIT_WORK(&map_element->req_ws, afs_flightq);
+
+        atomic64_set(&map_element->req.state, REQ_STATE_FLIGHT);
+        afs_eq_add(&context->flight_eq, map_element);
+        queue_work(context->flight_wq, &map_element->req_ws);
+
         ret = DM_MAPIO_SUBMITTED;
         break;
 
     case REQ_OP_FLUSH:
-        while (afs_eq_req_exist(&context->flight_eq, bio) || afs_eq_req_exist(&context->ground_eq, bio)) {
+        //while (afs_eq_req_exist(&context->flight_eq, bio) || afs_eq_req_exist(&context->ground_eq, bio)) {
+        while (afs_eq_req_exist(&context->flight_eq, bio)) {
             msleep(1);
         }
         bio_endio(bio);
@@ -588,16 +598,16 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     }
 
     // We are now ready to process map requests.
-    context->ground_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
-    afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
+    //context->ground_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
+    //afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
     context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
-    INIT_WORK(&context->ground_ws, afs_groundq);
+    //INIT_WORK(&context->ground_ws, afs_groundq);
     INIT_WORK(&context->clean_ws, afs_cleanq);
 
-    afs_eq_init(&context->ground_eq);
+    //afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
 
     //TODO, change from the default number of blocks
@@ -612,9 +622,9 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     return 0;
 
 fwq_err:
-    destroy_workqueue(context->ground_wq);
+    //destroy_workqueue(context->ground_wq);
 
-gwq_err:
+//gwq_err:
     kfree(context->afs_ptr_blocks);
     vfree(context->afs_map);
 
@@ -651,7 +661,8 @@ afs_dtr(struct dm_target *ti)
     int err;
 
     // Wait for all requests to have processed. DO NOT busy wait.
-    while (!afs_eq_empty(&context->flight_eq) || !afs_eq_empty(&context->ground_eq)) {
+    //while (!afs_eq_empty(&context->flight_eq) || !afs_eq_empty(&context->ground_eq)) {
+    while(!afs_eq_empty(&context->flight_eq)) {
         msleep(1);
     }
 
@@ -685,7 +696,7 @@ afs_dtr(struct dm_target *ti)
 
     // Destroy the workqueues.
     destroy_workqueue(context->flight_wq);
-    destroy_workqueue(context->ground_wq);
+    //destroy_workqueue(context->ground_wq);
 
     // Free storage used by context.
     kfree(context);
