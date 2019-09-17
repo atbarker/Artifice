@@ -461,6 +461,7 @@ afs_map(struct dm_target *ti, struct bio *bio)
     case REQ_OP_FLUSH:
         //while (afs_eq_req_exist(&context->flight_eq, bio) || afs_eq_req_exist(&context->ground_eq, bio)) {
         while (afs_eq_req_exist(&context->flight_eq, bio)) {
+            afs_debug("stuck waiting for flush");
             msleep(1);
         }
         bio_endio(bio);
