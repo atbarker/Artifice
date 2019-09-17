@@ -72,8 +72,12 @@ debug_bench: build_bench
 debug_bench_full: build_bench
 	(cd scripts/bench; sudo python bench.py -i 5; sudo python bench.py -i 5 -o r; sudo python bench.py -i 5 -o rw)
 
-debug_single:
+debug_write:
 	sudo dd if=/dev/zero of=/dev/mapper/artifice bs=4096 count=1 oflag=direct
+
+debug_read:
+	touch test_output
+	sudo dd if=/dev/mapper/artifice of=test_output bs=4096 count=1 oflag=direct
 
 debug_end:
 	@sudo dmsetup remove artifice || true
