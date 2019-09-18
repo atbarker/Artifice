@@ -63,6 +63,8 @@ struct afs_map_request {
     //TODO create seperate invalid/pending flags
     atomic_t pending;
 
+    atomic_t bios_pending;
+
     //flag to mark if rebuild is required and array to keep track of block status
     //0 is the block is yet to be processed, 1 is the block is fine, 2 is corrupted
     //TODO set this flag

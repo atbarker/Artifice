@@ -13,11 +13,6 @@
 
 #define CONTAINER_OF(MemberPtr, StrucType, MemberName) ((StrucType*)( (char*)(MemberPtr) - offsetof(StrucType, MemberName)))
 
-struct afs_bio_private {
-    struct afs_map_request *req;
-    atomic_t bios_pending;
-};
-
 /**
  * Initialize an engine queue.
  */
@@ -124,8 +119,7 @@ afs_req_clean(struct afs_map_request *req) {
  */
 static void 
 afs_read_endio(struct bio *bio) {
-    struct afs_bio_private *ctx = bio->bi_private;
-    struct afs_map_request *req = ctx->req;
+    struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
     struct afs_map_queue *element = NULL;
     int ret = 0, i;
@@ -137,7 +131,7 @@ afs_read_endio(struct bio *bio) {
 
     bio_put(bio);
  
-    if(atomic_dec_and_test(&ctx->bios_pending)) {
+    if(atomic_dec_and_test(&req->bios_pending)) {
 	for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
@@ -180,7 +174,6 @@ afs_read_endio(struct bio *bio) {
 err:
         element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
-	kfree(ctx);
         schedule_work(element->clean_ws);
     }
     return;
@@ -188,14 +181,13 @@ err:
 
 static void 
 afs_write_endio(struct bio *bio) {
-    struct afs_bio_private *ctx = bio->bi_private;
-    struct afs_map_request *req = ctx->req;
+    struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
     struct afs_map_queue *element = NULL;
     int i;
 
     bio_put(bio); 
-    if(atomic_dec_and_test(&ctx->bios_pending)) {
+    if(atomic_dec_and_test(&req->bios_pending)) {
         // TODO: Set the entropy hash correctly, may not be needed
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         memcpy(req->map_entry_hash, digest, SHA128_SZ);
@@ -207,7 +199,6 @@ afs_write_endio(struct bio *bio) {
         //cleanup
         element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
-	kfree(ctx);
         schedule_work(element->clean_ws);
     }
     return;
@@ -219,12 +210,9 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
     const int page_offset = 0;
     int i, ret = 0;
     struct bio **bio = NULL;
-    struct afs_bio_private *ctx = NULL;
     
-    ctx = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    atomic_set(&ctx->bios_pending, num_pages);
-    ctx->req = req;
+    atomic_set(&req->bios_pending, num_pages);
 
     for(i = 0; i < num_pages; i++) {
 	struct page *page_structure;
@@ -242,16 +230,12 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
         bio_set_dev(bio[i], req->bdev);
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
-        bio[i]->bi_private = ctx;
+        bio[i]->bi_private = req;
         bio[i]->bi_end_io = afs_read_endio;
         generic_make_request(bio[i]);
     }
-    kfree(bio);
-    return ret;
-
 done:
     kfree(bio);
-    kfree(ctx);
     return ret;
 }
 
@@ -262,12 +246,9 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
     int i, ret = 0;
     const int page_offset = 0;
     struct bio **bio = NULL;
-    struct afs_bio_private *ctx = NULL;
    
-    ctx = kmalloc(sizeof(struct afs_bio_private), GFP_KERNEL);
     bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
-    atomic_set(&ctx->bios_pending, num_pages);
-    ctx->req = req;
+    atomic_set(&req->bios_pending, num_pages);
 
     for(i = 0; i < num_pages; i++) {
         struct page *page_structure;
@@ -287,16 +268,12 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
         bio[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
 
-        bio[i]->bi_private = ctx;
+        bio[i]->bi_private = req;
         bio[i]->bi_end_io = afs_write_endio;
         generic_make_request(bio[i]);
     }
-    kfree(bio);
-    return ret;
-
 done:
     kfree(bio);
-    kfree(ctx);
     return ret;
 }
 
