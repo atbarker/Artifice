@@ -137,8 +137,7 @@ afs_cleanq(struct work_struct *ws)
 {
     struct afs_private *context = NULL;
     struct afs_engine_queue *flight_eq = NULL;
-    struct afs_map_queue *node = NULL, *node_extra = NULL;
-    struct afs_map_request *req = NULL;
+    struct afs_map_request *node = NULL, *node_extra = NULL;
     long long state;
 
     context = container_of(ws, struct afs_private, clean_ws);
@@ -146,9 +145,8 @@ afs_cleanq(struct work_struct *ws)
 
     spin_lock(&flight_eq->mq_lock);
     list_for_each_entry_safe (node, node_extra, &flight_eq->mq.list, list) {
-        state = atomic64_read(&node->req.state);
+        state = atomic64_read(&node->state);
         if (state == REQ_STATE_COMPLETED) {
-            req = &node->req;
             list_del(&node->list);
             kfree(node);
         }
@@ -162,12 +160,10 @@ afs_cleanq(struct work_struct *ws)
 static void
 afs_flightq(struct work_struct *ws)
 {
-    struct afs_map_queue *element = NULL;
     struct afs_map_request *req = NULL;
     int ret = 0;
 
-    element = container_of(ws, struct afs_map_queue, req_ws);
-    req = &element->req;
+    req = container_of(ws, struct afs_map_request, req_ws);
 
     if(atomic_read(&req->pending) != 0){
         afs_debug("already processing");
@@ -207,7 +203,7 @@ done:
         kfree(req->allocated_write_page);
     }
 
-    schedule_work(element->clean_ws);
+    schedule_work(req->clean_ws);
 }
 
 /**
@@ -394,7 +390,6 @@ afs_map(struct dm_target *ti, struct bio *bio)
     const int override = 0;
 
     struct afs_private *context = ti->private;
-    struct afs_map_queue *map_element = NULL;
     struct afs_map_request *req = NULL;
     uint32_t sector_offset;
     uint32_t max_sector_count;
@@ -420,10 +415,9 @@ afs_map(struct dm_target *ti, struct bio *bio)
     }
 
     // Build request.
-    map_element = kmalloc(sizeof(*map_element), GFP_KERNEL);
-    afs_action(map_element, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
+    req = kmalloc(sizeof(*req), GFP_KERNEL);
+    afs_action(req, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
 
-    req = &map_element->req;
     req->bdev = context->bdev;
     req->map = context->afs_map;
     req->config = &context->config;
@@ -447,13 +441,13 @@ afs_map(struct dm_target *ti, struct bio *bio)
         // Defer bio to be completed later.
         // queue_work(context->ground_wq, &context->ground_ws);
 
-        map_element->eq = &context->flight_eq;
-        map_element->clean_ws = &context->clean_ws;
-        INIT_WORK(&map_element->req_ws, afs_flightq);
+        req->eq = &context->flight_eq;
+        req->clean_ws = &context->clean_ws;
+        INIT_WORK(&req->req_ws, afs_flightq);
 
-        atomic64_set(&map_element->req.state, REQ_STATE_FLIGHT);
-        afs_eq_add(&context->flight_eq, map_element);
-        queue_work(context->flight_wq, &map_element->req_ws);
+        atomic64_set(&req->state, REQ_STATE_FLIGHT);
+        afs_eq_add(&context->flight_eq, req);
+        queue_work(context->flight_wq, &req->req_ws);
 
         ret = DM_MAPIO_SUBMITTED;
         break;
@@ -476,8 +470,8 @@ afs_map(struct dm_target *ti, struct bio *bio)
 done:
     if (ret == DM_MAPIO_KILL) {
         bio_endio(bio);
-        if (map_element) {
-            kfree(map_element);
+        if (req) {
+            kfree(req);
         }
     }
     return ret;
@@ -611,13 +605,6 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
 
-    //TODO, change from the default number of blocks
-    ret = cauchy_init();
-    afs_assert(!ret, encode_err, "could not initialize encoding library [%d]", ret);
-//    context->params.BlockBytes = AFS_BLOCK_SIZE;
-//    context->params.OriginalCount = context->config.num_carrier_blocks + context->config.num_entropy_blocks;
-//    context->params.RecoveryCount = context->params.OriginalCount;
-
     afs_debug("constructor completed");
     ti->private = context;
     return 0;
@@ -639,9 +626,6 @@ fs_err:
     dm_put_device(ti, context->passive_dev);
 
 args_err:
-    kfree(context);
-
-encode_err:
     kfree(context);
 
 err:

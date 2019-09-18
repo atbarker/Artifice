@@ -25,12 +25,14 @@ struct afs_map_request {
     // have aligned pages. On destruction these arrays should be cleaned by 
     // calling free_page() on each member.
     uint8_t *carrier_blocks[NUM_MAX_CARRIER_BLKS];
-    //uint8_t *entropy_blocks[NUM_MAX_CARRIER_BLKS];
     uint8_t __attribute__((aligned(4096))) data_block[AFS_BLOCK_SIZE];
 
     // Multiple requests to the same block will need to be synchronized.
     atomic64_t state;
+
+    // Parent data block bio and number of pending carrier block bios.
     struct bio *bio;
+    atomic_t bios_pending;
 
     // We need these from the instance context to process a request.
     uint8_t *map;
@@ -51,44 +53,35 @@ struct afs_map_request {
     gfshare_ctx *encoder;
     uint8_t sharenrs[NUM_MAX_CARRIER_BLKS];
 
-    //data block number in the map
+    //data block number in the map and carrier block offsets
     uint32_t block;
     uint32_t request_size;
     uint32_t sector_offset;
-
-    //carrier block offsets
     uint32_t block_nums[NUM_MAX_CARRIER_BLKS];
   
     //used to tell if a request is currently pending and return status on invalid block write
     //TODO create seperate invalid/pending flags
     atomic_t pending;
 
-    atomic_t bios_pending;
-
     //flag to mark if rebuild is required and array to keep track of block status
     //0 is the block is yet to be processed, 1 is the block is fine, 2 is corrupted
     //TODO set this flag
     atomic_t rebuild_flag;
-} __attribute__((aligned(4096)));
 
-// Map request queue. This is an intrusive
-// linked list.
-struct afs_map_queue {
-    struct afs_map_request req;
     struct work_struct req_ws;
     struct work_struct *clean_ws;
 
-    // Save the engine queue this request exists on so that
-    // the queue may be accessed through it.
+    //So that we can access the encapsulating engine queue struct
     struct afs_engine_queue *eq;
 
-    // Intrusive linked list connector.
+    //Intrusive linked list head
     struct list_head list;
+
 };
 
-// A map queue with its lock.
+// A map queue and its lock.
 struct afs_engine_queue {
-    struct afs_map_queue mq;
+    struct afs_map_request mq;
     spinlock_t mq_lock;
 };
 
@@ -115,7 +108,7 @@ void afs_eq_init(struct afs_engine_queue *eq);
 /**
  * Add an element to an engine queue.
  */
-void afs_eq_add(struct afs_engine_queue *eq, struct afs_map_queue *element);
+void afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element);
 
 /**
  * Check if an engine queue is empty without locking.

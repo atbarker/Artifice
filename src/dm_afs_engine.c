@@ -26,7 +26,7 @@ afs_eq_init(struct afs_engine_queue *eq) {
  * Add a map element to a map queue.
  */
 void
-afs_eq_add(struct afs_engine_queue *eq, struct afs_map_queue *element) {
+afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
     spin_lock(&eq->mq_lock);
     list_add_tail(&element->list, &eq->mq.list);
     spin_unlock(&eq->mq_lock);
@@ -61,7 +61,7 @@ afs_eq_empty(struct afs_engine_queue *eq) {
 bool
 afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     bool ret = false;
-    struct afs_map_queue *node;
+    struct afs_map_request *node;
     struct bio *node_bio;
     uint32_t block_num;
     uint32_t node_block_num;
@@ -69,9 +69,9 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
     spin_lock(&eq->mq_lock);
     list_for_each_entry (node, &eq->mq.list, list) {
-        node_bio = node->req.bio;
+        node_bio = node->bio;
         node_block_num = (node_bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-        if (block_num == node_block_num && atomic64_read(&node->req.state) == REQ_STATE_FLIGHT) {
+        if (block_num == node_block_num && atomic64_read(&node->state) == REQ_STATE_FLIGHT) {
             ret = true;
             break;
         }
@@ -121,7 +121,6 @@ static void
 afs_read_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
-    struct afs_map_queue *element = NULL;
     int ret = 0, i;
     struct bio_vec bv;
     struct bvec_iter iter;
@@ -172,9 +171,8 @@ afs_read_endio(struct bio *bio) {
 
         //cleanup
 err:
-        element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
-        schedule_work(element->clean_ws);
+        schedule_work(req->clean_ws);
     }
     return;
 }
@@ -183,7 +181,6 @@ static void
 afs_write_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
-    struct afs_map_queue *element = NULL;
     int i;
 
     bio_put(bio); 
@@ -197,9 +194,8 @@ afs_write_endio(struct bio *bio) {
 	}
 
         //cleanup
-        element = container_of(req, struct afs_map_queue, req);
         afs_req_clean(req);
-        schedule_work(element->clean_ws);
+        schedule_work(req->clean_ws);
     }
     return;
 }
@@ -340,7 +336,6 @@ __afs_read_block(struct afs_map_request *req) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
         atomic_set(&req->pending, 2);
     } else {
-        //req->block_nums = kmalloc(sizeof(uint32_t) * config->num_carrier_blocks, GFP_KERNEL);
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
         for (i = 0; i < config->num_carrier_blocks; i++) {
