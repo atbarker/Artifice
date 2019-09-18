@@ -207,85 +207,6 @@ done:
 }
 
 /**
- * Ground queue.
- * 
- * If the queue is empty, then we have nothing more to do.
- * If the queue is not empty, make sure the request is not
- * contended, and then schedule it.
- */
-/*static void
-afs_groundq(struct work_struct *ws)
-{
-    struct afs_private *context = NULL;
-    struct afs_engine_queue *ground_eq = NULL;
-    struct afs_engine_queue *flight_eq = NULL;
-    struct afs_map_queue *element = NULL;
-    struct afs_map_queue *node = NULL, *node_extra = NULL;
-    bool exists;
-
-    context = container_of(ws, struct afs_private, ground_ws);
-    ground_eq = &context->ground_eq;
-    flight_eq = &context->flight_eq;
-
-    while (!afs_eq_empty(ground_eq)) {
-        element = NULL;
-
-        // TODO: Possible incorrect ordering.
-        // Suppose that we have two requests for the same block number.
-        // The request which we come across first is the first request to
-        // arrive since we add requests to the tail. It is possible that
-        // when we check the first request, there is contention and hence
-        // that request is not considered. However, when going through the
-        // rest of the requests, we come across the second request to that
-        // block number and now that block number is no longer contended.
-        // In this case, we will go ahead and process this request, thereby
-        // processing a request which came later first. This may result in
-        // data corruption, although the likelihood is quite low.
-
-        spin_lock(&ground_eq->mq_lock);
-        list_for_each_entry_safe (node, node_extra, &ground_eq->mq.list, list) {
-            exists = afs_eq_req_exist(flight_eq, node->req.bio);
-            if (!exists) {
-                element = node;
-                list_del(&node->list);
-                break;
-            }
-        }
-        spin_unlock(&ground_eq->mq_lock);
-
-        // If 'element' is not initializied, then we could not
-        // find an element to process due to contention for the
-        // block number. Sleep and try again.
-
-        if (!element) {
-            msleep(1);
-            continue;
-        }
-
-        // Initialize the element for the flight workqueue.
-        element->eq = flight_eq;
-        element->clean_ws = &context->clean_ws;
-        INIT_WORK(&element->req_ws, afs_flightq);
-
-        atomic64_set(&element->req.state, REQ_STATE_FLIGHT);
-        afs_eq_add(flight_eq, element);
-        queue_work(context->flight_wq, &element->req_ws);
-    }
-
-    // TODO: Potential race condition.
-    // Scenario: We find that the ground queue was empty, and we escape the while
-    // loop, and get rescheduled at this point.
-    // If at this time a new request comes in, 'queue_work' within 'afs_map' might
-    // see that we are still on the queue, and hence, not queue 'ground_ws' again.
-    // This means we won't be called to process the new request and may miss it until
-    // the next request queues us.
-    //
-    // NOTE: I am not sure if this is actually true. If workqueues remove the work
-    // struct when they call the work struct function, then there is no problem since
-    // 'ground_ws' will successfully be queued during afs_groundq's execution.
-}*/
-
-/**
  * Allocate a new bio and copy in the contents from another
  * one.
  * 
@@ -364,6 +285,40 @@ alloc_err:
 }
 
 /**
+ * Initialize an afs_map_request struct.
+ * Returns NULL on error.
+ *
+ * @context: AFS private context struct.
+ * 
+ * @return afs_map_request struct pointer.
+ */
+static struct afs_map_request*
+init_request(struct afs_private *context) {
+    struct afs_map_request *req;
+    int i;
+
+    req = kmalloc(sizeof(*req), GFP_KERNEL);
+    if(req == NULL){
+        return req;
+    }
+    
+    req->bdev = context->bdev;
+    req->map = context->afs_map;
+    req->config = &context->config;
+    req->fs = &context->passive_fs;
+    req->vector = &context->vector;
+    req->allocated_write_page = NULL;
+    atomic_set(&req->pending, 0);
+    atomic_set(&req->rebuild_flag, 0);
+    atomic64_set(&req->state, REQ_STATE_GROUND);
+    for(i = 0; i < req->config->num_carrier_blocks; i++) {
+        req->carrier_blocks[i] = (uint8_t*)__get_free_page(GFP_KERNEL);
+    }
+
+    return req;
+}
+
+/**
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
  * we need to remap to our underlying device and then submit
@@ -385,15 +340,14 @@ alloc_err:
  *                      be resubmitted.
  */
 static int
-afs_map(struct dm_target *ti, struct bio *bio)
-{
+afs_map(struct dm_target *ti, struct bio *bio) {
     const int override = 0;
 
     struct afs_private *context = ti->private;
     struct afs_map_request *req = NULL;
     uint32_t sector_offset;
     uint32_t max_sector_count;
-    int ret, i;
+    int ret;
 
     // Bypass Artifice completely.
     if (override) {
@@ -414,22 +368,8 @@ afs_map(struct dm_target *ti, struct bio *bio)
         dm_accept_partial_bio(bio, max_sector_count);
     }
 
-    // Build request.
-    req = kmalloc(sizeof(*req), GFP_KERNEL);
+    req = init_request(context);
     afs_action(req, ret = DM_MAPIO_KILL, done, "could not allocate memory for request");
-
-    req->bdev = context->bdev;
-    req->map = context->afs_map;
-    req->config = &context->config;
-    req->fs = &context->passive_fs;
-    req->vector = &context->vector;
-    req->allocated_write_page = NULL;
-    atomic_set(&req->pending, 0);
-    atomic_set(&req->rebuild_flag, 0);
-    atomic64_set(&req->state, REQ_STATE_GROUND);
-    for(i = 0; i < req->config->num_carrier_blocks; i++) {
-        req->carrier_blocks[i] = (uint8_t*)__get_free_page(GFP_KERNEL);
-    }
 
     switch (bio_op(bio)) {
     case REQ_OP_READ:
