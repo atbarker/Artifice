@@ -104,6 +104,7 @@ afs_req_clean(struct afs_map_request *req) {
     //end the virtual block device's recieved bio
     if(req->bio) {
         bio_endio(req->bio);
+        afs_debug("IO ended on block %d", req->block);
     }
 
     //TODO figure out a safer cleanup option
@@ -134,7 +135,7 @@ afs_read_endio(struct bio *bio) {
 	for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
-		afs_debug("corrupted block %d, stored checksum %d, checksum %d", i, req->map_entry_tuple[i].checksum, checksum);
+		afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
                 atomic_set(&req->rebuild_flag, 1);
 		req->sharenrs[i] = '0';
 	    }
@@ -182,6 +183,7 @@ afs_write_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
     int i;
+    uint16_t checksum = 0;
 
     bio_put(bio); 
     if(atomic_dec_and_test(&req->bios_pending)) {
@@ -190,7 +192,9 @@ afs_write_endio(struct bio *bio) {
         memcpy(req->map_entry_hash, digest, SHA128_SZ);
         memset(req->map_entry_entropy, 0, ENTROPY_HASH_SZ);
         for(i = 0; i < req->config->num_carrier_blocks; i++) {
-            req->map_entry_tuple[i].checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
+            checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE); 
+            memcpy(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t));
+            //req->map_entry_tuple[i].checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	}
 
         //cleanup
@@ -465,6 +469,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     for(i = 0; i < config->num_carrier_blocks; i++){
         req->sharenrs[i] = i + '0';
     }
+
+    afs_debug("write begun on block %d", req->block);
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing

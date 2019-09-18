@@ -17,6 +17,7 @@
 
 // 1MB.
 #define BUFFER_SIZE (1 << 20)
+//#define BUFFER_SIZE (1 << 12)
 
 // Time.
 #define INIT_TIME(x) _initTime(x)
@@ -94,7 +95,7 @@ thread_write(void *t_arg)
         INIT_TIME(&time_ctx);
         for (j = 0; j < n_writes; j++) {
             offset = (type == RAND) ? BUFFER_SIZE * (rand() % n_writes) : BUFFER_SIZE * j;
-            ret = pwrite(fd, buf, BUFFER_SIZE, offset);
+            ret = pwrite(fd, buf, BUFFER_SIZE, offset); 
             fsync(fd);
         }
         duration += GET_TIME(time_ctx);
