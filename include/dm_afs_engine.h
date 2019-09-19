@@ -77,11 +77,13 @@ struct afs_map_request {
     //Intrusive linked list head
     struct list_head list;
 
+    struct rb_node node;
 };
 
 // A map queue and its lock.
 struct afs_engine_queue {
     struct afs_map_request mq;
+    struct rb_root mq_tree;
     spinlock_t mq_lock;
 };
 

@@ -18,7 +18,8 @@
  */
 void
 afs_eq_init(struct afs_engine_queue *eq) {
-    INIT_LIST_HEAD(&eq->mq.list);
+    //INIT_LIST_HEAD(&eq->mq.list);
+    eq->mq_tree = RB_ROOT;
     spin_lock_init(&eq->mq_lock);
 }
 
@@ -28,7 +29,26 @@ afs_eq_init(struct afs_engine_queue *eq) {
 void
 afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
     spin_lock(&eq->mq_lock);
-    list_add_tail(&element->list, &eq->mq.list);
+    //list_add_tail(&element->list, &eq->mq.list);
+    struct rb_node **new = &(eq->mq_tree->rb_node), *parent = NULL;
+    
+    while (*new) {
+        struct afs_map_request *this = container_of(*new, struct afs_map_request, node);
+        //Use block number instead of keystring
+        int result = strcmp(data->keystring, this->keystring);
+        
+        parent = *new;
+        if (result < 0) {
+            new = &((*new)->rb_left);
+        } else if (result > 0 ) {
+            new = &((*new)->rb_right);
+        } else {
+            
+        }
+        // add new node and rebalance tree
+        rb_link_node(&data->node, parent, new);
+        rb_insert_color(&data->node, root);
+    }
     spin_unlock(&eq->mq_lock);
 }
 
