@@ -31,16 +31,19 @@ afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
     //spin_lock(&eq->mq_lock);
     //list_add_tail(&element->list, &eq->mq.list);
     struct rb_node **new = &(eq->mq_tree.rb_node), *parent = NULL;
+    //TODO calculate this when creating a request
+    uint32_t block_num = (element->bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
 
     spin_lock(&eq->mq_lock);    
     while (*new) {
         struct afs_map_request *this = container_of(*new, struct afs_map_request, node);
         //Use block number instead of keystring
+        uint32_t this_block = (this->bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE; 
         
         parent = *new;
-        if (element->block < this->block) {
+        if (block_num < this_block) {
             new = &((*new)->rb_left);
-        } else if (element->block > this->block) {
+        } else if (block_num > this_block) {
             new = &((*new)->rb_right);
         } else {
             
@@ -57,7 +60,8 @@ afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
  */
 bool
 afs_eq_empty_unsafe(struct afs_engine_queue *eq) {
-    return list_empty(&eq->mq.list);
+    //return list_empty(&eq->mq.list);
+    return !!(eq->mq_tree.rb_node->rb_left && eq->mq_tree.rb_node->rb_right);
 }
 
 /**
@@ -68,19 +72,47 @@ afs_eq_empty(struct afs_engine_queue *eq) {
     bool ret = false;
 
     spin_lock(&eq->mq_lock);
-    ret = afs_eq_empty_unsafe(eq);
+    //ret = afs_eq_empty_unsafe(eq);
+    ret = !!(eq->mq_tree.rb_node->rb_left && eq->mq_tree.rb_node->rb_right);
     spin_unlock(&eq->mq_lock);
 
     return ret;
 }
 
 /**
+ * Remove a specified request from the red/black tree.
+ */
+void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *req){
+    rb_erase(&req->node, &eq->mq_tree);
+}
+
+/**
  * Check if an engine queue contains a request with a specified
  * bio.
  */
+//TODO make this return the address of the found node
 bool
 afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
-    bool ret = false;
+    struct rb_node *node = eq->mq_tree.rb_node;
+    uint32_t block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+
+    spin_lock(&eq->mq_lock);
+    while (node) {
+        struct afs_map_request *this = container_of(node, struct afs_map_request, node);
+        int this_block = (this->bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+
+        if (block_num < this_block) {
+            node = node->rb_left;
+        } else if (block_num > this_block){
+            node = node->rb_right;
+        } else {
+            spin_unlock(&eq->mq_lock);
+            return true;
+        }
+    }
+    spin_unlock(&eq->mq_lock);
+    return false;
+    /*bool ret = false;
     struct afs_map_request *node;
     struct bio *node_bio;
     uint32_t block_num;
@@ -98,7 +130,7 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     }
     spin_unlock(&eq->mq_lock);
 
-    return ret;
+    return ret;*/
 }
 
 /**
