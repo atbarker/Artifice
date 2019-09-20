@@ -353,6 +353,11 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
         afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
 
+        //req->map_entry = afs_get_map_entry(req->map, config, req->block);
+        //req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
+        //req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+        //req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
+
         req->eq = &context->flight_eq;
         INIT_WORK(&req->req_ws, afs_flightq);
         queue_work(context->flight_wq, &req->req_ws);

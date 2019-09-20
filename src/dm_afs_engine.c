@@ -148,7 +148,7 @@ afs_req_clean(struct afs_map_request *req) {
     //gfshare_ctx_free(req->encoder);   
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
-        //req->allocated_write_page = NULL;
+        req->allocated_write_page = NULL;
     }
     
     kfree(req);
@@ -368,13 +368,13 @@ __afs_read_block(struct afs_map_request *req) {
         return -EIO;
     }
 
-    config = req->config;
+    //config = req->config;
 
     //set up map entry stuff
-    req->map_entry = afs_get_map_entry(req->map, config, req->block);
+    req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
-    req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
-    req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
+    req->map_entry_hash = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+    //req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
 
     if (req->map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
@@ -382,11 +382,11 @@ __afs_read_block(struct afs_map_request *req) {
     } else {
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
-        for (i = 0; i < config->num_carrier_blocks; i++) {
+        for (i = 0; i < req->config->num_carrier_blocks; i++) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
             req->sharenrs[i] = i + '0';
         }
-        ret = read_pages(req, false, config->num_carrier_blocks);
+        ret = read_pages(req, false, req->config->num_carrier_blocks);
         afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
     }
     ret = 0;
@@ -417,20 +417,20 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
 
     // Copy back into the segments.
     if(atomic_read(&req->pending) == 2) {
-        //segment_offset = 0;
-        //bio_for_each_segment (bv, bio, iter) {
-        //    bio_data = kmap(bv.bv_page);
-        //    if (bv.bv_len <= (req->request_size - segment_offset)) {
-        //        memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
-        //    } else {
-        //        memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, req->request_size - segment_offset);
-        //        kunmap(bv.bv_page);
-        //        break;
-        //    }
-        //    segment_offset += bv.bv_len;
-        //    kunmap(bv.bv_page);
-        //}
-        //ret = 0;
+        segment_offset = 0;
+        bio_for_each_segment (bv, bio, iter) {
+            bio_data = kmap(bv.bv_page);
+            if (bv.bv_len <= (req->request_size - segment_offset)) {
+                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+            } else {
+                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, req->request_size - segment_offset);
+                kunmap(bv.bv_page);
+                break;
+            }
+            segment_offset += bv.bv_len;
+            kunmap(bv.bv_page);
+        }
+        ret = 0;
     }
 
 done:
