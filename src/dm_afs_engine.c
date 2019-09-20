@@ -43,12 +43,12 @@ afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
         } else if (block_num > this_block) {
             new = &((*new)->rb_right);
         } else {
-            
+            afs_debug("could not insert into tree");       
         }
-        // add new node and rebalance tree
-        rb_link_node(&element->node, parent, new);
-        rb_insert_color(&element->node, &eq->mq_tree);
     }
+    // add new node and rebalance tree
+    rb_link_node(&element->node, parent, new);
+    rb_insert_color(&element->node, &eq->mq_tree);
     spin_unlock(&eq->mq_lock);
 }
 
