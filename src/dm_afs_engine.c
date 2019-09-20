@@ -58,9 +58,8 @@ afs_eq_empty(struct afs_engine_queue *eq) {
  * Check if an engine queue contains a request with a specified
  * bio.
  */
-bool
+struct afs_map_request *
 afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
-    bool ret = false;
     struct afs_map_request *node;
     struct bio *node_bio;
     uint32_t block_num;
@@ -72,13 +71,13 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
         node_bio = node->bio;
         node_block_num = (node_bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
         if (block_num == node_block_num && atomic64_read(&node->state) == REQ_STATE_FLIGHT) {
-            ret = true;
-            break;
+            spin_unlock(&eq->mq_lock);
+            return node;
         }
     }
     spin_unlock(&eq->mq_lock);
 
-    return ret;
+    return NULL;
 }
 
 /**
@@ -100,11 +99,17 @@ afs_req_clean(struct afs_map_request *req) {
     for(i = 0; i < req->config->num_carrier_blocks; i++){
        free_page((uint64_t)req->carrier_blocks[i]);
     }
+
+    if (bio_op(req->bio) == REQ_OP_WRITE) {
+        spin_lock(&req->eq->mq_lock);
+        list_del(&req->list);
+        spin_unlock(&req->eq->mq_lock);
+    }
   
     //end the virtual block device's recieved bio
     if(req->bio) {
         bio_endio(req->bio);
-        afs_debug("IO ended on block %d", req->block);
+        //afs_debug("IO ended on block %d", req->block);
     }
 
     //TODO figure out a safer cleanup option
@@ -173,7 +178,7 @@ afs_read_endio(struct bio *bio) {
         //cleanup
 err:
         afs_req_clean(req);
-        schedule_work(req->clean_ws);
+        //schedule_work(req->clean_ws);
     }
     return;
 }
@@ -199,7 +204,7 @@ afs_write_endio(struct bio *bio) {
 
         //cleanup
         afs_req_clean(req);
-        schedule_work(req->clean_ws);
+        //schedule_work(req->clean_ws);
     }
     return;
 }
@@ -470,7 +475,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         req->sharenrs[i] = i + '0';
     }
 
-    afs_debug("write begun on block %d", req->block);
+    //afs_debug("write begun on block %d", req->block);
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
