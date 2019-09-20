@@ -131,14 +131,14 @@ err:
  * handler then we can end the quest and clean up.
  */
 static void clear_request(struct afs_map_request *req){
+    if (bio_op(req->bio) == REQ_OP_WRITE) {
+        afs_eq_remove(req->eq, req);
+    }
+
     bio_endio(req->bio);
 
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
-    }
-
-    if (bio_op(req->bio) == REQ_OP_WRITE) {
-        afs_eq_remove(req->eq, req);
     }
 
     kfree(req);
