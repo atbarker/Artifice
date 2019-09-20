@@ -126,6 +126,24 @@ err:
     return -EINVAL;
 }
 
+/*
+ * If a bio is handled in the flight queue without having to call a request
+ * handler then we can end the quest and clean up.
+ */
+static void clear_request(struct afs_map_request *req){
+    bio_endio(req->bio);
+
+    if (req->allocated_write_page) {
+        kfree(req->allocated_write_page);
+    }
+
+    if (bio_op(req->bio) == REQ_OP_WRITE) {
+        afs_eq_remove(req->eq, req);
+    }
+
+    kfree(req);
+}
+
 /**
  * Flight queue.
  */
@@ -147,7 +165,8 @@ afs_flightq(struct work_struct *ws)
         atomic_set(&req->pending, 1);
         if ((existing_req = afs_eq_req_exist(req->eq, req->bio))) {
             memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
-            atomic_set(&req->pending, 2);
+            clear_request(req);
+            return;
         } else {
             ret = afs_read_request(req, req->bio);
         }
@@ -163,27 +182,15 @@ afs_flightq(struct work_struct *ws)
         ret = -EINVAL;
         afs_debug("This case should never be encountered!");
     }
-    //atomic64_set(&req->state, REQ_STATE_COMPLETED);
+
     if(atomic_read(&req->pending) == 2){
-        goto done;
+        clear_request(req);
     }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
     return;
 
 done:
-    atomic64_set(&req->state, REQ_STATE_COMPLETED);
-
-    bio_endio(req->bio);
-
-    // Write requests may have an allocated page with them. This needs
-    // to be free'd AFTER the bio has been ended.
-    if (req->allocated_write_page) {
-        kfree(req->allocated_write_page);
-    }
-    if (bio_op(req->bio) == REQ_OP_WRITE) { 
-        afs_eq_remove(req->eq, req);
-    }
-    kfree(req);
+    clear_request(req);
 }
 
 /**
