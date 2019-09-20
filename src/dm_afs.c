@@ -127,34 +127,6 @@ err:
 }
 
 /**
- * Clean queue.
- * 
- * This is scheduled on the global kernel workqueue. Simply
- * removes all elements which have finished processing.
- */
-static void
-afs_cleanq(struct work_struct *ws)
-{
-    struct afs_private *context = NULL;
-    struct afs_engine_queue *flight_eq = NULL;
-    struct afs_map_request *node = NULL, *node_extra = NULL;
-    long long state;
-
-    context = container_of(ws, struct afs_private, clean_ws);
-    flight_eq = &context->flight_eq;
-
-    spin_lock(&flight_eq->mq_lock);
-    list_for_each_entry_safe (node, node_extra, &flight_eq->mq.list, list) {
-        state = atomic64_read(&node->state);
-        if (state == REQ_STATE_COMPLETED) {
-            list_del(&node->list);
-            kfree(node);
-        }
-    }
-    spin_unlock(&flight_eq->mq_lock);
-}
-
-/**
  * Flight queue.
  */
 static void
@@ -203,7 +175,8 @@ done:
         kfree(req->allocated_write_page);
     }
 
-    schedule_work(req->clean_ws);
+    afs_eq_remove(req->eq, req);
+    kfree(req);
 }
 
 /**
@@ -382,7 +355,6 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         // queue_work(context->ground_wq, &context->ground_ws);
 
         req->eq = &context->flight_eq;
-        req->clean_ws = &context->clean_ws;
         INIT_WORK(&req->req_ws, afs_flightq);
 
         atomic64_set(&req->state, REQ_STATE_FLIGHT);
@@ -540,7 +512,6 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     //INIT_WORK(&context->ground_ws, afs_groundq);
-    INIT_WORK(&context->clean_ws, afs_cleanq);
 
     //afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);

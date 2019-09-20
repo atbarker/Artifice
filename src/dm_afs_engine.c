@@ -18,7 +18,6 @@
  */
 void
 afs_eq_init(struct afs_engine_queue *eq) {
-    //INIT_LIST_HEAD(&eq->mq.list);
     eq->mq_tree = RB_ROOT;
     spin_lock_init(&eq->mq_lock);
 }
@@ -28,8 +27,6 @@ afs_eq_init(struct afs_engine_queue *eq) {
  */
 void
 afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
-    //spin_lock(&eq->mq_lock);
-    //list_add_tail(&element->list, &eq->mq.list);
     struct rb_node **new = &(eq->mq_tree.rb_node), *parent = NULL;
     //TODO calculate this when creating a request
     uint32_t block_num = (element->bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
@@ -60,8 +57,11 @@ afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
  */
 bool
 afs_eq_empty_unsafe(struct afs_engine_queue *eq) {
-    //return list_empty(&eq->mq.list);
-    return !!(eq->mq_tree.rb_node->rb_left && eq->mq_tree.rb_node->rb_right);
+    if (eq->mq_tree.rb_node == NULL) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 /**
@@ -72,8 +72,7 @@ afs_eq_empty(struct afs_engine_queue *eq) {
     bool ret = false;
 
     spin_lock(&eq->mq_lock);
-    //ret = afs_eq_empty_unsafe(eq);
-    ret = !!(eq->mq_tree.rb_node->rb_left && eq->mq_tree.rb_node->rb_right);
+    ret = afs_eq_empty_unsafe(eq);
     spin_unlock(&eq->mq_lock);
 
     return ret;
@@ -82,8 +81,12 @@ afs_eq_empty(struct afs_engine_queue *eq) {
 /**
  * Remove a specified request from the red/black tree.
  */
-void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *req){
-    rb_erase(&req->node, &eq->mq_tree);
+void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *req) {
+    spin_lock(&eq->mq_lock);
+    if(!afs_eq_empty_unsafe(eq)){
+        rb_erase(&req->node, &eq->mq_tree);
+    }
+    spin_unlock(&eq->mq_lock);
 }
 
 /**
@@ -112,25 +115,6 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     }
     spin_unlock(&eq->mq_lock);
     return false;
-    /*bool ret = false;
-    struct afs_map_request *node;
-    struct bio *node_bio;
-    uint32_t block_num;
-    uint32_t node_block_num;
-
-    block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-    spin_lock(&eq->mq_lock);
-    list_for_each_entry (node, &eq->mq.list, list) {
-        node_bio = node->bio;
-        node_block_num = (node_bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-        if (block_num == node_block_num && atomic64_read(&node->state) == REQ_STATE_FLIGHT) {
-            ret = true;
-            break;
-        }
-    }
-    spin_unlock(&eq->mq_lock);
-
-    return ret;*/
 }
 
 /**
@@ -156,7 +140,6 @@ afs_req_clean(struct afs_map_request *req) {
     //end the virtual block device's recieved bio
     if(req->bio) {
         bio_endio(req->bio);
-        afs_debug("IO ended on block %d", req->block);
     }
 
     //TODO figure out a safer cleanup option
@@ -164,7 +147,10 @@ afs_req_clean(struct afs_map_request *req) {
     //gfshare_ctx_free(req->encoder);   
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
-    } 
+    }
+
+    afs_eq_remove(req->eq, req);
+    kfree(req); 
 }
 
 /**
@@ -225,7 +211,6 @@ afs_read_endio(struct bio *bio) {
         //cleanup
 err:
         afs_req_clean(req);
-        schedule_work(req->clean_ws);
     }
     return;
 }
@@ -249,9 +234,7 @@ afs_write_endio(struct bio *bio) {
             //req->map_entry_tuple[i].checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	}
 
-        //cleanup
         afs_req_clean(req);
-        schedule_work(req->clean_ws);
     }
     return;
 }
@@ -522,7 +505,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         req->sharenrs[i] = i + '0';
     }
 
-    afs_debug("write begun on block %d", req->block);
+    //afs_debug("write begun on block %d", req->block);
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing

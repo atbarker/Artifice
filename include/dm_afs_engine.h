@@ -69,14 +69,10 @@ struct afs_map_request {
     atomic_t rebuild_flag;
 
     struct work_struct req_ws;
-    struct work_struct *clean_ws;
-
     //So that we can access the encapsulating engine queue struct
     struct afs_engine_queue *eq;
 
-    //Intrusive linked list head
-    struct list_head list;
-
+    //Intrusive red black tree node
     struct rb_node node;
 };
 
@@ -121,6 +117,11 @@ bool afs_eq_empty_unsafe(struct afs_engine_queue *eq);
  * Check if an engine queue.
  */
 bool afs_eq_empty(struct afs_engine_queue *eq);
+
+/**
+ * Remove a specified request from the red/black tree.
+ */
+void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *req);
 
 /**
  * Check if an engine queue contains a request with a specified
