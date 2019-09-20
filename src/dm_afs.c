@@ -126,24 +126,6 @@ err:
     return -EINVAL;
 }
 
-/*
- * If a bio is handled in the flight queue without having to call a request
- * handler then we can end the quest and clean up.
- */
-static void clear_request(struct afs_map_request *req){
-    if (bio_op(req->bio) == REQ_OP_WRITE) {
-        afs_eq_remove(req->eq, req);
-    }
-
-    bio_endio(req->bio);
-
-    if (req->allocated_write_page) {
-        kfree(req->allocated_write_page);
-    }
-
-    kfree(req);
-}
-
 /**
  * Flight queue.
  */
@@ -165,7 +147,7 @@ afs_flightq(struct work_struct *ws)
         atomic_set(&req->pending, 1);
         if ((existing_req = afs_eq_req_exist(req->eq, req->bio))) {
             memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
-            clear_request(req);
+            afs_req_clean(req);
             return;
         } else {
             ret = afs_read_request(req, req->bio);
@@ -184,13 +166,13 @@ afs_flightq(struct work_struct *ws)
     }
 
     if(atomic_read(&req->pending) == 2){
-        clear_request(req);
+        afs_req_clean(req);
     }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
     return;
 
 done:
-    clear_request(req);
+    afs_req_clean(req);
 }
 
 /**

@@ -84,6 +84,11 @@ struct afs_engine_queue {
 };
 
 /**
+ * Cleanup a completed request.
+ */
+void afs_req_clean(struct afs_map_request *req);
+
+/**
  * Rebuild a set of corrupted blocks
  */
 int rebuild_blocks(struct afs_map_request *req);

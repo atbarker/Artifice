@@ -126,12 +126,15 @@ afs_get_map_entry(uint8_t *map, struct afs_config *config, uint32_t index) {
     return map + (index * config->map_entry_sz);
 }
 
-static void 
+/**
+ * Cleanup a completed request.
+ */
+void 
 afs_req_clean(struct afs_map_request *req) {
     int i;
 
     //set the state of the request to completed
-    atomic64_set(&req->state, REQ_STATE_COMPLETED);
+    //atomic64_set(&req->state, REQ_STATE_COMPLETED);
 
     for(i = 0; i < req->config->num_carrier_blocks; i++){
        free_page((uint64_t)req->carrier_blocks[i]);
