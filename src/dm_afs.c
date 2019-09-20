@@ -132,7 +132,7 @@ err:
 static void
 afs_flightq(struct work_struct *ws)
 {
-    struct afs_map_request *req = NULL;
+    struct afs_map_request *req = NULL, *existing_req = NULL;
     int ret = 0;
 
     req = container_of(ws, struct afs_map_request, req_ws);
@@ -145,11 +145,17 @@ afs_flightq(struct work_struct *ws)
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
         atomic_set(&req->pending, 1);
-        ret = afs_read_request(req, req->bio);
+        if ((existing_req = afs_eq_req_exist(req->eq, req->bio))) {
+            memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
+            atomic_set(&req->pending, 2);
+        } else {
+            ret = afs_read_request(req, req->bio);
+        }
         break;
 
     case REQ_OP_WRITE:
         atomic_set(&req->pending, 1);
+        afs_eq_add(req->eq, req);
         ret = afs_write_request(req, req->bio);
         break;
 
@@ -174,8 +180,9 @@ done:
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
     }
-
-    afs_eq_remove(req->eq, req);
+    if (bio_op(req->bio) == REQ_OP_WRITE) { 
+        afs_eq_remove(req->eq, req);
+    }
     kfree(req);
 }
 
@@ -358,7 +365,7 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         INIT_WORK(&req->req_ws, afs_flightq);
 
         atomic64_set(&req->state, REQ_STATE_FLIGHT);
-        afs_eq_add(&context->flight_eq, req);
+        //afs_eq_add(&context->flight_eq, req);
         queue_work(context->flight_wq, &req->req_ws);
 
         ret = DM_MAPIO_SUBMITTED;

@@ -127,6 +127,6 @@ void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *r
  * Check if an engine queue contains a request with a specified
  * bio.
  */
-bool afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio);
+struct afs_map_request * afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio);
 
 #endif /* DM_AFS_ENGINE_H */

@@ -94,7 +94,7 @@ void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *r
  * bio.
  */
 //TODO make this return the address of the found node
-bool
+struct afs_map_request *
 afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     struct rb_node *node = eq->mq_tree.rb_node;
     uint32_t block_num = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
@@ -110,11 +110,11 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
             node = node->rb_right;
         } else {
             spin_unlock(&eq->mq_lock);
-            return true;
+            return this;
         }
     }
     spin_unlock(&eq->mq_lock);
-    return false;
+    return NULL;
 }
 
 /**
@@ -136,6 +136,10 @@ afs_req_clean(struct afs_map_request *req) {
     for(i = 0; i < req->config->num_carrier_blocks; i++){
        free_page((uint64_t)req->carrier_blocks[i]);
     }
+
+    if (bio_op(req->bio) == REQ_OP_WRITE) {
+        afs_eq_remove(req->eq, req);
+    }
   
     //end the virtual block device's recieved bio
     if(req->bio) {
@@ -148,8 +152,7 @@ afs_req_clean(struct afs_map_request *req) {
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
     }
-
-    afs_eq_remove(req->eq, req);
+    
     kfree(req); 
 }
 
