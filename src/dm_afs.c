@@ -150,6 +150,7 @@ afs_flightq(struct work_struct *ws)
             afs_req_clean(req);
             return;
         } else {
+            atomic64_set(&req->state, REQ_STATE_FLIGHT);
             ret = afs_read_request(req, req->bio);
         }
         break;
@@ -157,6 +158,7 @@ afs_flightq(struct work_struct *ws)
     case REQ_OP_WRITE:
         atomic_set(&req->pending, 1);
         afs_eq_add(req->eq, req);
+        atomic64_set(&req->state, REQ_STATE_FLIGHT);
         ret = afs_write_request(req, req->bio);
         break;
 
@@ -164,7 +166,7 @@ afs_flightq(struct work_struct *ws)
         ret = -EINVAL;
         afs_debug("This case should never be encountered!");
     }
-
+    
     if(atomic_read(&req->pending) == 2){
         afs_req_clean(req);
     }
@@ -345,16 +347,14 @@ afs_map(struct dm_target *ti, struct bio *bio) {
     case REQ_OP_WRITE:
         req->bio = __clone_bio(bio, &req->allocated_write_page, true);
         afs_action(req->bio, ret = DM_MAPIO_KILL, done, "could not clone bio");
-        //afs_eq_add(&context->ground_eq, map_element);
 
-        // Defer bio to be completed later.
-        // queue_work(context->ground_wq, &context->ground_ws);
+        req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+        req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+        req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+        afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
 
         req->eq = &context->flight_eq;
         INIT_WORK(&req->req_ws, afs_flightq);
-
-        atomic64_set(&req->state, REQ_STATE_FLIGHT);
-        //afs_eq_add(&context->flight_eq, req);
         queue_work(context->flight_wq, &req->req_ws);
 
         ret = DM_MAPIO_SUBMITTED;

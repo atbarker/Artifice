@@ -28,19 +28,15 @@ afs_eq_init(struct afs_engine_queue *eq) {
 void
 afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
     struct rb_node **new = &(eq->mq_tree.rb_node), *parent = NULL;
-    //TODO calculate this when creating a request
-    uint32_t block_num = (element->bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-
+    
     spin_lock(&eq->mq_lock);    
     while (*new) {
         struct afs_map_request *this = container_of(*new, struct afs_map_request, node);
-        //Use block number instead of keystring
-        uint32_t this_block = (this->bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE; 
         
         parent = *new;
-        if (block_num < this_block) {
+        if (element->block < this->block) {
             new = &((*new)->rb_left);
-        } else if (block_num > this_block) {
+        } else if (element->block > this->block) {
             new = &((*new)->rb_right);
         } else {
             afs_debug("could not insert into tree");       
@@ -93,7 +89,6 @@ void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *r
  * Check if an engine queue contains a request with a specified
  * bio.
  */
-//TODO make this return the address of the found node
 struct afs_map_request *
 afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     struct rb_node *node = eq->mq_tree.rb_node;
@@ -102,11 +97,10 @@ afs_eq_req_exist(struct afs_engine_queue *eq, struct bio *bio) {
     spin_lock(&eq->mq_lock);
     while (node) {
         struct afs_map_request *this = container_of(node, struct afs_map_request, node);
-        int this_block = (this->bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
 
-        if (block_num < this_block) {
+        if (block_num < this->block) {
             node = node->rb_left;
-        } else if (block_num > this_block){
+        } else if (block_num > this->block){
             node = node->rb_right;
         } else {
             spin_unlock(&eq->mq_lock);
@@ -134,7 +128,7 @@ afs_req_clean(struct afs_map_request *req) {
     int i;
 
     //set the state of the request to completed
-    //atomic64_set(&req->state, REQ_STATE_COMPLETED);
+    atomic64_set(&req->state, REQ_STATE_COMPLETED);
 
     for(i = 0; i < req->config->num_carrier_blocks; i++){
        free_page((uint64_t)req->carrier_blocks[i]);
@@ -154,9 +148,11 @@ afs_req_clean(struct afs_map_request *req) {
     //gfshare_ctx_free(req->encoder);   
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
+        //req->allocated_write_page = NULL;
     }
     
-    kfree(req); 
+    kfree(req);
+    req = NULL; 
 }
 
 /**
@@ -250,16 +246,16 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
     uint64_t sector_num;
     const int page_offset = 0;
     int i, ret = 0;
-    struct bio **bio = NULL;
+    struct bio **read_bios = NULL;
     
-    bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
+    read_bios = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     atomic_set(&req->bios_pending, num_pages);
 
     for(i = 0; i < num_pages; i++) {
 	struct page *page_structure;
 
-        bio[i] = bio_alloc(GFP_NOIO, 1);
-        afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
+        read_bios[i] = bio_alloc(GFP_NOIO, 1);
+        afs_action(!IS_ERR(read_bios[i]), ret = PTR_ERR(read_bios[i]), done, "could not allocate bio [%d]", ret);
         // Make sure page is aligned.
         afs_action(!((uint64_t)req->carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
 
@@ -267,16 +263,16 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
         page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
         sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
 
-        bio[i]->bi_opf |= REQ_OP_READ;
-        bio_set_dev(bio[i], req->bdev);
-        bio[i]->bi_iter.bi_sector = sector_num;
-        bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
-        bio[i]->bi_private = req;
-        bio[i]->bi_end_io = afs_read_endio;
-        generic_make_request(bio[i]);
+        read_bios[i]->bi_opf |= REQ_OP_READ;
+        bio_set_dev(read_bios[i], req->bdev);
+        read_bios[i]->bi_iter.bi_sector = sector_num;
+        bio_add_page(read_bios[i], page_structure, AFS_BLOCK_SIZE, page_offset);
+        read_bios[i]->bi_private = req;
+        read_bios[i]->bi_end_io = afs_read_endio;
+        generic_make_request(read_bios[i]);
     }
 done:
-    kfree(bio);
+    kfree(read_bios);
     return ret;
 }
 
@@ -286,16 +282,16 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
     uint64_t sector_num;
     int i, ret = 0;
     const int page_offset = 0;
-    struct bio **bio = NULL;
+    struct bio **write_bios = NULL;
    
-    bio = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
+    write_bios = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
     atomic_set(&req->bios_pending, num_pages);
 
     for(i = 0; i < num_pages; i++) {
         struct page *page_structure;
 
-        bio[i] = bio_alloc(GFP_NOIO, 1);
-        afs_action(!IS_ERR(bio[i]), ret = PTR_ERR(bio[i]), done, "could not allocate bio [%d]", ret);
+        write_bios[i] = bio_alloc(GFP_NOIO, 1);
+        afs_action(!IS_ERR(write_bios[i]), ret = PTR_ERR(write_bios[i]), done, "could not allocate bio [%d]", ret);
 
         // Make sure page is aligned.
         afs_action(!((uint64_t)req->carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
@@ -304,17 +300,16 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
         page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
         sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
 
-        bio[i]->bi_opf |= REQ_OP_WRITE;
-        bio_set_dev(bio[i], req->bdev);
-        bio[i]->bi_iter.bi_sector = sector_num;
-        bio_add_page(bio[i], page_structure, AFS_BLOCK_SIZE, page_offset);
-
-        bio[i]->bi_private = req;
-        bio[i]->bi_end_io = afs_write_endio;
-        generic_make_request(bio[i]);
+        write_bios[i]->bi_opf |= REQ_OP_WRITE;
+        bio_set_dev(write_bios[i], req->bdev);
+        write_bios[i]->bi_iter.bi_sector = sector_num;
+        bio_add_page(write_bios[i], page_structure, AFS_BLOCK_SIZE, page_offset);
+        write_bios[i]->bi_private = req;
+        write_bios[i]->bi_end_io = afs_write_endio;
+        generic_make_request(write_bios[i]);
     }
 done:
-    kfree(bio);
+    kfree(write_bios);
     return ret;
 }
 
@@ -369,6 +364,10 @@ __afs_read_block(struct afs_map_request *req) {
     struct afs_config *config = NULL;
     int ret = 0, i;
 
+    if(req == NULL){
+        return -EIO;
+    }
+
     config = req->config;
 
     //set up map entry stuff
@@ -409,10 +408,8 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
     uint32_t segment_offset;
     int ret = 0;
 
-    req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-    req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
-    req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
-    afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
+    afs_action(atomic64_read(&req->state) == REQ_STATE_FLIGHT, ret = -EINVAL, done, "Request already completed");
+
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
 
     ret = __afs_read_block(req);
@@ -420,20 +417,20 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
 
     // Copy back into the segments.
     if(atomic_read(&req->pending) == 2) {
-        segment_offset = 0;
-        bio_for_each_segment (bv, bio, iter) {
-            bio_data = kmap(bv.bv_page);
-            if (bv.bv_len <= (req->request_size - segment_offset)) {
-                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
-            } else {
-                memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, req->request_size - segment_offset);
-                kunmap(bv.bv_page);
-                break;
-            }
-            segment_offset += bv.bv_len;
-            kunmap(bv.bv_page);
-        }
-        ret = 0;
+        //segment_offset = 0;
+        //bio_for_each_segment (bv, bio, iter) {
+        //    bio_data = kmap(bv.bv_page);
+        //    if (bv.bv_len <= (req->request_size - segment_offset)) {
+        //        memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+        //    } else {
+        //        memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, req->request_size - segment_offset);
+        //        kunmap(bv.bv_page);
+        //        break;
+        //    }
+        //    segment_offset += bv.bv_len;
+        //    kunmap(bv.bv_page);
+        //}
+        //ret = 0;
     }
 
 done:
@@ -456,12 +453,9 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     bool modification = false;
     int ret = 0, i;
 
+    afs_action(atomic64_read(&req->state) == REQ_STATE_FLIGHT, ret = -EINVAL, err, "Request already completed");
+
     config = req->config;
-    req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
-    req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
-    req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
-    
-    afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, err, "cannot handle requested size [%u]", req->request_size);
 
     req->map_entry = afs_get_map_entry(req->map, config, req->block);
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
