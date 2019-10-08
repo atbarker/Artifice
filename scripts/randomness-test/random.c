@@ -63,8 +63,10 @@ int main(int argc, char *argv[]) {
         read(fd, buffer, BLOCK_SIZE);
         if (is_block_psuedorandom(buffer)) {
 	    random_blocks++;
+	    printf("block %d is random\n", i);
 	} else {
             nonrandom_blocks++;
+	    printf("block %d is not random\n", i);
 	}
     }
 
