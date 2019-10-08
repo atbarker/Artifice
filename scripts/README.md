@@ -18,3 +18,13 @@ The 'disk' option calculates the probability of survival for a disk given the me
 ## Benchmarking
 
 The 'bench' folder contains scripts for benchmarking Artifice.
+
+## Read Test
+
+The 'read-test' folder contains small C programs for running a 4KB or 4MB read test on a block device.
+
+## Randomness Test
+
+This program reads through the entirety of a block device and tests the randomness of each block using a chi square test. This is useful for determining how much data on a block device can actually be considered pseudorandom. 
+
+TODO: Specifically mark free space and generate a graphic, maybe with a matplotlib wrapper.
