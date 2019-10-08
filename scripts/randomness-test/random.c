@@ -16,7 +16,7 @@ float chi_square(uint8_t *block) {
     float expected = (float)BLOCK_SIZE/HISTOGRAM_SIZE;
     
     //buffer of longs for the histogram
-    int64_t *histogram = malloc(sizeof(int64_t) * HISTOGRAM_SIZE);
+    uint64_t *histogram = malloc(sizeof(uint64_t) * HISTOGRAM_SIZE);
 
     //populate histogram
     for(i = 0; i < BLOCK_SIZE; i++) {
