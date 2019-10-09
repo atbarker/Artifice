@@ -4,19 +4,26 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 #define HISTOGRAM_SIZE 256
 #define BLOCK_SIZE 4096
 #define SIGNIFICANCE_LEVEL 293.247835
 
 //calculate sum of (((observed-expected)^2)/expected) over a 256 element histogram
-float chi_square(uint8_t *block) {
+double chi_square(uint8_t *block) {
     int i = 0;
-    float chi = 0;
-    float expected = (float)BLOCK_SIZE/HISTOGRAM_SIZE;
+    double chi = 0;
+    double expected = (double)BLOCK_SIZE/HISTOGRAM_SIZE;
     
     //buffer of longs for the histogram
-    uint64_t *histogram = malloc(sizeof(uint64_t) * HISTOGRAM_SIZE);
+    uint64_t histogram[HISTOGRAM_SIZE];
+    uint8_t zero_buffer[BLOCK_SIZE];
+    memset(histogram, 0, HISTOGRAM_SIZE * sizeof(uint64_t));
+    memset(zero_buffer, 0, BLOCK_SIZE);
+    if (!memcmp(zero_buffer, block, BLOCK_SIZE)) {
+        printf("block is zero\n");
+    } 
 
     //populate histogram
     for(i = 0; i < BLOCK_SIZE; i++) {
@@ -24,13 +31,11 @@ float chi_square(uint8_t *block) {
     }
     //calculate chi
     for(i = 0; i < HISTOGRAM_SIZE; i++) {
-        float numerator = histogram[i] - expected;
+        double numerator = histogram[i] - expected;
         chi += (numerator*numerator);
     }
     chi /= expected;
-
-    free(histogram);
-
+    
     return chi;
 }
 
