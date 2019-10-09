@@ -8,7 +8,8 @@
 
 #define HISTOGRAM_SIZE 256
 #define BLOCK_SIZE 4096
-#define SIGNIFICANCE_LEVEL 293.247835
+#define SIGNIFICANCE_LEVEL 293.247835 //p=0.05
+#define ZERO_CHI 1044480.000000 //x^2 value for an all zero block
 
 //calculate sum of (((observed-expected)^2)/expected) over a 256 element histogram
 double chi_square(uint8_t *block) {
@@ -18,12 +19,12 @@ double chi_square(uint8_t *block) {
     
     //buffer of longs for the histogram
     uint64_t histogram[HISTOGRAM_SIZE];
-    uint8_t zero_buffer[BLOCK_SIZE];
+    //uint8_t zero_buffer[BLOCK_SIZE];
     memset(histogram, 0, HISTOGRAM_SIZE * sizeof(uint64_t));
-    memset(zero_buffer, 0, BLOCK_SIZE);
-    if (!memcmp(zero_buffer, block, BLOCK_SIZE)) {
-        printf("block is zero\n");
-    } 
+    //memset(zero_buffer, 0, BLOCK_SIZE);
+    //if (!memcmp(zero_buffer, block, BLOCK_SIZE)) {
+    //    printf("block is zero\n");
+    //} 
 
     //populate histogram
     for(i = 0; i < BLOCK_SIZE; i++) {
@@ -35,22 +36,24 @@ double chi_square(uint8_t *block) {
         chi += (numerator*numerator);
     }
     chi /= expected;
+
+    //printf("Chi = %f\n", chi);
     
     return chi;
 }
 
-bool is_block_psuedorandom(uint8_t *block) {
+int is_block_psuedorandom(uint8_t *block) {
     if (chi_square(block) < SIGNIFICANCE_LEVEL){
-        return true;
+        return 1;
     }
-    return false;
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
     const int arg_count = 2;
     int fd, i;
     size_t file_size, num_blocks;
-    size_t random_blocks = 0, nonrandom_blocks = 0;
+    size_t random_blocks = 0, nonrandom_blocks = 0, zero_blocks = 0;
     uint8_t buffer[BLOCK_SIZE];
 
     if (argc != arg_count) {
@@ -66,7 +69,10 @@ int main(int argc, char *argv[]) {
 
     for (i = 0; i < num_blocks; i++) {
         read(fd, buffer, BLOCK_SIZE);
-        if (is_block_psuedorandom(buffer)) {
+        if (chi_square(buffer) == ZERO_CHI) {
+	    zero_blocks++;
+            printf("block %d is zero'd\n", i);
+        } else if (chi_square(buffer) < SIGNIFICANCE_LEVEL) {
 	    random_blocks++;
 	    printf("block %d is random\n", i);
 	} else {
