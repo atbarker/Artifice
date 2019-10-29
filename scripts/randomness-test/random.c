@@ -11,6 +11,20 @@
 #define SIGNIFICANCE_LEVEL 293.247835 //p=0.05
 #define ZERO_CHI 1044480.000000 //x^2 value for an all zero block
 
+typedef enum {
+    Nonrandom = 0,
+    Random = 1,
+    Zero = 2
+} Randomness;
+
+//double check a block after chi square test
+Randomness additional_test(uint8_t *block){
+    //run an additional R script
+    system("");
+
+    return Nonrandom;
+}
+
 //calculate sum of (((observed-expected)^2)/expected) over a 256 element histogram
 double chi_square(uint8_t *block) {
     int i = 0;

@@ -1,6 +1,8 @@
+CC= clang
+CFLAGS= -Wall -Werror -Wpedantic -Wshadow
 
-all:
-	gcc -Wall -Werror -Wpedantic -o randomtest random.c
+all: random.c
+	$(CC) $(CFLAGS) -o randomtest random.c
 
 clean:
 	rm randomtest
