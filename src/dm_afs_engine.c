@@ -100,11 +100,11 @@ afs_req_clean(struct afs_map_request *req) {
        free_page((uint64_t)req->carrier_blocks[i]);
     }
 
-    if (bio_op(req->bio) == REQ_OP_WRITE) {
-        spin_lock(&req->eq->mq_lock);
-        list_del(&req->list);
-        spin_unlock(&req->eq->mq_lock);
-    }
+    //if (bio_op(req->bio) == REQ_OP_WRITE) {
+    //    spin_lock(&req->eq->mq_lock);
+    //    list_del(&req->list);
+    //    spin_unlock(&req->eq->mq_lock);
+    //}
   
     //end the virtual block device's recieved bio
     if(req->bio) {
@@ -178,7 +178,7 @@ afs_read_endio(struct bio *bio) {
         //cleanup
 err:
         afs_req_clean(req);
-        //schedule_work(req->clean_ws);
+        schedule_work(req->clean_ws);
     }
     return;
 }
@@ -206,7 +206,7 @@ afs_write_endio(struct bio *bio) {
 
         //cleanup
         afs_req_clean(req);
-        //schedule_work(req->clean_ws);
+        schedule_work(req->clean_ws);
     }
     return;
 }

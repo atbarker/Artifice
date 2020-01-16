@@ -194,17 +194,17 @@ afs_flightq(struct work_struct *ws)
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
         atomic_set(&req->pending, 1);
-        if ((existing_req = afs_eq_req_exist(req->eq, req->bio))){
+        /*if ((existing_req = afs_eq_req_exist(req->eq, req->bio))){
             memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
             clear_request(req);
             return;
-        }
+        }*/
         ret = afs_read_request(req, req->bio);
         break;
 
     case REQ_OP_WRITE:
         atomic_set(&req->pending, 1);
-        afs_eq_add(req->eq, req);
+        //afs_eq_add(req->eq, req);
         ret = afs_write_request(req, req->bio);
         break;
 
@@ -214,13 +214,21 @@ afs_flightq(struct work_struct *ws)
     }
     //atomic64_set(&req->state, REQ_STATE_COMPLETED);
     if(atomic_read(&req->pending) == 2){
-        clear_request(req);
+        //clear_request(req);
+        goto done;
     }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
     return;
 
 done:
-    clear_request(req);
+    //clear_request(req);
+    atomic64_set(&req->state, REQ_STATE_COMPLETED);
+
+    if(req->allocated_write_page) {
+        kfree(req->allocated_write_page);
+    }
+
+    schedule_work(req->clean_ws);
 }
 
 /**
@@ -399,10 +407,11 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         // queue_work(context->ground_wq, &context->ground_ws);
 
         req->eq = &context->flight_eq;
-        //req->clean_ws = &context->clean_ws;
+        req->clean_ws = &context->clean_ws;
         INIT_WORK(&req->req_ws, afs_flightq);
 
         atomic64_set(&req->state, REQ_STATE_FLIGHT);
+        afs_eq_add(&context->flight_eq, req);
         queue_work(context->flight_wq, &req->req_ws);
 
         ret = DM_MAPIO_SUBMITTED;
@@ -556,7 +565,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     //INIT_WORK(&context->ground_ws, afs_groundq);
-    //INIT_WORK(&context->clean_ws, afs_cleanq);
+    INIT_WORK(&context->clean_ws, afs_cleanq);
 
     //afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
