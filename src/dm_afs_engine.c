@@ -135,7 +135,7 @@ afs_read_endio(struct bio *bio) {
 	for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
-		afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
+		//afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
                 atomic_set(&req->rebuild_flag, 1);
 		req->sharenrs[i] = '0';
 	    }
@@ -192,8 +192,10 @@ afs_write_endio(struct bio *bio) {
         memcpy(req->map_entry_hash, digest, SHA128_SZ);
         memset(req->map_entry_entropy, 0, ENTROPY_HASH_SZ);
         for(i = 0; i < req->config->num_carrier_blocks; i++) {
-            checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE); 
-            memcpy(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t));
+            //checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE); 
+            //memcpy(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t));
+            memset(&req->map_entry_tuple[i].checksum, 0, sizeof(uint16_t));
+
             //req->map_entry_tuple[i].checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	}
 
