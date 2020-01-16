@@ -2,7 +2,7 @@
 
 The Artifice File System is a pseudo file system which exists in the free space of another file system. By doing so, Artifice remains hidden from suspecting users and hence can be used to store information with concrete deniability. Artifice is implemented using device mapper, and it performs a block to block mapping of information.
 
-For contributions to this project, please contact `Yash Gupta` and `Austen Barker` {ygupta,atbarker}@ucsc.edu.
+For contributions to this project, please contact `Yash Gupta`, `Austen Barker`, or `Eugene Chou` {ygupta,atbarker,euchou}@ucsc.edu.
 
 ## Build
 
@@ -38,7 +38,7 @@ The design portion of this markdown is not intended to be reference information.
 
 This design document has **NOT** been updated for information on a `shadow` (nested) Artifice instance.
 
-Something to make clear before we proceed. A block, or a pointer to a block, is represented by a `32 bit` integer in Artifice. This means that we can, at max, reference `~4 billion` blocks. Since a block is `4KB`, it means we can reference, at max, a disk of size `16TB`.
+Something to make clear before we proceed. A block, or a pointer to a block, is represented by a `32 bit` integer in Artifice. This means that we can, at max, reference `~4 billion` blocks. Since a block is `4KB`, it means we can reference, at max, a disk of size `16TB`. `64 bit` block pointer support is pending.
 
 ### Structure
 
@@ -60,35 +60,35 @@ On the other hand, we need discrete support for the passive file system. This is
 
 Currently, we plan to add modules to support `FAT32`, `EXT4` and `NTFS`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Additionally support for log structured file systems like F2FS is a long term goal.
 
-### How do we keep mapped data safe, and unrecognizable: Entropy Blocks
+### How do we keep mapped data safe, and unrecognizable: Reed-Solomon + Entropy or Secret sharing.
 
 Since Artifice is mapping I/O from the active to the passive file system, the data which is being mapped would be clearly visible if one were to begin inspecting the physical device (`/dev/sdb`) directly. This presents a problem, since the existence of this data proves the existence of the Artifice subsystem. 
 
 We can encrypt this data so that it looks random, however, that leads us to the problem of key management. Managing different keys for each data block is not possible, and using a single key for the encryption of all data blocks is a security hazard. In the case of a rubber-hose attack, all the data stands to be compromised. Hence, to provide obfuscation and security of the data, we use `entropy blocks`.
 
-When a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data is XOR'ed with a random block within the `entropy file`. For consequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is XOR'ed again to recover the data. Without access to this entropy information, it is impossible to recreate the data, depending on the configuration of the Artifice code word.
+When a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data combined with random blocks from the `entropy file` through Reed-Solomon error correcting codes. For subsequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is used again to recover the data. Without access to this entropy information, it is impossible to recreate the data, depending on the configuration of the Reed-Solomon code word.
 
 This is the main selling point for the use of `entropy blocks`. The fact is, a user can store the entropy files on a portable flash drive, and in case of an emergency, discard this flash drive. Now, even if their passphrase was to be compromised and an adversary was able to figure out the names of the entropy files, the adversary will still not have access to those files. And without access to those files, the adversary will not have access to the data.
 
 However, filenames can be rather large and we need to preserve as much space as possible. Hence, we provide an optimization: When Artifice is first started, it reads the `entropy directory` and stores the name for each file into a hash table. To reduce space consumption, an `8` byte hash of the filename is stored instead of the filename itself. This hash also acts as the key into the entropy hash table.
 
+
+Alternatively Artifice can make use of Shamir Secret Sharing instead of Reed-Solomon erasure codes. In this case Artifice does not need entropy blocks, smaller metadata records, and is more reliable in the face of overwrite by the public file system.
+
 ### Carrier Blocks
 
 To provide obfuscation and survivability, Artifice maps data blocks in the form of carrier blocks. Each data block is secret split into `m` carrier blocks, of which `n` are required for reconstruction. This provides us with `m-n` redundant blocks. Moreover, if one has less than `n` blocks, then the data block _cannot_ be reconstructed.
 
-Each carrier block is XOR'ed with an `entropy block` to provide more obfuscation. As explained above, without the `entropy block`, recovering the carrier block is impossible. The number of carrier blocks is user specified (the default is `4`).
+The number of carrier blocks and rebuild threshhold are user specified (the default is `4`).
 
 Given this, we can finally look at the metadata which is stored for a `single` data block:
 ```
-<Carrier block pointer, Entropy block pointer, 2 Byte checksum of carrier block>
-<Carrier block pointer, Entropy block pointer, 2 Byte checksum of carrier block>
+<Carrier block pointer, 2 Byte checksum of carrier block>
+<Carrier block pointer, 2 Byte checksum of carrier block>
 ...
-<Carrier block pointer, Entropy block pointer, 2 Byte checksum of carrier block>
+<Carrier block pointer, 2 Byte checksum of carrier block>
 <Hash of the data block>
-<Hash of the entropy file name>
 ```
-
-The `entropy block pointer` is nothing more than a byte/block offset into the `entropy file` for that particular carrier block. We do not need to store sizes since each block is `4KB`.
 
 This metadata for a single data block is known as a `map entry`, since it signifies a single entry into the `Artifice Map`.
 
@@ -124,12 +124,43 @@ So in essense, it is the super block which allows us to locate and rebuild the m
 
 Every Artifice instance requires a passphrase. We hash this passphrase and use that hash as the location of the super block. If the location we acquired was not free, we hash the hash again, and repeat the process until we find a free block. This way, the only way to find the super block is to know the passphrase. Without the passphrase, it would be impossible to even detect the presence of the super block, and without the super block, it would be impossible to detect the presence of Artifice.
 
-### Encryption
+### Encryption and Secret Sharing
 
 What kind of a security sub-system would not contain encryption? Artifice uses encrpytion for a very special purpose.
 
-So far we have been saying that detecting the super block would be impossible without knowing the passphrase. But that is not entirely true, since one could perform a linear scan of a disk to find the super block. In fact, one could even detect the `pointer blocks` and the `map blocks` by performaing a linear scan since they are structured in predictable patterns. Far as the entropy blocks are contained, they are used to obfuscate only the carrier blocks, and not any of the Artifice metadata. That is because encryption is used to obfuscate all the metadata, including the `super block`, `pointer blocks`, and `map blocks`. The key is none other than the passphrase which is supplied when an Artifice instance is _created_ or _mounted_.
+So far we have been saying that detecting the super block would be impossible without knowing the passphrase. But that is not entirely true, since one could perform a linear scan of a disk to find the super block. In fact, one could even detect the `pointer blocks` and the `map blocks` by performaing a linear scan if they are structured in predictable patterns. In Artifice we encrypt the `superblock` and protect the rest of the metadata in much the same way as the data blocks. The key is none other than the passphrase which is supplied when an Artifice instance is _created_ or _mounted_.
 
-With encryption in place, the super block legitimately cannot be found unless a passphrase is known. Since encrypted data looks very much like random data, there are no patterns an adversary can be on the lookout for, even if they perform a full linear scan of a disk.
+With encryption in place, the super block cannot be found without the passphrase. Since encrypted data looks random, there are no patterns an adversary can be on the lookout for, even if they perform a full linear scan of a disk.
 
-Put everything together, and we have `Artifice`.
+### SSD's and TRIM
+
+An operating system lets an SSD know that data has been deleted and therefore a block is free for remapping and wear leveling through a special disk command called TRIM. TRIM poses a special problem for steganographic file systems because if TRIM is enabled on a system an adversary could cross reference public file system metadata with what is marked as used on the SSD. Differences could possibly give away the existence of a steganographic file system. Although most operating systems only emit TRIM commands periodically so there will likely always be a small number of blocks marked as free by a file system but not by the SSD. 
+
+It would be a far easier solution to avoid the question of "how much of a difference is deniable?" and simply TRIM Artifice carrier blocks once written to the disk. The feasibility of this approach is dependent on the kind of TRIM implemented by an SSD. There are currently three types of TRIM supported by modern SSDs. Each pose relatively similar challenges for Artifice.
+
+* Non-deterministic TRIM: Each read of a TRIMmed block may return different data. In this case Artifice simply has another possible source of overwrites. In this case the problem may be solved through storing additional carrier blocks to provide greater resiliency.
+* Deterministic TRIM (DRAT): All read commands to a TRIMmed block return the same data. Much like before this may simply be another source of overwrites and the user should use a higher number of carrier blocks per code word to compensate.
+* Deterministic Read Zero after TRIM (RZAT): All read commands to a TRIMmed block return only zeros. This is significantly more efficient than previous methods as the FTL need not even look at the raw flash and can return much faster for freed blocks. Although this may cause it to be impossible to retrieve Artifice data as any TRIMmed blocks will be all zeroes instead of the data stored in the flash cells. This could be a possible solution so long as there is a way to reverse a TRIM command for a specific logical block address. At which point RZAT may be equivalent in behavior to DRAT or Non-deterministic TRIM.
+
+Ideally Artifice will be run with TRIM disabled in a similar manner to whole disk encryption schemes like [dm-crypt](http://asalor.blogspot.com/2011/08/trim-dm-crypt-problems.html).
+
+### Multiple Snapshot Attacks.
+
+Artifice assumes an adversary has the ability to take static snapshots of the disk. So therefore the deniability of any changes to the disk between two snapshots must be deniable. Previous system rely on random patterns of cover writes or "chaff". This is unreliable as everyday disk accesses are not guaranteed to be random.
+
+Artifice intends to limit writes to locations that have been recently deleted by the user. This would require an additional data structure to track the status of every block in the file system to be stored in Artifice. Therefore the user can say that any changes to the free space of the file system are because of normal allocation and deletion activities.
+
+### Deniability of Psuedorandom information in unallocated blocks.
+
+While there is a great deal of psuedorandom information in unallocated blocks not everything on the disk is psuedorandom. In addition if a pseudorandom block is stored in the free space of a file system then an adversary should be able to restore it and the file it was part of. If the restored file was pseudorandom because it was DRM protected media, then the adversary should be able to view or play the media contained in the file. If the restored file is pseudorandom because it is encrypted then it should be decryptable into a readable file. A file that cannot be recovered in these two ways is suspicious.
+
+There is a relatively simple way around this, hiding pseudorandom data in a secure delete file system. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
+
+### TODO
+
+* `64 bit` block pointer support and `64 bit` EXT4.
+* Fix random block allocation bugs.
+* Secret sharing for metadata blocks.
+* Persistant data structure to track the free space.
+* Secure delete file system.
+* Yet unnamed secure delete file system, NTFS, and APFS support.
