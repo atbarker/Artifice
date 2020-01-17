@@ -408,8 +408,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
     uint32_t segment_offset;
     int ret = 0;
 
-    if(req == NULL) return;
-
+    afs_assert(req != NULL, done, "already freed request");
     afs_action(atomic64_read(&req->state) == REQ_STATE_FLIGHT, ret = -EINVAL, done, "Request already completed");
 
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
