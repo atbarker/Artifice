@@ -137,30 +137,23 @@ afs_flightq(struct work_struct *ws)
 
     req = container_of(ws, struct afs_map_request, req_ws);
 
-    if(atomic_read(&req->pending) != 0){
-        afs_debug("already processing");
-        return;
-    }
-
     if(work_pending(ws)){
         return;
     }
 
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
-        atomic_set(&req->pending, 1);
         //if ((existing_req = afs_eq_req_exist(req->eq, req->bio))) {
         //    memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
         //    afs_req_clean(req);
         //    return;
-       // } else {
+        //} else {
             atomic64_set(&req->state, REQ_STATE_FLIGHT);
             ret = afs_read_request(req, req->bio);
         //}
         break;
 
     case REQ_OP_WRITE:
-        atomic_set(&req->pending, 1);
         //afs_eq_add(req->eq, req);
         atomic64_set(&req->state, REQ_STATE_FLIGHT);
         ret = afs_write_request(req, req->bio);
@@ -171,14 +164,12 @@ afs_flightq(struct work_struct *ws)
         afs_debug("This case should never be encountered!");
     }
     
-    if(atomic_read(&req->pending) == 2){
-        afs_req_clean(req);
-    }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
     return;
 
 done:
     afs_req_clean(req);
+    return;
 }
 
 /**
@@ -283,7 +274,6 @@ init_request(struct afs_private *context) {
     req->fs = &context->passive_fs;
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
-    atomic_set(&req->pending, 0);
     atomic_set(&req->rebuild_flag, 0);
     atomic64_set(&req->state, REQ_STATE_GROUND);
     for(i = 0; i < req->config->num_carrier_blocks; i++) {

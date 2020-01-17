@@ -363,16 +363,13 @@ reset_entry:
  * Read a block from the map.
  * In case a block is unmapped, zero-fill it.
  */
-static int
+/*static int
 __afs_read_block(struct afs_map_request *req) {
-    struct afs_config *config = NULL;
     int ret = 0, i;
 
     if(req == NULL){
         return -EIO;
     }
-
-    //config = req->config;
 
     //set up map entry stuff
     req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
@@ -382,7 +379,7 @@ __afs_read_block(struct afs_map_request *req) {
 
     if (req->map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
-        atomic_set(&req->pending, 2);
+        return -2;
     } else {
         //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
@@ -399,7 +396,7 @@ __afs_read_block(struct afs_map_request *req) {
 done:
     //gfshare_ctx_free(req->encoder);
     return ret;
-}
+}*/
 
 /**
  * Map a read request from userspace.
@@ -411,17 +408,21 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
     uint8_t *bio_data = NULL;
     uint32_t segment_offset;
     int ret = 0;
+    int i = 0;
 
-    afs_assert(req != NULL && bio != NULL, done, "already freed request");
+    afs_action(req != NULL && bio != NULL, ret = -EIO, done, "already freed request");
     afs_action(atomic64_read(&req->state) == REQ_STATE_FLIGHT, ret = -EINVAL, done, "Request already completed");
 
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
 
-    ret = __afs_read_block(req);
-    afs_assert(!ret, done, "could not read data block [%d:%u]", ret, req->block);
+    req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
+    req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
+    req->map_entry_hash = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+    //req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
 
-    // Copy back into the segments.
-    if(atomic_read(&req->pending) == 2) {
+    //The block is unallocated, zero fill the data block, remap and return, clean up request
+    if (req->map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
+        memset(req->data_block, 0, AFS_BLOCK_SIZE);
         segment_offset = 0;
         bio_for_each_segment (bv, bio, iter) {
             bio_data = kmap(bv.bv_page);
@@ -435,7 +436,16 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
             segment_offset += bv.bv_len;
             kunmap(bv.bv_page);
         }
-        ret = 0;
+        afs_req_clean(req);
+    } else {
+        //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+
+        for (i = 0; i < req->config->num_carrier_blocks; i++) {
+            req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
+            req->sharenrs[i] = i + '0';
+        }
+        ret = read_pages(req, false, req->config->num_carrier_blocks);
+        afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
     }
 
 done:

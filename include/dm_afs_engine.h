@@ -59,10 +59,6 @@ struct afs_map_request {
     uint32_t sector_offset;
     uint32_t block_nums[NUM_MAX_CARRIER_BLKS];
   
-    //used to tell if a request is currently pending and return status on invalid block write
-    //TODO create seperate invalid/pending flags
-    atomic_t pending;
-
     //flag to mark if rebuild is required and array to keep track of block status
     //0 is the block is yet to be processed, 1 is the block is fine, 2 is corrupted
     //TODO set this flag
