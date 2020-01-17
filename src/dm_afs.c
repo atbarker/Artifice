@@ -158,7 +158,7 @@ afs_cleanq(struct work_struct *ws)
  * Clear a request if the bio was resolved with an error or without using 
  * a request handler.
  */ 
-static void
+/*static void
 clear_request(struct afs_map_request *req) {
     if (bio_op(req->bio) == REQ_OP_WRITE) {
         spin_lock(&req->eq->mq_lock);
@@ -173,7 +173,7 @@ clear_request(struct afs_map_request *req) {
     }
    
     kfree(req);
-}
+}*/
 
 /**
  * Flight queue.
@@ -223,6 +223,8 @@ afs_flightq(struct work_struct *ws)
 done:
     //clear_request(req);
     atomic64_set(&req->state, REQ_STATE_COMPLETED);
+
+    bio_endio(req->bio);
 
     if(req->allocated_write_page) {
         kfree(req->allocated_write_page);
