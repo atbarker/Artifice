@@ -141,7 +141,11 @@ afs_flightq(struct work_struct *ws)
         afs_debug("already processing");
         return;
     }
-    
+
+    if(work_pending(ws)){
+        return;
+    }
+
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
         atomic_set(&req->pending, 1);
@@ -509,7 +513,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //context->ground_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
     //afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
-    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
+    //context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
+    context->flight_wq = alloc_ordered_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     //INIT_WORK(&context->ground_ws, afs_groundq);

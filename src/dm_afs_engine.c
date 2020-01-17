@@ -272,6 +272,8 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
         generic_make_request(read_bios[i]);
     }
 done:
+    //kfree(read_bios);
+    for(i = 0; i < num_pages; i++) read_bios[i] = NULL;
     kfree(read_bios);
     return ret;
 }
@@ -309,6 +311,8 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
         generic_make_request(write_bios[i]);
     }
 done:
+    //kfree(write_bios);
+    for(i = 0; i < num_pages; i++) write_bios[i] = NULL;
     kfree(write_bios);
     return ret;
 }
@@ -408,7 +412,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
     uint32_t segment_offset;
     int ret = 0;
 
-    afs_assert(req != NULL, done, "already freed request");
+    afs_assert(req != NULL && bio != NULL, done, "already freed request");
     afs_action(atomic64_read(&req->state) == REQ_STATE_FLIGHT, ret = -EINVAL, done, "Request already completed");
 
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
