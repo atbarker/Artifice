@@ -161,7 +161,7 @@ afs_flightq(struct work_struct *ws)
 
     case REQ_OP_WRITE:
         atomic_set(&req->pending, 1);
-        afs_eq_add(req->eq, req);
+        //afs_eq_add(req->eq, req);
         atomic64_set(&req->state, REQ_STATE_FLIGHT);
         ret = afs_write_request(req, req->bio);
         break;

@@ -133,10 +133,10 @@ afs_req_clean(struct afs_map_request *req) {
     for(i = 0; i < req->config->num_carrier_blocks; i++){
        free_page((uint64_t)req->carrier_blocks[i]);
     }
-
+    /*
     if (bio_op(req->bio) == REQ_OP_WRITE) {
         afs_eq_remove(req->eq, req);
-    }
+    }*/
   
     //end the virtual block device's recieved bio
     if(req->bio) {
