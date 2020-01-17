@@ -172,14 +172,14 @@ afs_read_endio(struct bio *bio) {
     bio_put(bio);
  
     if(atomic_dec_and_test(&req->bios_pending)) {
-	for(i = 0; i < req->config->num_carrier_blocks; i++) {
+	/*for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
 		afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
                 atomic_set(&req->rebuild_flag, 1);
 		req->sharenrs[i] = '0';
 	    }
-	}
+	}*/
 
         // TODO: Read entropy blocks as well.
         memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
@@ -230,11 +230,11 @@ afs_write_endio(struct bio *bio) {
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         memcpy(req->map_entry_hash, digest, SHA128_SZ);
         memset(req->map_entry_entropy, 0, ENTROPY_HASH_SZ);
-        for(i = 0; i < req->config->num_carrier_blocks; i++) {
+        /*for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE); 
             memcpy(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t));
             //req->map_entry_tuple[i].checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
-	}
+	}*/
 
         afs_req_clean(req);
     }
@@ -272,7 +272,6 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
         generic_make_request(read_bios[i]);
     }
 done:
-    //kfree(read_bios);
     for(i = 0; i < num_pages; i++) read_bios[i] = NULL;
     kfree(read_bios);
     return ret;
@@ -311,7 +310,6 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
         generic_make_request(write_bios[i]);
     }
 done:
-    //kfree(write_bios);
     for(i = 0; i < num_pages; i++) write_bios[i] = NULL;
     kfree(write_bios);
     return ret;
