@@ -143,14 +143,14 @@ afs_flightq(struct work_struct *ws)
 
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
-        //if ((existing_req = afs_eq_req_exist(req->eq, req->bio))) {
-        //    memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
-        //    afs_req_clean(req);
-        //    return;
-        //} else {
+        if ((existing_req = afs_eq_req_exist(req->eq, req->bio))) {
+            memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
+            afs_req_clean(req);
+            return;
+        } else {
             atomic64_set(&req->state, REQ_STATE_FLIGHT);
             ret = afs_read_request(req, req->bio);
-        //}
+        }
         break;
 
     case REQ_OP_WRITE:
