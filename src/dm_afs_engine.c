@@ -29,15 +29,15 @@ void
 afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
     struct rb_node **new = &(eq->mq_tree.rb_node), *parent = NULL;
     
-    spin_lock(&eq->mq_lock);    
+    spin_lock_irq(&eq->mq_lock);
     while (*new) {
         struct afs_map_request *this = container_of(*new, struct afs_map_request, node);
         
         parent = *new;
         if (element->block < this->block) {
-            new = &((*new)->rb_left);
+            new = &(*new)->rb_left;
         } else if (element->block > this->block) {
-            new = &((*new)->rb_right);
+            new = &(*new)->rb_right;
         } else {
             afs_debug("could not insert into tree");       
         }
@@ -45,7 +45,7 @@ afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
     // add new node and rebalance tree
     rb_link_node(&element->node, parent, new);
     rb_insert_color(&element->node, &eq->mq_tree);
-    spin_unlock(&eq->mq_lock);
+    spin_unlock_irq(&eq->mq_lock);
 }
 
 /**
@@ -53,7 +53,7 @@ afs_eq_add(struct afs_engine_queue *eq, struct afs_map_request *element) {
  */
 bool
 afs_eq_empty_unsafe(struct afs_engine_queue *eq) {
-    if (eq->mq_tree.rb_node == NULL) {
+    if (RB_EMPTY_ROOT(&eq->mq_tree)) {
         return true;
     } else {
         return false;
@@ -133,10 +133,10 @@ afs_req_clean(struct afs_map_request *req) {
     for(i = 0; i < req->config->num_carrier_blocks; i++){
        free_page((uint64_t)req->carrier_blocks[i]);
     }
-    /*
+    
     if (bio_op(req->bio) == REQ_OP_WRITE) {
         afs_eq_remove(req->eq, req);
-    }*/
+    }
   
     //end the virtual block device's recieved bio
     if(req->bio) {
