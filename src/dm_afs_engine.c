@@ -162,12 +162,13 @@ static void
 afs_read_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
-    int ret = 0, i;
+    int ret = 0;
+    //int i = 0;
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
     uint32_t segment_offset;
-    uint16_t checksum;
+    //uint16_t checksum;
 
     bio_put(bio);
  
@@ -222,8 +223,8 @@ static void
 afs_write_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
-    int i;
-    uint16_t checksum = 0;
+    //int i;
+    //uint16_t checksum = 0;
 
     bio_put(bio); 
     if(atomic_dec_and_test(&req->bios_pending)) {

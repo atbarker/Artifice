@@ -132,7 +132,7 @@ err:
 static void
 afs_flightq(struct work_struct *ws)
 {
-    struct afs_map_request *req = NULL, *existing_req = NULL;
+    struct afs_map_request *req = NULL;
     int ret = 0;
 
     req = container_of(ws, struct afs_map_request, req_ws);
