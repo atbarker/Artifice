@@ -59,31 +59,30 @@ struct afs_map_request {
     uint32_t sector_offset;
     uint32_t block_nums[NUM_MAX_CARRIER_BLKS];
   
-    //used to tell if a request is currently pending and return status on invalid block write
-    //TODO create seperate invalid/pending flags
-    atomic_t pending;
-
     //flag to mark if rebuild is required and array to keep track of block status
     //0 is the block is yet to be processed, 1 is the block is fine, 2 is corrupted
     //TODO set this flag
     atomic_t rebuild_flag;
 
     struct work_struct req_ws;
-    struct work_struct *clean_ws;
-
     //So that we can access the encapsulating engine queue struct
     struct afs_engine_queue *eq;
 
-    //Intrusive linked list head
-    struct list_head list;
-
+    //Intrusive red black tree node
+    struct rb_node node;
 };
 
 // A map queue and its lock.
 struct afs_engine_queue {
     struct afs_map_request mq;
+    struct rb_root mq_tree;
     spinlock_t mq_lock;
 };
+
+/**
+ * Cleanup a completed request.
+ */
+void afs_req_clean(struct afs_map_request *req);
 
 /**
  * Rebuild a set of corrupted blocks
@@ -119,6 +118,11 @@ bool afs_eq_empty_unsafe(struct afs_engine_queue *eq);
  * Check if an engine queue.
  */
 bool afs_eq_empty(struct afs_engine_queue *eq);
+
+/**
+ * Remove a specified request from the red/black tree.
+ */
+void inline afs_eq_remove(struct afs_engine_queue *eq, struct afs_map_request *req);
 
 /**
  * Check if an engine queue contains a request with a specified

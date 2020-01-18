@@ -127,55 +127,6 @@ err:
 }
 
 /**
- * Clean queue.
- * 
- * This is scheduled on the global kernel workqueue. Simply
- * removes all elements which have finished processing.
- */
-static void
-afs_cleanq(struct work_struct *ws)
-{
-    struct afs_private *context = NULL;
-    struct afs_engine_queue *flight_eq = NULL;
-    struct afs_map_request *node = NULL, *node_extra = NULL;
-    long long state;
-
-    context = container_of(ws, struct afs_private, clean_ws);
-    flight_eq = &context->flight_eq;
-
-    spin_lock(&flight_eq->mq_lock);
-    list_for_each_entry_safe (node, node_extra, &flight_eq->mq.list, list) {
-        state = atomic64_read(&node->state);
-        if (state == REQ_STATE_COMPLETED) {
-            list_del(&node->list);
-            kfree(node);
-        }
-    }
-    spin_unlock(&flight_eq->mq_lock);
-}
-
-/**
- * Clear a request if the bio was resolved with an error or without using 
- * a request handler.
- */ 
-/*static void
-clear_request(struct afs_map_request *req) {
-    if (bio_op(req->bio) == REQ_OP_WRITE) {
-        spin_lock(&req->eq->mq_lock);
-        list_del(&req->list);
-        spin_unlock(&req->eq->mq_lock);
-    }
- 
-    bio_endio(req->bio);
-
-    if (req->allocated_write_page) {
-        kfree(req->allocated_write_page);
-    }
-   
-    kfree(req);
-}*/
-
-/**
  * Flight queue.
  */
 static void
@@ -186,25 +137,25 @@ afs_flightq(struct work_struct *ws)
 
     req = container_of(ws, struct afs_map_request, req_ws);
 
-    if(atomic_read(&req->pending) != 0){
-        afs_debug("already processing");
+    if(work_pending(ws)){
         return;
     }
-    
+
     switch (bio_op(req->bio)) {
     case REQ_OP_READ:
-        atomic_set(&req->pending, 1);
-        /*if ((existing_req = afs_eq_req_exist(req->eq, req->bio))){
-            memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
-            clear_request(req);
-            return;
-        }*/
-        ret = afs_read_request(req, req->bio);
+        //if ((existing_req = afs_eq_req_exist(req->eq, req->bio))) {
+        //    memcpy(req->data_block, existing_req->data_block, AFS_BLOCK_SIZE);
+        //    afs_req_clean(req);
+        //    return;
+        //} else {
+            atomic64_set(&req->state, REQ_STATE_FLIGHT);
+            ret = afs_read_request(req, req->bio);
+        //}
         break;
 
     case REQ_OP_WRITE:
-        atomic_set(&req->pending, 1);
         //afs_eq_add(req->eq, req);
+        atomic64_set(&req->state, REQ_STATE_FLIGHT);
         ret = afs_write_request(req, req->bio);
         break;
 
@@ -212,25 +163,12 @@ afs_flightq(struct work_struct *ws)
         ret = -EINVAL;
         afs_debug("This case should never be encountered!");
     }
-    //atomic64_set(&req->state, REQ_STATE_COMPLETED);
-    if(atomic_read(&req->pending) == 2){
-        //clear_request(req);
-        goto done;
-    }
     afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
     return;
 
 done:
-    //clear_request(req);
-    atomic64_set(&req->state, REQ_STATE_COMPLETED);
-
-    bio_endio(req->bio);
-
-    if(req->allocated_write_page) {
-        kfree(req->allocated_write_page);
-    }
-
-    schedule_work(req->clean_ws);
+    afs_req_clean(req);
+    return;
 }
 
 /**
@@ -335,7 +273,6 @@ init_request(struct afs_private *context) {
     req->fs = &context->passive_fs;
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
-    atomic_set(&req->pending, 0);
     atomic_set(&req->rebuild_flag, 0);
     atomic64_set(&req->state, REQ_STATE_GROUND);
     for(i = 0; i < req->config->num_carrier_blocks; i++) {
@@ -403,17 +340,19 @@ afs_map(struct dm_target *ti, struct bio *bio) {
     case REQ_OP_WRITE:
         req->bio = __clone_bio(bio, &req->allocated_write_page, true);
         afs_action(req->bio, ret = DM_MAPIO_KILL, done, "could not clone bio");
-        //afs_eq_add(&context->ground_eq, map_element);
 
-        // Defer bio to be completed later.
-        // queue_work(context->ground_wq, &context->ground_ws);
+        req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+        req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
+        req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
+        afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
+
+        //req->map_entry = afs_get_map_entry(req->map, config, req->block);
+        //req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
+        //req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+        //req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
 
         req->eq = &context->flight_eq;
-        req->clean_ws = &context->clean_ws;
         INIT_WORK(&req->req_ws, afs_flightq);
-
-        atomic64_set(&req->state, REQ_STATE_FLIGHT);
-        afs_eq_add(&context->flight_eq, req);
         queue_work(context->flight_wq, &req->req_ws);
 
         ret = DM_MAPIO_SUBMITTED;
@@ -563,11 +502,11 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //context->ground_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
     //afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
-    context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
+    //context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
+    context->flight_wq = alloc_ordered_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     //INIT_WORK(&context->ground_ws, afs_groundq);
-    INIT_WORK(&context->clean_ws, afs_cleanq);
 
     //afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
