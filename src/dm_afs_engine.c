@@ -134,9 +134,9 @@ afs_req_clean(struct afs_map_request *req) {
        free_page((uint64_t)req->carrier_blocks[i]);
     }
     
-    if (bio_op(req->bio) == REQ_OP_WRITE) {
+    /*if (bio_op(req->bio) == REQ_OP_WRITE) {
         afs_eq_remove(req->eq, req);
-    }
+    }*/
   
     //end the virtual block device's recieved bio
     if(req->bio) {
@@ -188,7 +188,8 @@ afs_read_endio(struct bio *bio) {
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         ret = memcmp(req->map_entry_hash, digest, SHA128_SZ);
-        afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
+        //TODO only run this check when explicitly rebuilding, while mounted it is kind of useless
+        //afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
                 
 	segment_offset = 0;
         bio_for_each_segment (bv, req->bio, iter) {
@@ -211,7 +212,7 @@ afs_read_endio(struct bio *bio) {
 	}
 
         //cleanup
-err:
+//err:
         afs_req_clean(req);
     }
     return;
