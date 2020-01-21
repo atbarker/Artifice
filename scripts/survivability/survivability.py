@@ -13,6 +13,7 @@ blocks_overwritten = 1310720 #5GB in blocks
 art_size_blocks = 1310720 #5GB artifice instance
 prob_success = blocks_overwritten / num_blocks
 num_days = 365
+small_checksum = 0 #checksum used to verify carrier block integrity
 
 
 #in mathematica this is represented as Sum[PDF[BinomialDistribution[k+m,p],i], {i, 0, m}]
@@ -25,7 +26,6 @@ def prob_survival_rs(e, d, m, p):
 
 def calc_metadata_size_rs(blocks, parity, entropy, data, replicas, verbose):
     pointer_size = 4
-    small_checksum = 2
     art_block_hash = 16
     entropy_filename_hash = 8
 
@@ -60,7 +60,6 @@ def calc_metadata_size_rs(blocks, parity, entropy, data, replicas, verbose):
 
 def calc_metadata_size_shamir(blocks, shares, threshold, replicas, verbose):
     pointer_size = 4
-    small_checksum = 2
     art_block_hash = 16
 
     amplification_factor = shares
@@ -122,8 +121,8 @@ def prob_disk_alive(mttf, days):
     return ((1 - (1/mttf)) ** (days * 24))
 
 def main(args):
-    #calc_metadata_size_rs(art_size_blocks, 4, 1, 2, 8, True)
-    #calc_metadata_size_shamir(art_size_blocks, 4, 1, 8, True)
+    calc_metadata_size_rs(art_size_blocks, 4, 1, 2, 8, True)
+    calc_metadata_size_shamir(art_size_blocks, 4, 1, 8, True)
     
     if args[1] == "nines":
         m_max = 0.05
