@@ -347,11 +347,6 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
         afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
 
-        //req->map_entry = afs_get_map_entry(req->map, config, req->block);
-        //req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
-        //req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
-        //req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
-
         req->eq = &context->flight_eq;
         INIT_WORK(&req->req_ws, afs_flightq);
         queue_work(context->flight_wq, &req->req_ws);
@@ -360,7 +355,6 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         break;
 
     case REQ_OP_FLUSH:
-        //while (afs_eq_req_exist(&context->flight_eq, bio) || afs_eq_req_exist(&context->ground_eq, bio)) {
         while (afs_eq_req_exist(&context->flight_eq, bio)) {
             afs_debug("stuck waiting for flush");
             msleep(1);
@@ -412,7 +406,6 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     int ret;
     int8_t detected_fs;
     uint64_t instance_size;
-    //uint64_t i;
 
     // Make sure instance is large enough.
     instance_size = ti->len * AFS_SECTOR_SIZE;
@@ -500,16 +493,12 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     }
 
     // We are now ready to process map requests.
-    //context->ground_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_MEM_RECLAIM, 1, "Artifice Ground WQ");
     //afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
     //context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM | WQ_CPU_INTENSIVE, num_online_cpus(), "Artifice Flight WQ");
     context->flight_wq = alloc_ordered_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_MEM_RECLAIM, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
-    //INIT_WORK(&context->ground_ws, afs_groundq);
-
-    //afs_eq_init(&context->ground_eq);
     afs_eq_init(&context->flight_eq);
 
     afs_debug("constructor completed");
@@ -517,9 +506,6 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     return 0;
 
 fwq_err:
-    //destroy_workqueue(context->ground_wq);
-
-//gwq_err:
     kfree(context->afs_ptr_blocks);
     vfree(context->afs_map);
 
@@ -553,7 +539,6 @@ afs_dtr(struct dm_target *ti)
     int err;
 
     // Wait for all requests to have processed. DO NOT busy wait.
-    //while (!afs_eq_empty(&context->flight_eq) || !afs_eq_empty(&context->ground_eq)) {
     while(!afs_eq_empty(&context->flight_eq)) {
         msleep(1);
     }
@@ -588,7 +573,6 @@ afs_dtr(struct dm_target *ti)
 
     // Destroy the workqueues.
     destroy_workqueue(context->flight_wq);
-    //destroy_workqueue(context->ground_wq);
 
     // Free storage used by context.
     kfree(context);

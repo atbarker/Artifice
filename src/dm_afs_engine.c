@@ -143,8 +143,6 @@ afs_req_clean(struct afs_map_request *req) {
         bio_endio(req->bio);
     }
 
-    //TODO figure out a safer cleanup option
-    //re-enable when we want libgfshare
     if (req->encoder != NULL){
         gfshare_ctx_free(req->encoder);
         req->encoder = NULL;   
@@ -166,12 +164,10 @@ afs_read_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
     int ret = 0;
-    //int i = 0;
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
     uint32_t segment_offset;
-    //uint16_t checksum;
 
     bio_put(bio);
  
@@ -185,7 +181,6 @@ afs_read_endio(struct bio *bio) {
 	    }
 	}*/
 
-        // TODO: Read entropy blocks as well.
         //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
 	gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
 	
@@ -216,7 +211,6 @@ afs_read_endio(struct bio *bio) {
 	}
 
         //cleanup
-//err:
         afs_req_clean(req);
     }
     return;
@@ -226,12 +220,9 @@ static void
 afs_write_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
     uint8_t *digest;
-    //int i;
-    //uint16_t checksum = 0;
 
     bio_put(bio); 
     if(atomic_dec_and_test(&req->bios_pending)) {
-        // TODO: Set the entropy hash correctly, may not be needed
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         memcpy(req->map_entry_hash, digest, SHA128_SZ);
         memset(req->map_entry_entropy, 0, ENTROPY_HASH_SZ);
@@ -330,13 +321,11 @@ rebuild_blocks(struct afs_map_request *req) {
     int ret= 0, i;
     uint32_t block_num;
 
-    //TODO, make sure this doesn't cause a null pointer error
     for(i = 0; i < config->num_carrier_blocks; i++) {
         req->sharenrs[i] = i + '0';
     }
 
     req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-    // TODO: Read entropy blocks as well., if needed with secret sharing
     gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -527,7 +516,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //afs_debug("write begun on block %d", req->block);
     req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
-    // TODO: Read entropy blocks as well., if needed with secret sharing
     gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
