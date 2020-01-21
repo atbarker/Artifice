@@ -273,6 +273,7 @@ init_request(struct afs_private *context) {
     req->fs = &context->passive_fs;
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
+    req->encoder = NULL;
     atomic_set(&req->rebuild_flag, 0);
     atomic64_set(&req->state, REQ_STATE_GROUND);
     for(i = 0; i < req->config->num_carrier_blocks; i++) {

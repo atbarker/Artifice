@@ -145,7 +145,10 @@ afs_req_clean(struct afs_map_request *req) {
 
     //TODO figure out a safer cleanup option
     //re-enable when we want libgfshare
-    //gfshare_ctx_free(req->encoder);   
+    if (req->encoder != NULL){
+        gfshare_ctx_free(req->encoder);
+        req->encoder = NULL;   
+    }
     if (req->allocated_write_page) {
         kfree(req->allocated_write_page);
         req->allocated_write_page = NULL;
@@ -183,8 +186,8 @@ afs_read_endio(struct bio *bio) {
 	}*/
 
         // TODO: Read entropy blocks as well.
-        memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
-	//gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+        //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
+	gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
 	
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
@@ -332,9 +335,9 @@ rebuild_blocks(struct afs_map_request *req) {
         req->sharenrs[i] = i + '0';
     }
 
-    //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
     // TODO: Read entropy blocks as well., if needed with secret sharing
-    //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
@@ -355,7 +358,8 @@ reset_entry:
         }
         req->map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    //gfshare_ctx_free(req->encoder);
+    gfshare_ctx_free(req->encoder);
+    req->encoder = NULL;
     return ret;
 }
 
@@ -438,7 +442,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
         }
         afs_req_clean(req);
     } else {
-        //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+        req->encoder = gfshare_ctx_init_dec(req->sharenrs, req->config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
         for (i = 0; i < req->config->num_carrier_blocks; i++) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
@@ -521,10 +525,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
 
     //afs_debug("write begun on block %d", req->block);
-    //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     // TODO: Read entropy blocks as well., if needed with secret sharing
-    //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
@@ -532,7 +536,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         req->map_entry_tuple[i].carrier_block_ptr = block_num;
 	req->block_nums[i] = block_num;
-        memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        //memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
     ret = write_pages(req, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
@@ -545,7 +549,8 @@ reset_entry:
         }
         req->map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    //gfshare_ctx_free(req->encoder);
+    gfshare_ctx_free(req->encoder);
+    req->encoder = NULL;
 
 err:
     return ret;
