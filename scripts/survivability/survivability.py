@@ -159,9 +159,9 @@ def main(args):
             #reconstruct threshold of 3, i additional blocks
             prob4.append(prob_metadata_alive_sss(3, i))
 
-        plt.xlabel("Number of Parity Blocks")
+        plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
-        plt.title("Probability of Metadata Survival vs Number of Parity Blocks")
+        plt.title("Probability of Metadata Survival vs Number of Carrier Blocks")
         rs = plt.plot(m_values, prob1, label='RS, 1 data block')
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
@@ -185,9 +185,9 @@ def main(args):
             #reconstruct threshold of 3, i additional blocks
             prob4.append(prob_artifice_alive_sss(3, i))
 
-        plt.xlabel("Number of Parity Blocks")
+        plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
-        plt.title("Probability of Artifice Survival vs Number of Parity Blocks")
+        plt.title("Probability of Artifice Survival vs Number of Carrier Blocks")
         rs = plt.plot(m_values, prob1, label='RS, 1 data block')
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
