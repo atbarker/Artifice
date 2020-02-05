@@ -57,10 +57,11 @@ reload:
 #	196608  = 096MB Artifice instance.
 #	524288  = 256MB Artifice instance.
 #   1048576 = 512MB Artifice instance.
+#   16777216 = 8GB Artifice Instance (2GB usable)
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 1048576 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 16777216 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1

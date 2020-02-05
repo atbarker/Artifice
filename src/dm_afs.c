@@ -491,7 +491,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         // Create nested instance.
         break;
     }
-
+    afs_debug("List length %d", fs->list_len);
     // We are now ready to process map requests.
     //afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
