@@ -52,12 +52,13 @@ reload:
 ######################################################################
 # Make sure your VM has another disk and its mounted at /dev/sdb.
 #
-# MY CONFIGURATION: /dev/sdb is 4GB.
+# MY CONFIGURATION: /dev/sdb is 10GB.
 # Sectors:
 #	196608  = 096MB Artifice instance.
 #	524288  = 256MB Artifice instance.
 #   1048576 = 512MB Artifice instance.
-#   16777216 = 8GB Artifice Instance (2GB usable)
+#   4194304 = 2GB Artifice instance.
+#   16777216 = 8GB Artifice Instance
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1

@@ -399,6 +399,7 @@ afs_fat32_detect(const void *data, struct block_device *device, struct afs_passi
     if (fs) {
         fs->total_blocks = vol->num_data_clusters;
         fs->sectors_per_block = vol->sec_cluster;
+        afs_debug("sectors per cluster %d", vol->sec_cluster);
         fs->block_list = vol->empty_clusters;
         fs->list_len = vol->num_empty_clusters;
         fs->data_start_off = vol->data_start_off; // Data start in sectors, blocks are relative to this.
