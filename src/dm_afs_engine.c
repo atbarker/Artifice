@@ -408,6 +408,7 @@ __afs_read_block(struct afs_map_request *req) {
             read_bios[i]->bi_private = req;
             //read_bios[i]->bi_end_io = afs_read_endio;
             submit_bio_wait(read_bios[i]);
+            //bio_put(read_bios[i]);
             kfree(read_bios[i]);
             //generic_make_request(read_bios[i]);
         }
@@ -420,6 +421,7 @@ __afs_read_block(struct afs_map_request *req) {
     for(i = 0; i < num_pages; i++) {
         read_bios[i] = NULL;
     }
+    gfshare_ctx_free(req->encoder);
     kfree(read_bios);
     ret = 0;
     return ret;
