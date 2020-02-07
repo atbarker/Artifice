@@ -63,7 +63,7 @@ reload:
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 1048576 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
