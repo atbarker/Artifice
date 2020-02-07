@@ -356,7 +356,7 @@ reset_entry:
  * Read a block from the map.
  * In case a block is unmapped, zero-fill it.
  */
-/*static int
+static int
 __afs_read_block(struct afs_map_request *req) {
     int ret = 0, i;
 
@@ -374,7 +374,7 @@ __afs_read_block(struct afs_map_request *req) {
         memset(req->data_block, 0, AFS_BLOCK_SIZE);
         return -2;
     } else {
-        //req->encoder = gfshare_ctx_init_dec(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+        req->encoder = gfshare_ctx_init_dec(req->sharenrs, req->config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
         for (i = 0; i < req->config->num_carrier_blocks; i++) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
@@ -387,9 +387,9 @@ __afs_read_block(struct afs_map_request *req) {
     return ret;
 
 done:
-    //gfshare_ctx_free(req->encoder);
+    gfshare_ctx_free(req->encoder);
     return ret;
-}*/
+}
 
 /**
  * Map a read request from userspace.
@@ -476,8 +476,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     // read of the block regardless because if the block is indeed unmapped, then
     // the data block will be simply zero'ed out.
 
-    //ret = __afs_read_block(req, block_num);
-    //afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
+    ret = __afs_read_block(req);
+    afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
 
     if (req->map_entry_tuple[0].carrier_block_ptr != AFS_INVALID_BLOCK) {
         modification = true;
