@@ -358,8 +358,12 @@ reset_entry:
  */
 static int
 __afs_read_block(struct afs_map_request *req) {
-    int ret = 0, i;
-
+    uint64_t sector_num;
+    const int page_offset = 0;
+    int i, ret = 0;
+    struct bio **read_bios = NULL;
+    uint8_t *digest;
+    uint32_t num_pages = req->config->num_carrier_blocks;
     if(req == NULL){
         return -EIO;
     }
@@ -380,9 +384,43 @@ __afs_read_block(struct afs_map_request *req) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
             req->sharenrs[i] = i + '0';
         }
-        ret = read_pages(req, false, req->config->num_carrier_blocks);
-        afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
+        //ret = read_pages(req, false, req->config->num_carrier_blocks);
+        //afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
+        read_bios = kmalloc(sizeof(struct bio *) * num_pages, GFP_KERNEL);
+        atomic_set(&req->bios_pending, num_pages);
+
+        for(i = 0; i < num_pages; i++) {
+            struct page *page_structure;
+
+            read_bios[i] = bio_alloc(GFP_NOIO, 1);
+            afs_action(!IS_ERR(read_bios[i]), ret = PTR_ERR(read_bios[i]), done, "could not allocate bio [%d]", ret);
+            // Make sure page is aligned.
+            afs_action(!((uint64_t)req->carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
+
+            // Acquire page structure and sector offset.
+            page_structure = (false) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
+            sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
+
+            read_bios[i]->bi_opf |= REQ_OP_READ;
+            bio_set_dev(read_bios[i], req->bdev);
+            read_bios[i]->bi_iter.bi_sector = sector_num;
+            bio_add_page(read_bios[i], page_structure, AFS_BLOCK_SIZE, page_offset);
+            read_bios[i]->bi_private = req;
+            //read_bios[i]->bi_end_io = afs_read_endio;
+            submit_bio_wait(read_bios[i]);
+            kfree(read_bios[i]);
+            //generic_make_request(read_bios[i]);
+        }
+        gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+
+        // Confirm hash matches.
+        //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
+        //ret = memcmp(req->map_entry_hash, digest, SHA128_SZ);
     }
+    for(i = 0; i < num_pages; i++) {
+        read_bios[i] = NULL;
+    }
+    kfree(read_bios);
     ret = 0;
     return ret;
 
@@ -476,11 +514,13 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     // read of the block regardless because if the block is indeed unmapped, then
     // the data block will be simply zero'ed out.
 
-    ret = __afs_read_block(req);
+    //ret = __afs_read_block(req);
     afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
 
     if (req->map_entry_tuple[0].carrier_block_ptr != AFS_INVALID_BLOCK) {
         modification = true;
+        ret = __afs_read_block(req);
+        afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
     }
 
     // Copy from the segments.
