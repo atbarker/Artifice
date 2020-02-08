@@ -181,8 +181,8 @@ afs_read_endio(struct bio *bio) {
 	    }
 	}*/
 
-        memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
-	//gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+        //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
+	gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
 	
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
@@ -353,7 +353,8 @@ reset_entry:
 }
 
 /**
- * Read a block from the map.
+ * Read a block from the map for a read/modify/write.
+ * TODO, make this asynchronous
  * In case a block is unmapped, zero-fill it.
  */
 static int
@@ -412,8 +413,8 @@ __afs_read_block(struct afs_map_request *req) {
             kfree(read_bios[i]);
             //generic_make_request(read_bios[i]);
         }
-        memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
-        //gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+        //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
+        gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
 
         // Confirm hash matches.
         //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
@@ -559,17 +560,17 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //afs_debug("write begun on block %d", req->block);
     req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
-    //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
-        allocation_free(req->vector, req->map_entry_tuple[i].carrier_block_ptr);
-        block_num = acquire_block(req->fs, req->vector);
-        //block_num = (modification) ? req->map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
+        //allocation_free(req->vector, req->map_entry_tuple[i].carrier_block_ptr);
+        //block_num = acquire_block(req->fs, req->vector);
+        block_num = (modification) ? req->map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         req->map_entry_tuple[i].carrier_block_ptr = block_num;
 	req->block_nums[i] = block_num;
-        memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        //memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
     ret = write_pages(req, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
