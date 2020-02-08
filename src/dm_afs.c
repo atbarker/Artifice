@@ -288,11 +288,12 @@ static void print_bio_info(struct bio *bio){
     struct bvec_iter iter;
     uint32_t segment_offset;
     segment_offset = 0;
-    afs_debug("bio sectors (%d), sector offset (%lu), alignment off (%lu)", bio_sectors(bio), bio->bi_iter.bi_sector, AFS_SECTORS_PER_BLOCK - (bio->bi_iter.bi_sector % 8));
+    //afs_debug("bio sectors (%d), sector offset (%lu), alignment off (%lu)", bio_sectors(bio), bio->bi_iter.bi_sector, AFS_SECTORS_PER_BLOCK - (bio->bi_iter.bi_sector % 8));
     bio_for_each_segment (bv, bio, iter) {
-        //if(bv.bv_len != 4096 || bv.bv_offset != 0){
+        if(bv.bv_len != 4096 || bv.bv_offset != 0 || bio_sectors(bio) != 8){
+            afs_debug("bio sectors (%d), sector offset (%lu), alignment off (%lu)", bio_sectors(bio), bio->bi_iter.bi_sector, AFS_SECTORS_PER_BLOCK - (bio->bi_iter.bi_sector % 8));
             afs_debug("bv.bv_len (%d), bv.bv_offset %d", bv.bv_len, bv.bv_offset);
-        //}
+        }
     }
 }
 
@@ -356,7 +357,8 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         req->bio = __clone_bio(bio, &req->allocated_write_page, true);
         afs_action(req->bio, ret = DM_MAPIO_KILL, done, "could not clone bio");
 
-        req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+        //req->block = (bio->bi_iter.bi_sector * AFS_SECTOR_SIZE) / AFS_BLOCK_SIZE;
+        req->block = bio->bi_iter.bi_sector / AFS_SECTORS_PER_BLOCK;
         req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
         req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
         afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
