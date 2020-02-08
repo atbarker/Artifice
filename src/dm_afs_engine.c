@@ -523,7 +523,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     if (req->map_entry_tuple[0].carrier_block_ptr != AFS_INVALID_BLOCK) {
         modification = true;
-        ret = __afs_read_block(req);
+        //ret = __afs_read_block(req);
         afs_assert(!ret, err, "could not read data block [%d:%u]", ret, block_num);
     }
 
