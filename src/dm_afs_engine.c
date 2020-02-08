@@ -257,7 +257,7 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
 
         // Acquire page structure and sector offset.
         page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
-        sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
+        sector_num = (req->block_nums[i] * AFS_SECTORS_PER_BLOCK) + req->fs->data_start_off;
 
         read_bios[i]->bi_opf |= REQ_OP_READ;
         bio_set_dev(read_bios[i], req->bdev);
@@ -295,7 +295,7 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
 
         // Acquire page structure and sector offset.
         page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
-        sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
+        sector_num = (req->block_nums[i] * AFS_SECTORS_PER_BLOCK) + req->fs->data_start_off;
 
         write_bios[i]->bi_opf |= REQ_OP_WRITE;
         bio_set_dev(write_bios[i], req->bdev);
@@ -399,7 +399,7 @@ __afs_read_block(struct afs_map_request *req) {
 
             // Acquire page structure and sector offset.
             page_structure = (false) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
-            sector_num = ((req->block_nums[i] * AFS_BLOCK_SIZE) / AFS_SECTOR_SIZE) + req->fs->data_start_off;
+            sector_num = (req->block_nums[i] * AFS_SECTORS_PER_BLOCK) + req->fs->data_start_off;
 
             read_bios[i]->bi_opf |= REQ_OP_READ;
             bio_set_dev(read_bios[i], req->bdev);

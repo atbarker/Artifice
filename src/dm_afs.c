@@ -361,7 +361,7 @@ afs_map(struct dm_target *ti, struct bio *bio) {
         req->block = bio->bi_iter.bi_sector / AFS_SECTORS_PER_BLOCK;
         req->sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
         req->request_size = bio_sectors(bio) * AFS_SECTOR_SIZE;
-        afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
+        //afs_action(req->request_size <= AFS_BLOCK_SIZE, ret = -EINVAL, done, "cannot handle requested size [%u]", req->request_size);
 
         req->eq = &context->flight_eq;
         INIT_WORK(&req->req_ws, afs_flightq);
