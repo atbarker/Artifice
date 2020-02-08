@@ -283,6 +283,19 @@ init_request(struct afs_private *context) {
     return req;
 }
 
+static void print_bio_info(struct bio *bio){
+    struct bio_vec bv;
+    struct bvec_iter iter;
+    uint32_t segment_offset;
+    segment_offset = 0;
+    afs_debug("bio sectors (%d), sector offset (%lu), alignment off (%lu)", bio_sectors(bio), bio->bi_iter.bi_sector, AFS_SECTORS_PER_BLOCK - (bio->bi_iter.bi_sector % 8));
+    bio_for_each_segment (bv, bio, iter) {
+        //if(bv.bv_len != 4096 || bv.bv_offset != 0){
+            afs_debug("bv.bv_len (%d), bv.bv_offset %d", bv.bv_len, bv.bv_offset);
+        //}
+    }
+}
+
 /**
  * Map function for this target. This is the heart and soul
  * of the device mapper. We receive block I/O requests which
@@ -314,12 +327,6 @@ afs_map(struct dm_target *ti, struct bio *bio) {
     uint32_t max_sector_count;
     int ret;
 
-    // Bypass Artifice completely.
-    if (override) {
-        bio_set_dev(bio, context->bdev);
-        submit_bio(bio);
-        return DM_MAPIO_SUBMITTED;
-    }
 
     // We only support bio's with a maximum length of 8 sectors (4KB).
     // Moreover, we only support processing a single block per bio.
@@ -327,10 +334,17 @@ afs_map(struct dm_target *ti, struct bio *bio) {
     // a block boundary and involves two blocks. For all such requests,
     // we truncate the bio to within the single page.
 
-    sector_offset = bio->bi_iter.bi_sector % (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE);
-    max_sector_count = (AFS_BLOCK_SIZE / AFS_SECTOR_SIZE) - sector_offset;
+    sector_offset = bio->bi_iter.bi_sector % (AFS_SECTORS_PER_BLOCK);
+    max_sector_count = (AFS_SECTORS_PER_BLOCK) - sector_offset;
     if (bio_sectors(bio) > max_sector_count) {
         dm_accept_partial_bio(bio, max_sector_count);
+    }
+
+    if (override) {
+        bio_set_dev(bio, context->bdev);
+        print_bio_info(bio);
+        submit_bio(bio);
+        return DM_MAPIO_SUBMITTED;
     }
 
     req = init_request(context);
