@@ -85,4 +85,30 @@ debug_read:
 debug_end:
 	@sudo dmsetup remove artifice || true
 	@sudo rmmod dm_afs || true
+
+#For this target make sure that 100GB of free space is available, 4GB of RAM
+#pilot and bonnie++ must be installed
+debug_pilot:
+	@sudo insmod dm_afs.ko afs_debug_mode=1
+	@echo 0 33554432 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmesetup create artifice
+	mkdir test
+	@sudo mkfs.ext4 /dev/mapper/artifice
+	@sudo mount /dev/mapper/artifice test
+	@sudo bonnie++ -d test -u root
+	@sudo umount test
+	@sudo fsck /dev/mapper/artifice
+	@sudo dmsetup remove artifice || true
+	@sudo rmmod dm_afs || true
+
+debug_bonnie:
+	@sudo insmod dm_afs.ko afs_debug_mode=1
+	@echo 0 33554432 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmesetup create artifice
+	mkdir test
+	@sudo mkfs.ext4 /dev/mapper/artifice
+	@sudo mount /dev/mapper/artifice test
+	(cd benchmarks; sudo ./pilot.sh test 4096 root w; sudo ./pilot.sh test 4096 root r)
+	@sudo umount test
+	@sudo dmsetup remove artifice || true
+	@sudo rmmod dm_afs || true
+
 ######################################################################
