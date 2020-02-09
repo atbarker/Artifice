@@ -357,7 +357,7 @@ reset_entry:
  * TODO, make this asynchronous
  * In case a block is unmapped, zero-fill it.
  */
-static int
+/*static int
 __afs_read_block(struct afs_map_request *req) {
     uint64_t sector_num;
     const int page_offset = 0;
@@ -431,7 +431,7 @@ __afs_read_block(struct afs_map_request *req) {
 done:
     gfshare_ctx_free(req->encoder);
     return ret;
-}
+}*/
 
 /**
  * Map a read request from userspace.
