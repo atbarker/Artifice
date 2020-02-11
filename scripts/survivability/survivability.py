@@ -19,7 +19,8 @@ small_checksum = 0 #checksum used to verify carrier block integrity
 #in mathematica this is represented as Sum[PDF[BinomialDistribution[k+m,p],i], {i, 0, m}]
 #as this is just a cumulative distribution function, python can do this for us
 def prob_survival_sss(k, m, p):
-    return binom.cdf(m, k+m, p)
+    #return binom.cdf(m, k+m, p)
+    return binom.cdf(m-k, m, p)
 
 def prob_survival_rs(e, d, m, p):
     return binom.cdf(m-d, e+m, p)
@@ -144,7 +145,7 @@ def main(args):
 
     #probability of survival for metadata, reed solomon
     elif args[1] == "metadata":
-        m_values = np.arange(2, 9, 1)
+        m_values = np.arange(3, 10, 1)
         prob1 = []
         prob2 = []
         prob3 = []
@@ -155,11 +156,11 @@ def main(args):
             #number of carrier blocks in the keyword
             prob1.append(prob_metadata_alive_rs(1, 1, i))
             #reconstruct threshold of 2, i additional blocks
-            prob2.append(prob_metadata_alive_sss(4, i))
+            prob2.append(prob_metadata_alive_sss(2, i))
             #1 entropy block, 2 data blocks, i parity blocks
             prob3.append(prob_metadata_alive_rs(1, 2, i))
             #reconstruct threshold of 3, i additional blocks
-            prob4.append(prob_metadata_alive_sss(5, i))
+            prob4.append(prob_metadata_alive_sss(3, i))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
@@ -172,7 +173,7 @@ def main(args):
         plt.show()
 
     elif args[1] == "all":
-        m_values = np.arange(3, 9, 1)
+        m_values = np.arange(3, 10, 1)
         prob1 = []
         prob2 = []
         prob3 = []
@@ -181,11 +182,11 @@ def main(args):
             #1 entropy block, 1 data block, i parity blocks
             prob1.append(prob_artifice_alive_rs(1, 1, i))
             #reconstruct threshold of 2, i additional blocks
-            prob2.append(prob_artifice_alive_sss(4, i))
+            prob2.append(prob_artifice_alive_sss(2, i))
             #1 entropy block, 2 data blocks, i parity blocks
             prob3.append(prob_artifice_alive_rs(1, 2, i))
             #reconstruct threshold of 3, i additional blocks
-            prob4.append(prob_artifice_alive_sss(5, i))
+            prob4.append(prob_artifice_alive_sss(3, i))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
