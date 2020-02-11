@@ -122,7 +122,7 @@ def prob_disk_alive(mttf, days):
 
 def main(args):
     calc_metadata_size_rs(art_size_blocks, 4, 1, 2, 8, True)
-    calc_metadata_size_shamir(art_size_blocks, 4, 1, 8, True)
+    calc_metadata_size_shamir(art_size_blocks, 8, 5, 8, True)
     
     if args[1] == "nines":
         m_max = 0.05
@@ -144,33 +144,35 @@ def main(args):
 
     #probability of survival for metadata, reed solomon
     elif args[1] == "metadata":
-        m_values = np.arange(1, 9, 1)
+        m_values = np.arange(2, 9, 1)
         prob1 = []
         prob2 = []
         prob3 = []
         prob4 = []
         for i in m_values:
             #1 entropy block, 1 data block, i parity blocks
+            #in this case at least i-2 blocks must survive, the threshold is tied to the 
+            #number of carrier blocks in the keyword
             prob1.append(prob_metadata_alive_rs(1, 1, i))
             #reconstruct threshold of 2, i additional blocks
-            prob2.append(prob_metadata_alive_sss(2, i))
+            prob2.append(prob_metadata_alive_sss(4, i))
             #1 entropy block, 2 data blocks, i parity blocks
             prob3.append(prob_metadata_alive_rs(1, 2, i))
             #reconstruct threshold of 3, i additional blocks
-            prob4.append(prob_metadata_alive_sss(3, i))
+            prob4.append(prob_metadata_alive_sss(5, i))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
         plt.title("Probability of Metadata Survival vs Number of Carrier Blocks")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
-        rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks')
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3')
+        rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
+        rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 4', marker="D")
+        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 5', marker="p")
         plt.legend()
         plt.show()
 
     elif args[1] == "all":
-        m_values = np.arange(1, 9, 1)
+        m_values = np.arange(3, 9, 1)
         prob1 = []
         prob2 = []
         prob3 = []
@@ -179,19 +181,19 @@ def main(args):
             #1 entropy block, 1 data block, i parity blocks
             prob1.append(prob_artifice_alive_rs(1, 1, i))
             #reconstruct threshold of 2, i additional blocks
-            prob2.append(prob_artifice_alive_sss(2, i))
+            prob2.append(prob_artifice_alive_sss(4, i))
             #1 entropy block, 2 data blocks, i parity blocks
             prob3.append(prob_artifice_alive_rs(1, 2, i))
             #reconstruct threshold of 3, i additional blocks
-            prob4.append(prob_artifice_alive_sss(3, i))
+            prob4.append(prob_artifice_alive_sss(5, i))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
         plt.title("Probability of Artifice Survival vs Number of Carrier Blocks")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
-        rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks')
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3')
+        rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
+        rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 4', marker="D")
+        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 5', marker="p")
         plt.legend()
         plt.show()
 
