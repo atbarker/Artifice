@@ -92,11 +92,47 @@ def calc_metadata_size_shamir(blocks, shares, threshold, replicas, verbose):
 
     return metadata_size
 
+def calc_metadata_size_aont(blocks, shares, threshold, replicas, verbose):
+    pointer_size = 4
+    art_block_hash = 16
+
+    amplification_factor = shares/threshold
+    carrier_block_tuple = pointer_size + small_checksum
+    record_size = (shares * carrier_block_tuple) + art_block_hash
+    pointers_per_pointerblock = (block_size / pointer_size) - 1
+
+    entries_per_block = math.floor(block_size / record_size)
+    num_map_blocks = math.ceil(blocks / entries_per_block)
+    num_map_map_blocks = math.ceil(num_map_blocks / entries_per_block)
+    num_pointer_blocks = math.ceil(num_map_map_blocks / pointers_per_pointerblock)
+    metadata_size = ((num_pointer_blocks + 1) * replicas) + num_map_map_blocks + num_map_blocks
+    metadata_overhead = (metadata_size / blocks) * 100
+    effective_artifice_size = (art_size_blocks * amplification_factor) + metadata_size
+
+    if verbose == True:
+        print("|---Metadata size for Secret Sharing-----|")
+        print("Codeword configuration: reconstruct threshold {}, {} shares".format(threshold, shares))
+        print("Write amplification factor: {}".format(shares))
+        print("Record Size: {} bytes".format(record_size))
+        print("Entries per map block: {}".format(entries_per_block))
+        print("Number of map blocks: {}".format(num_map_blocks))
+        print("Number of map map blocks: {}".format(num_map_map_blocks))
+        print("Number of pointer bocks: {}".format(num_pointer_blocks))
+        print("Metadata size in blocks: {}".format(metadata_size))
+        print("Metadata overhead: {} percent".format(metadata_overhead))
+        print("effective artifice size: {}".format(effective_artifice_size))
+        print("")
+
+    return metadata_size
+
 def calc_total_size_rs(size, parity, data, entropy):
     return (size * (parity / data)) + calc_metadata_size_rs(size, parity, entropy, data, 8, False)
 
 def calc_total_size_sss(size, k, m):
-    return (size * (k + m)) + calc_metadata_size_shamir(size, m, k, 8, False)
+    return (size * (m)) + calc_metadata_size_shamir(size, m, k, 8, False)
+
+def calc_total_size_aont(size, k, m):
+    return (size * (m/k)) + calc_metadata_size_shamir(size, m, k, 8, False)
 
 def prob_metadata_alive_rs(e, d, m):
     return math.pow(prob_survival_rs(e, d, m, prob_success), (calc_metadata_size_rs(art_size_blocks, m, e, d, 8, False) * num_days))
@@ -105,6 +141,10 @@ def prob_metadata_alive_rs(e, d, m):
 def prob_metadata_alive_sss(k, m):
     return math.pow(prob_survival_sss(k, m, prob_success), (calc_metadata_size_shamir(art_size_blocks, m, k, 8, False) * num_days))
 
+def prob_metadata_alive_aont(k, m):
+    return math.pow(prob_survival_sss(k, m, prob_success), (calc_metadata_size_aont(art_size_blocks, m, k, 8, False) * num_days))
+
+
 #k is data + entropy, m 
 def prob_artifice_alive_rs(e, d, m):
     return math.pow(prob_survival_rs(e, d, m, prob_success), (calc_total_size_rs(art_size_blocks, m, d, e) * num_days))
@@ -112,6 +152,9 @@ def prob_artifice_alive_rs(e, d, m):
 #k is the reconstruct threshold, m is the number of additional shares
 def prob_artifice_alive_sss(k, m):
     return math.pow(prob_survival_sss(k, m, prob_success), (calc_total_size_sss(art_size_blocks, m, k) * num_days))
+
+def prob_artifice_alive_aont(k, m):
+    return math.pow(prob_survival_sss(k, m, prob_success), (calc_total_size_aont(art_size_blocks, m, k) * num_days))
 
 def prob_nines(k, m, p):
     return -math.log10(1 - prob_survival(k, m, p))
@@ -167,8 +210,8 @@ def main(args):
         plt.title("Probability of Metadata Survival vs Number of Carrier Blocks")
         rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 4', marker="D")
-        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 5', marker="p")
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
+        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
         plt.legend()
         plt.show()
 
@@ -178,6 +221,7 @@ def main(args):
         prob2 = []
         prob3 = []
         prob4 = []
+        prob5 = []
         for i in m_values:
             #1 entropy block, 1 data block, i parity blocks
             prob1.append(prob_artifice_alive_rs(1, 1, i))
@@ -187,14 +231,17 @@ def main(args):
             prob3.append(prob_artifice_alive_rs(1, 2, i))
             #reconstruct threshold of 3, i additional blocks
             prob4.append(prob_artifice_alive_sss(3, i))
+            #reconstruct threshold of 4, i additional shares
+            prob5.append(prob_artifice_alive_aont(4, i))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
         plt.title("Probability of Artifice Survival vs Number of Carrier Blocks")
         rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 4', marker="D")
-        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 5', marker="p")
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
+        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
+        aont = plt.plot(m_values, prob5, label='AONT, threshold 4', marker="x")
         plt.legend()
         plt.show()
 
