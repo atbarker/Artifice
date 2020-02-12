@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-public, public_std = (51876, 34476), (1232.92, 2291.85)
+public, public_std = (303187.77, 323907.92), (1956.91, 27188.35)
 hidden, hidden_std = (51876, 34476), (1232.92, 2291.85)
 usb, usb_std = (51876, 34476), (1232.92, 2291.85)
 
