@@ -6,3 +6,4 @@
 *.cmd
 *.tmp_versions
 *.mod.c
+*.o.ur-safe
