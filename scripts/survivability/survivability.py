@@ -96,14 +96,16 @@ def calc_metadata_size_aont(blocks, shares, threshold, replicas, verbose):
     pointer_size = 4
     art_block_hash = 16
 
+    #So we will only have to store records for each encoding "group"
+    #So say we have 8 shards per block, the data blocks for all those 8 shards can be represented by one map entry
     amplification_factor = shares/threshold
     carrier_block_tuple = pointer_size + small_checksum
     record_size = (shares * carrier_block_tuple) + art_block_hash
     pointers_per_pointerblock = (block_size / pointer_size) - 1
 
     entries_per_block = math.floor(block_size / record_size)
-    num_map_blocks = math.ceil(blocks / entries_per_block)
-    num_map_map_blocks = math.ceil(num_map_blocks / entries_per_block)
+    num_map_blocks = math.ceil(math.ceil(blocks / entries_per_block)/threshold)
+    num_map_map_blocks = math.ceil(math.ceil(num_map_blocks / entries_per_block)/threshold)
     num_pointer_blocks = math.ceil(num_map_map_blocks / pointers_per_pointerblock)
     metadata_size = ((num_pointer_blocks + 1) * replicas) + num_map_map_blocks + num_map_blocks
     metadata_overhead = (metadata_size / blocks) * 100
@@ -167,6 +169,7 @@ def prob_disk_alive(mttf, days):
 def main(args):
     calc_metadata_size_rs(art_size_blocks, 4, 1, 2, 8, True)
     calc_metadata_size_shamir(art_size_blocks, 8, 5, 8, True)
+    calc_metadata_size_aont(art_size_blocks, 8, 5, 8, True)
     
     if args[1] == "nines":
         m_max = 0.05
@@ -193,6 +196,8 @@ def main(args):
         prob2 = []
         prob3 = []
         prob4 = []
+        prob5 = []
+        prob6 = []
         for i in m_values:
             #1 entropy block, 1 data block, i parity blocks
             #in this case at least i-2 blocks must survive, the threshold is tied to the 
@@ -204,6 +209,8 @@ def main(args):
             prob3.append(prob_metadata_alive_rs(1, 2, i))
             #reconstruct threshold of 3, i additional blocks
             prob4.append(prob_metadata_alive_sss(3, i))
+            prob5.append(prob_metadata_alive_aont(2, i))
+            prob6.append(prob_metadata_alive_aont(3, i))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
@@ -212,6 +219,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
+        aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
+        aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -222,6 +231,7 @@ def main(args):
         prob3 = []
         prob4 = []
         prob5 = []
+        prob6 = []
         for i in m_values:
             #1 entropy block, 1 data block, i parity blocks
             prob1.append(prob_artifice_alive_rs(1, 1, i))
@@ -232,7 +242,8 @@ def main(args):
             #reconstruct threshold of 3, i additional blocks
             prob4.append(prob_artifice_alive_sss(3, i))
             #reconstruct threshold of 4, i additional shares
-            prob5.append(prob_artifice_alive_aont(4, i))
+            prob5.append(prob_artifice_alive_aont(2, i))
+            prob6.append(prob_artifice_alive_aont(3, i))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
@@ -241,7 +252,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        aont = plt.plot(m_values, prob5, label='AONT, threshold 4', marker="x")
+        aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
+        aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
