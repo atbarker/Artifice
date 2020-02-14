@@ -98,6 +98,8 @@ def calc_metadata_size_aont(blocks, shares, threshold, replicas, verbose):
 
     #So we will only have to store records for each encoding "group"
     #So say we have 8 shards per block, the data blocks for all those 8 shards can be represented by one map entry
+    #store datablocks/threshold entries, determine the entry for a data block with data block # / threshold
+    #essentiall index the same as a bitvector
     amplification_factor = shares/threshold
     carrier_block_tuple = pointer_size + small_checksum
     record_size = (shares * carrier_block_tuple) + art_block_hash
@@ -134,7 +136,7 @@ def calc_total_size_sss(size, k, m):
     return (size * (m)) + calc_metadata_size_shamir(size, m, k, 8, False)
 
 def calc_total_size_aont(size, k, m):
-    return (size * (m/k)) + calc_metadata_size_shamir(size, m, k, 8, False)
+    return (size * (m/k)) + calc_metadata_size_aont(size, m, k, 8, False)
 
 def prob_metadata_alive_rs(e, d, m):
     return math.pow(prob_survival_rs(e, d, m, prob_success), (calc_metadata_size_rs(art_size_blocks, m, e, d, 8, False) * num_days))
@@ -259,6 +261,15 @@ def main(args):
 
     elif args[1] == "disk":
         print("Probability of the disk being alive {}".format(prob_disk_alive(200000, 365)))
+
+    elif args[1] == "volume":
+        print("Graph for artifice size")
+
+    elif args[1] == "write":
+        print("Graph for amount written per day for different modules")
+
+    elif args[1] == "freespace":
+        print("Graph for size based on the amount of free space")
 
     else:
         print("Invalid argument")
