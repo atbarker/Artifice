@@ -234,8 +234,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
-        aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
+        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -267,8 +267,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
-        aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
+        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -278,7 +278,7 @@ def main(args):
     elif args[1] == "volume":
         print("Graph for the probability of survival based on Artifice volume size")
         #256MB to 4GB volume in powers of 2 (2^29, 2^30, 2^31, ...)
-        m_values = np.power(2, np.arange(16, 21, 1)) 
+        m_values = np.power(2, np.arange(16, 21, 0.01)) 
         prob1 = []
         prob2 = []
         prob3 = []
@@ -297,19 +297,19 @@ def main(args):
         plt.xlabel("Size of the Artifice Volume (blocks)")
         plt.ylabel("Probability of Survival")
         plt.title("Probability of Artifice Survival vs Size of the Artifice Volume")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
-        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks', marker="s")
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
-        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3', marker="p")
-        aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
+        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
+        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
+        #aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
+        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
     elif args[1] == "write":
         print("Graph for amount written per day")
         #256MB to 8GB
-        m_values = np.power(2, np.arange(16, 22, 1))
+        m_values = np.power(2, np.arange(16, 21, 0.01))
         prob1 = []
         prob2 = []
         prob3 = []
@@ -328,19 +328,19 @@ def main(args):
         plt.xlabel("Amount written per day (blocks)")
         plt.ylabel("Probability of Survival")
         plt.title("Probability of Artifice Surivival vs Amount Written per Day")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
-        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks', marker="s")
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
-        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3', marker="p")
-        aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
+        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
+        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
+        #aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
+        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
     elif args[1] == "freespace":
         print("Graph for size based on the amount of free space")
         #64GB to 1TB
-        m_values = np.power(2, np.arange(24, 29, 1))
+        m_values = np.power(2, np.arange(24, 29, 0.01))
         prob1 = []
         prob2 = []
         prob3 = []
@@ -356,15 +356,15 @@ def main(args):
             prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, def_overwritten, i))
             prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, def_overwritten, i))
 
-        plt.xlabel("Size of the Artifice Volume (blocks)")
+        plt.xlabel("Unallocated Space (blocks)")
         plt.ylabel("Probability of Survival")
-        plt.title("Probability of Artifice Survival vs Size of the Artifice Volume")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
-        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks', marker="s")
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
-        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3', marker="p")
-        aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        plt.title("Probability of Artifice Survival vs Size of Unallocated Space")
+        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
+        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
+        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
+        #aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
+        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
