@@ -25,6 +25,9 @@ def prob_survival_sss(k, m, p):
 def prob_survival_rs(e, d, m, p):
     return binom.cdf(m-d, e+m, p)
 
+def prob_survival_aont(d, m, p):
+    return binom.cdf(m, m+d, p)
+
 def calc_metadata_size_rs(blocks, parity, entropy, data, replicas, verbose):
     pointer_size = 4
     art_block_hash = 16
@@ -92,7 +95,7 @@ def calc_metadata_size_shamir(blocks, shares, threshold, replicas, verbose):
 
     return metadata_size
 
-def calc_metadata_size_aont(blocks, shares, threshold, replicas, verbose):
+def calc_metadata_size_ssms(blocks, shares, threshold, replicas, verbose):
     pointer_size = 4
     art_block_hash = 16
 
@@ -129,14 +132,51 @@ def calc_metadata_size_aont(blocks, shares, threshold, replicas, verbose):
 
     return metadata_size
 
+def calc_metadata_size_aont(blocks, parity, data, replicas, verbose):
+    pointer_size = 4
+    art_block_hash = 16
+
+    amplification_factor = parity / data
+    carrier_block_tuple = pointer_size + small_checksum
+    record_size = (parity * carrier_block_tuple) + art_block_hash
+    pointers_per_pointerblock = (block_size / pointer_size - 1)
+
+    entries_per_block = math.floor(block_size / record_size)
+    num_map_blocks = math.ceil((blocks / data) / entries_per_block)
+    num_map_map_blocks = math.ceil((num_map_blocks / data) / entries_per_block)
+    num_pointer_blocks = math.ceil(num_map_map_blocks / pointers_per_pointerblock)
+    metadata_size = ((num_pointer_blocks + 1) * replicas) + num_map_map_blocks + num_map_blocks
+    metadata_overhead = (metadata_size / blocks) * 100
+    effective_artifice_size = (blocks * amplification_factor) + metadata_size
+
+    if verbose == True:
+        print("|---Metadata size for Reed-Solomon-----|")
+        print("Codeword configuration: {} data blocks, {} entropy, {} parity blocks".format(data, entropy, parity))
+        print("Write amplification factor: {}".format(amplification_factor))
+        print("Record Size: {} bytes".format(record_size))
+        print("Entries per map block: {}".format(entries_per_block))
+        print("Number of map blocks: {}".format(num_map_blocks))
+        print("Number of map map blocks: {}".format(num_map_map_blocks))
+        print("Number of pointer bocks: {}".format(num_pointer_blocks))
+        print("Metadata size in blocks: {}".format(metadata_size))
+        print("Metadata overhead: {} percent".format(metadata_overhead))
+        print("effective artifice size: {}".format(effective_artifice_size))
+        print("")
+
+    return metadata_size
+
+
 def calc_total_size_rs(size, parity, data, entropy):
     return (size * (parity / data)) + calc_metadata_size_rs(size, parity, entropy, data, 8, False)
 
 def calc_total_size_sss(size, k, m):
     return (size * (m)) + calc_metadata_size_shamir(size, m, k, 8, False)
 
-def calc_total_size_aont(size, k, m):
-    return (size * (m/k)) + calc_metadata_size_aont(size, m, k, 8, False)
+def calc_total_size_ssms(size, k, m):
+    return (size * (m/k)) + calc_metadata_size_ssms(size, m, k, 8, False)
+
+def calc_total_size_aont(size, parity, data):
+    return size + (size * (parity / data)) + calc_metadata_size_aont(size, parity, data, 8, False)
 
 def prob_metadata_alive_rs(e, d, m, art_size, blocks_over, free_blocks):
     prob = blocks_over / free_blocks
@@ -149,10 +189,15 @@ def prob_metadata_alive_sss(k, m, art_size, blocks_over, free_blocks):
     metadata = calc_metadata_size_shamir(art_size, m, k, 8, False)
     return math.pow(prob_survival_sss(k, m, prob), (metadata * num_days))
 
-def prob_metadata_alive_aont(k, m, art_size, blocks_over, free_blocks):
+def prob_metadata_alive_ssms(k, m, art_size, blocks_over, free_blocks):
     prob = blocks_over / free_blocks
-    metadata = calc_metadata_size_aont(art_size, m, k, 8, False)
+    metadata = calc_metadata_size_ssms(art_size, m, k, 8, False)
     return math.pow(prob_survival_sss(k, m, prob), (metadata * num_days))
+
+def prob_metadata_alive_aont(d, m, art_size, blocks_over, free_blocks):
+    prob = blocks_over / free_blocks
+    metadata = calc_metadata_size_aont(art_size, m, d, 8, False)
+    return math.pow(prob_survival_aont(d, m, prob), (metadata * num_days))
 
 
 #k is data + entropy, m 
@@ -167,10 +212,15 @@ def prob_artifice_alive_sss(k, m, art_size, blocks_over, free_blocks):
     total_size = calc_total_size_sss(art_size, m, k)
     return math.pow(prob_survival_sss(k, m, prob), (total_size * num_days))
 
-def prob_artifice_alive_aont(k, m, art_size, blocks_over, free_blocks):
+def prob_artifice_alive_ssms(k, m, art_size, blocks_over, free_blocks):
     prob = blocks_over / free_blocks
-    total_size = calc_total_size_aont(art_size, m, k)
+    total_size = calc_total_size_ssms(art_size, m, k)
     return math.pow(prob_survival_sss(k, m, prob), (total_size * num_days))
+
+def prob_artifice_alive_aont(d, m, art_size, blocks_over, free_blocks):
+    prob = blocks_over / free_blocks
+    total_size = calc_total_size_aont(art_size, m, d)
+    return math.pow(prob_survival_aont(d, m, prob), (total_size * num_days))
 
 def prob_nines(k, m, p):
     return -math.log10(1 - prob_survival(k, m, p))
@@ -184,7 +234,7 @@ def main(args):
 
     calc_metadata_size_rs(def_art_size, 4, 1, 2, 8, True)
     calc_metadata_size_shamir(def_art_size, 8, 5, 8, True)
-    calc_metadata_size_aont(def_art_size, 8, 5, 8, True)
+    calc_metadata_size_ssms(def_art_size, 8, 5, 8, True)
     
     if args[1] == "nines":
         m_max = 0.05
@@ -224,8 +274,8 @@ def main(args):
             prob3.append(prob_metadata_alive_rs(1, 2, i, def_art_size, def_overwritten, def_free_blocks))
             #reconstruct threshold of 3, i additional blocks
             prob4.append(prob_metadata_alive_sss(3, i, def_art_size, def_overwritten, def_free_blocks))
-            prob5.append(prob_metadata_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
-            prob6.append(prob_metadata_alive_aont(3, i, def_art_size, def_overwritten, def_free_blocks))
+            prob5.append(prob_metadata_alive_ssms(2, i, def_art_size, def_overwritten, def_free_blocks))
+            prob6.append(prob_metadata_alive_ssms(3, i, def_art_size, def_overwritten, def_free_blocks))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
@@ -234,8 +284,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        #aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
-        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #ssms = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
+        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -247,6 +297,8 @@ def main(args):
         prob4 = []
         prob5 = []
         prob6 = []
+        prob7 = []
+        prob8 = []
         for i in m_values:
             #1 entropy block, 1 data block, i parity blocks
             prob1.append(prob_artifice_alive_rs(1, 1, i, def_art_size, def_overwritten, def_free_blocks))
@@ -257,8 +309,11 @@ def main(args):
             #reconstruct threshold of 3, i additional blocks
             prob4.append(prob_artifice_alive_sss(3, i, def_art_size, def_overwritten, def_free_blocks))
             #reconstruct threshold of 4, i additional shares
-            prob5.append(prob_artifice_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
-            prob6.append(prob_artifice_alive_aont(3, i, def_art_size, def_overwritten, def_free_blocks))
+            prob5.append(prob_artifice_alive_ssms(2, i, def_art_size, def_overwritten, def_free_blocks))
+            prob6.append(prob_artifice_alive_ssms(3, i, def_art_size, def_overwritten, def_free_blocks))
+            prob7.append(prob_artifice_alive_aont(1, i, def_art_size, def_overwritten, def_free_blocks))
+            prob8.append(prob_artifice_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
+
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
@@ -267,8 +322,10 @@ def main(args):
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        #aont = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
-        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        ssms = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
+        ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        aont = plt.plot(m_values, prob7, label='AONT, threshold 2', marker="x")
+        aont2 = plt.plot(m_values, prob8, label='AONT, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -289,10 +346,10 @@ def main(args):
         for i in m_values:
             prob1.append(prob_artifice_alive_rs(1, 1, 8, i, def_overwritten, def_free_blocks))
             prob2.append(prob_artifice_alive_sss(2, 8, i, def_overwritten, def_free_blocks))
-            prob3.append(prob_artifice_alive_aont(2, 8, i, def_overwritten, def_free_blocks))
+            prob3.append(prob_artifice_alive_ssms(2, 8, i, def_overwritten, def_free_blocks))
             prob4.append(prob_artifice_alive_rs(1, 2, 8, i, def_overwritten, def_free_blocks))
             prob5.append(prob_artifice_alive_sss(3, 8, i, def_overwritten, def_free_blocks))
-            prob6.append(prob_artifice_alive_aont(3, 8, i, def_overwritten, def_free_blocks))           
+            prob6.append(prob_artifice_alive_ssms(3, 8, i, def_overwritten, def_free_blocks))           
 
         plt.xlabel("Size of the Artifice Volume (blocks)")
         plt.ylabel("Probability of Survival")
@@ -301,8 +358,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
         shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        #aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #ssms = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
+        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -320,10 +377,10 @@ def main(args):
         for i in m_values:
             prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, i, def_free_blocks))
             prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, i, def_free_blocks))
-            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, i, def_free_blocks))
+            prob3.append(prob_artifice_alive_ssms(2, 8, def_art_size, i, def_free_blocks))
             prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, i, def_free_blocks))
             prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, i, def_free_blocks))
-            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, i, def_free_blocks))
+            prob6.append(prob_artifice_alive_ssms(3, 8, def_art_size, i, def_free_blocks))
 
         plt.xlabel("Amount written per day (blocks)")
         plt.ylabel("Probability of Survival")
@@ -332,8 +389,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
         shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        #aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #ssms = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
+        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -351,10 +408,10 @@ def main(args):
         for i in m_values:
             prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, def_overwritten, i))
             prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, def_overwritten, i))
-            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, def_overwritten, i))
+            prob3.append(prob_artifice_alive_ssms(2, 8, def_art_size, def_overwritten, i))
             prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, def_overwritten, i))
             prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, def_overwritten, i))
-            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, def_overwritten, i))
+            prob6.append(prob_artifice_alive_ssms(3, 8, def_art_size, def_overwritten, i))
 
         plt.xlabel("Unallocated Space (blocks)")
         plt.ylabel("Probability of Survival")
@@ -363,8 +420,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
         shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        #aont = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        #aont2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #ssms = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
+        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
