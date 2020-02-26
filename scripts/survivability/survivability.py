@@ -136,7 +136,7 @@ def calc_metadata_size_aont(blocks, parity, data, replicas, verbose):
     pointer_size = 4
     art_block_hash = 16
 
-    amplification_factor = parity / data
+    amplification_factor = parity/data
     carrier_block_tuple = pointer_size + small_checksum
     record_size = (parity * carrier_block_tuple) + art_block_hash
     pointers_per_pointerblock = (block_size / pointer_size - 1)
@@ -151,7 +151,7 @@ def calc_metadata_size_aont(blocks, parity, data, replicas, verbose):
 
     if verbose == True:
         print("|---Metadata size for Reed-Solomon-----|")
-        print("Codeword configuration: {} data blocks, {} entropy, {} parity blocks".format(data, entropy, parity))
+        print("Codeword configuration: {} data blocks, {} parity blocks".format(data, parity))
         print("Write amplification factor: {}".format(amplification_factor))
         print("Record Size: {} bytes".format(record_size))
         print("Entries per map block: {}".format(entries_per_block))
@@ -176,7 +176,7 @@ def calc_total_size_ssms(size, k, m):
     return (size * (m/k)) + calc_metadata_size_ssms(size, m, k, 8, False)
 
 def calc_total_size_aont(size, parity, data):
-    return size + (size * (parity / data)) + calc_metadata_size_aont(size, parity, data, 8, False)
+    return (size * (parity / data)) + calc_metadata_size_aont(size, parity, data, 8, False)
 
 def prob_metadata_alive_rs(e, d, m, art_size, blocks_over, free_blocks):
     prob = blocks_over / free_blocks
@@ -235,6 +235,7 @@ def main(args):
     calc_metadata_size_rs(def_art_size, 4, 1, 2, 8, True)
     calc_metadata_size_shamir(def_art_size, 8, 5, 8, True)
     calc_metadata_size_ssms(def_art_size, 8, 5, 8, True)
+    calc_metadata_size_aont(def_art_size, 8, 5, 8, True)
     
     if args[1] == "nines":
         m_max = 0.05
@@ -311,8 +312,8 @@ def main(args):
             #reconstruct threshold of 4, i additional shares
             prob5.append(prob_artifice_alive_ssms(2, i, def_art_size, def_overwritten, def_free_blocks))
             prob6.append(prob_artifice_alive_ssms(3, i, def_art_size, def_overwritten, def_free_blocks))
-            prob7.append(prob_artifice_alive_aont(1, i, def_art_size, def_overwritten, def_free_blocks))
-            prob8.append(prob_artifice_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
+            prob7.append(prob_artifice_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
+            prob8.append(prob_artifice_alive_aont(3, i, def_art_size, def_overwritten, def_free_blocks))
 
 
         plt.xlabel("Number of Carrier Blocks")
