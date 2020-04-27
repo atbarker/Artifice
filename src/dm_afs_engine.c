@@ -10,6 +10,7 @@
 #include <linux/timekeeping.h>
 #include "lib/libgfshare.h"
 #include "lib/city.h"
+#include "lib/aont.h"
 
 #define CONTAINER_OF(MemberPtr, StrucType, MemberName) ((StrucType*)( (char*)(MemberPtr) - offsetof(StrucType, MemberName)))
 
@@ -170,6 +171,9 @@ afs_read_endio(struct bio *bio) {
     uint32_t segment_offset;
     uint32_t i;
     uint16_t checksum;
+    //TODO change these two to reflect the erasures
+    uint8_t *erasures = kmalloc(req->config->num_carrier_blocks, GFP_KERNEL);
+    uint8_t num_erasures = 0;
 
     bio_put(bio);
  
@@ -185,7 +189,8 @@ afs_read_endio(struct bio *bio) {
 	}
 
         //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
-	gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+	//gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+	decode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, req->config->num_carrier_blocks, erasures, num_erasures);
 	
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
@@ -214,6 +219,7 @@ afs_read_endio(struct bio *bio) {
 	}
 
         //cleanup
+	kfree(erasures);
         afs_req_clean(req);
     }
     return;
@@ -433,8 +439,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     req->map_entry = afs_get_map_entry(req->map, config, req->block);
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
-    req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+    //TODO the hash is specific to the secret sharing version
+    //req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
     req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
+    req->map_entry_difference = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
     // afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
 
     // If this write is a modification, then we perform a read-modify-write.
@@ -478,9 +486,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         req->sharenrs[i] = i + '0';
     }
 
-    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
-    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    encode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, config->num_carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.

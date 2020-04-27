@@ -44,7 +44,9 @@ struct afs_map_request {
     struct afs_map_tuple *map_entry_tuple;
     uint8_t *map_entry;
     uint8_t *map_entry_hash;
+    uint8_t *map_entry_difference;
     uint8_t *map_entry_entropy;
+    size_t share_size;
 
     // Write requests allocate a new page for a bio.
     uint8_t *allocated_write_page;

@@ -108,7 +108,7 @@ afs_create_map(struct afs_private *context)
         map_tuple = (struct afs_map_tuple *)(map_entries + (i * map_entry_sz));
         for (j = 0; j < num_carrier_blocks; j++) {
             map_tuple->carrier_block_ptr = AFS_INVALID_BLOCK;
-            map_tuple->entropy_block_ptr = AFS_INVALID_BLOCK;
+            //map_tuple->entropy_block_ptr = AFS_INVALID_BLOCK;
             map_tuple->checksum = 0;
             map_tuple += 1;
         }

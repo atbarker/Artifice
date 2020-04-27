@@ -25,6 +25,10 @@ struct __attribute__((packed)) afs_ptr_block {
     // we can store 1019 pointers to map blocks and
     // a pointer to the next block.
 
+    //TODO for AONT and all later secret sharing approaches, use a 256 bit hash
+    //This difference is a bitwise XOR of the key used to encrypt and a hash of the encrypted data
+    //The hash of the whole data block is our canary, this hash really is kind of excessive
+    uint8_t difference[SHA256_SZ];
     uint8_t hash[SHA128_SZ];
     uint32_t map_block_ptrs[NUM_MAP_BLKS_IN_PB];
     uint32_t next_ptr_block;
@@ -33,7 +37,7 @@ struct __attribute__((packed)) afs_ptr_block {
 // Artifice map tuple.
 struct __attribute__((packed)) afs_map_tuple {
     uint32_t carrier_block_ptr; // Sector number from the free list.
-    uint32_t entropy_block_ptr; // Sector number from the entropy file.
+    //uint32_t entropy_block_ptr; // Sector number from the entropy file.
     uint16_t checksum;          // Checksum of this carrier block.
 };
 
@@ -73,12 +77,13 @@ struct __attribute__((packed)) afs_map_tuple {
 // afs_map_entry[num_map_entries_per_block-1] (map_entry_sz bytes)
 
 struct afs_config {
-    uint8_t num_carrier_blocks;
-    uint8_t num_entropy_blocks;
-    uint8_t map_entry_sz;
-    uint8_t unused_space_per_block;
+    uint8_t num_carrier_blocks; //Total number of carrier blocks
+    uint8_t threshold;          //Reconstruction threshold
+    uint8_t num_entropy_blocks; //if using the Reed-Solomon/Entropy scheme
+    uint8_t map_entry_sz; //size of each map entry (for indexing purposes)
+    uint8_t unused_space_per_block; //additional padding in each block
     uint8_t num_map_entries_per_block;
-    uint32_t num_blocks;
+    uint32_t num_blocks;   //Total number of blocks on the disk
     uint32_t num_map_blocks;
     uint32_t num_ptr_blocks;
     uint64_t instance_size;
