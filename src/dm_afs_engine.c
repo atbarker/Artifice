@@ -190,7 +190,7 @@ afs_read_endio(struct bio *bio) {
 
         //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
 	//gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
-	decode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, req->config->num_carrier_blocks, erasures, num_erasures);
+	decode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, req->config->num_carrier_blocks - 2, erasures, num_erasures);
 	
         // Confirm hash matches.
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
