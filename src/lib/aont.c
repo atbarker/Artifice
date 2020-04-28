@@ -94,7 +94,8 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, size_t k
     struct skcipher_def sk;
     struct crypto_skcipher *skcipher = NULL;
     struct skcipher_request *req = NULL;
-    uint8_t ivdata[KEY_SIZE];
+    //uint8_t ivdata[KEY_SIZE];
+    uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
     int ret = -EFAULT;
 
     skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
@@ -124,7 +125,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, size_t k
 
     /* IV will be random */
     //get_random_bytes(ivdata, 16);
-    memset(ivdata, 0, KEY_SIZE);
+    //memset(ivdata, 0, KEY_SIZE);
 
     printk(KERN_INFO "setting up skcipher");
     sk.tfm = skcipher;
@@ -145,6 +146,7 @@ out:
         crypto_free_skcipher(skcipher);
     if (req)
         skcipher_request_free(req);
+    kfree(ivdata);
     return ret;
 }
 
@@ -166,8 +168,8 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
 
     //generate key and IV
     printk(KERN_INFO "initializing key");
-    //get_random_bytes(key, KEY_SIZE); 
-    memset(key, 0, KEY_SIZE); 
+    get_random_bytes(key, KEY_SIZE); 
+    //memset(key, 0, KEY_SIZE); 
     printk(KERN_INFO "encrypting");
     encrypt_payload(encode_buffer, data_length, key, KEY_SIZE, 1);
     printk(KERN_INFO "done with encryption");
