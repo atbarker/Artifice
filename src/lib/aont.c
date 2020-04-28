@@ -158,7 +158,7 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     int i = 0;
     
     //TODO Compute canary of the data block (small hash?)
-    memset(canary, 0, CANARY_SIZE);
+    //memset(canary, 0, CANARY_SIZE);
     memcpy(encode_buffer, data, data_length);
 
     //generate key and IV
