@@ -114,16 +114,19 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, size_t k
                       test_skcipher_cb,
                       &sk.result);
 
+    printk(KERN_INFO "setting key");
     if (crypto_skcipher_setkey(skcipher, key, KEY_SIZE)) {
         pr_info("key could not be set\n");
         ret = -EAGAIN;
         goto out;
     }
+    printk(KERN_INFO "done setting key");
 
     /* IV will be random */
     //get_random_bytes(ivdata, 16);
     memset(ivdata, 0, KEY_SIZE);
 
+    printk(KERN_INFO "setting up skcipher");
     sk.tfm = skcipher;
     sk.req = req;
 
