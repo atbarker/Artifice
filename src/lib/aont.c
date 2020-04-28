@@ -99,7 +99,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, size_t k
 
     skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
     if (IS_ERR(skcipher)) {
-        pr_info("could not allocate skcipher handle\n");
+        printk(KERN_INFO "could not allocate skcipher handle\n");
         return PTR_ERR(skcipher);
     }
 
@@ -135,7 +135,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, size_t k
     if (ret)
         goto out;
 
-    pr_info("Encryption triggered successfully\n");
+    printk(KERN_INFO "Encryption triggered successfully\n");
 
 out:
     if (skcipher)
@@ -162,14 +162,19 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     memcpy(encode_buffer, data, data_length);
 
     //generate key and IV
+    printk(KERN_INFO "initializing key");
     get_random_bytes(key, sizeof(key)); 
+    printk(KERN_INFO "encrypting");
     encrypt_payload(encode_buffer, data_length, key, KEY_SIZE, 1);
+    printk(KERN_INFO "done with encryption");
 
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
     params.RecoveryCount = parity_blocks;
 
+    printk(KERN_INFO "calculating hash");
     calc_hash(encode_buffer, data_length, hash);
+    printk(KERN_INFO "hash calculated");
 
     for (i = 0; i < KEY_SIZE; i++) {
         difference[i] = key[i] ^ hash[i];
