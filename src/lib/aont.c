@@ -166,7 +166,8 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
 
     //generate key and IV
     printk(KERN_INFO "initializing key");
-    get_random_bytes(key, sizeof(key)); 
+    //get_random_bytes(key, KEY_SIZE); 
+    memset(key, 0, KEY_SIZE); 
     printk(KERN_INFO "encrypting");
     encrypt_payload(encode_buffer, data_length, key, KEY_SIZE, 1);
     printk(KERN_INFO "done with encryption");
