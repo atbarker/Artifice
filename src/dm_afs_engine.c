@@ -489,7 +489,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
-    encode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, config->num_carrier_blocks);
+    encode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, config->num_carrier_blocks - 2);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
