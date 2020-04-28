@@ -28,7 +28,7 @@ struct __attribute__((packed)) afs_ptr_block {
     //TODO for AONT and all later secret sharing approaches, use a 256 bit hash
     //This difference is a bitwise XOR of the key used to encrypt and a hash of the encrypted data
     //The hash of the whole data block is our canary, this hash really is kind of excessive
-    uint8_t difference[SHA256_SZ];
+    //uint8_t difference[SHA256_SZ];
     uint8_t hash[SHA128_SZ];
     uint32_t map_block_ptrs[NUM_MAP_BLKS_IN_PB];
     uint32_t next_ptr_block;

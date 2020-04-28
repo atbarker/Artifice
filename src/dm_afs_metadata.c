@@ -50,7 +50,7 @@ build_configuration(struct afs_private *context, uint8_t num_carrier_blocks, uin
 
     config->num_carrier_blocks = num_carrier_blocks;
     config->num_entropy_blocks = num_entropy_blocks;
-    config->map_entry_sz = SHA128_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * config->num_carrier_blocks);
+    config->map_entry_sz = CARRIER_HASH_SZ + ENTROPY_HASH_SZ + (sizeof(struct afs_map_tuple) * config->num_carrier_blocks);
     config->unused_space_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) % config->map_entry_sz;
     config->num_map_entries_per_block = (AFS_BLOCK_SIZE - SHA512_SZ) / config->map_entry_sz;
     config->num_blocks = config->instance_size / AFS_BLOCK_SIZE;
@@ -113,7 +113,7 @@ afs_create_map(struct afs_private *context)
             map_tuple += 1;
         }
         // map_tuple now points to the beginning of the hash and the entropy.
-        memset(map_tuple, 0, SHA128_SZ + ENTROPY_HASH_SZ);
+        memset(map_tuple, 0, CARRIER_HASH_SZ + ENTROPY_HASH_SZ);
     }
     afs_debug("initialized Artifice map");
     context->afs_map = map_entries;

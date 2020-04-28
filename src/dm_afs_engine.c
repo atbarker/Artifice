@@ -383,7 +383,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
     req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
     req->map_entry_hash = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
-    //req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
+    //req->map_entry_entropy = req->map_entry_hash + CARRIER_HASH_SZ;
 
     //The block is unallocated, zero fill the data block, remap and return, clean up request
     if (req->map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
@@ -441,8 +441,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
     //TODO the hash is specific to the secret sharing version
     //req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
-    req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
     req->map_entry_difference = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+    req->map_entry_entropy = req->map_entry_hash + CARRIER_HASH_SZ;
     // afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
 
     // If this write is a modification, then we perform a read-modify-write.

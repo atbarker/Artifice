@@ -427,7 +427,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     // Confirm our structure sizes.
     afs_action(sizeof(*sb) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "super block structure incorrect size [%lu]", sizeof(*sb));
-    afs_action(sizeof(struct afs_ptr_block) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "pointer block structure incorrect size");
+    afs_action(sizeof(struct afs_ptr_block) == AFS_BLOCK_SIZE, ret = -EINVAL, err, "pointer block structure incorrect size [%lu]", sizeof(struct afs_ptr_block));
 
     context = kmalloc(sizeof(*context), GFP_KERNEL);
     afs_action(context, ret = -ENOMEM, err, "kmalloc failure [%d]", ret);

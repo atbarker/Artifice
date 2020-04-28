@@ -87,6 +87,7 @@ enum {
     PASSIVE_DEV_SZ = 32,
     ENTROPY_DIR_SZ = 64,
     ENTROPY_HASH_SZ = 8,
+    CARRIER_HASH_SZ = 32,
 
     // Hash algorithms
     SHA1_SZ = 20,
