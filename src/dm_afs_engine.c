@@ -217,7 +217,6 @@ afs_read_endio(struct bio *bio) {
 	}
 
         //cleanup
-	//kfree(erasures);
         afs_req_clean(req);
     }
     return;

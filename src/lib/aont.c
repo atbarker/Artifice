@@ -95,7 +95,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     struct crypto_skcipher *skcipher = NULL;
     struct skcipher_request *req = NULL;
     //uint8_t ivdata[KEY_SIZE];
-    uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
+    //uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
     int ret = -EFAULT;
 
     skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
@@ -130,7 +130,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     sk.req = req;
 
     sg_init_one(&sk.sg, data, datasize);
-    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, KEY_SIZE, ivdata);
+    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, KEY_SIZE, iv);
     init_completion(&sk.result.completion);
 
     ret = test_skcipher_encdec(&sk, enc);
@@ -144,7 +144,7 @@ out:
         crypto_free_skcipher(skcipher);
     if (req)
         skcipher_request_free(req);
-    kfree(ivdata);
+    //kfree(ivdata);
     return ret;
 }
 
@@ -193,6 +193,7 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     
     printk(KERN_INFO "freeing");
     kfree(encode_buffer);
+    kfree(iv);
     printk(KERN_INFO "done");
     return 0;
 }
@@ -234,6 +235,7 @@ int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, siz
     //}
     memcpy(data, encode_buffer, data_length);
 
+    kfree(iv);
     kfree(encode_buffer);
     return 0;
 }
