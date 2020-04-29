@@ -172,8 +172,6 @@ afs_read_endio(struct bio *bio) {
     uint32_t i;
     uint16_t checksum;
     //TODO change these two to reflect the erasures
-    uint8_t *erasures = kmalloc(req->config->num_carrier_blocks, GFP_KERNEL);
-    uint8_t num_erasures = 0;
 
     bio_put(bio);
  
@@ -190,10 +188,7 @@ afs_read_endio(struct bio *bio) {
 
         //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
 	//gfshare_ctx_dec_decode(req->encoder, req->erasures, req->carrier_blocks, req->data_block);
-	for(i = 0; i < req->config->num_carrier_blocks; i++){
-            erasures[i] = 0;
-	}
-	decode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, req->config->num_carrier_blocks - 2, erasures, num_erasures);
+	decode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, req->config->num_carrier_blocks - 2, req->erasures, req->num_erasures);
 	
         // Confirm hash matches.
         //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
