@@ -166,29 +166,29 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     memcpy(encode_buffer, data, data_length);
 
     //generate key and IV
-    printk(KERN_INFO, "IV and key");
+    printk(KERN_INFO "IV and key");
     get_random_bytes(key, KEY_SIZE);
     memset(iv, 0, KEY_SIZE);
-    printk(KERN_INFO, "encrypting");
+    printk(KERN_INFO "encrypting");
     encrypt_payload(encode_buffer, data_length, key, iv, KEY_SIZE, 1);
 
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
     params.RecoveryCount = parity_blocks;
 
-    printk(KERN_INFO, "calculating hash value");
+    printk(KERN_INFO "calculating hash value");
     calc_hash(encode_buffer, data_length, hash);
 
     for (i = 0; i < KEY_SIZE; i++) {
         difference[i] = key[i] ^ hash[i];
     }
-    printk(KERN_INFO, "building share array");
+    printk(KERN_INFO "building share array");
     //TODO eliminate these memcpy operations, do everything in place
     for (i = 0; i < data_blocks; i++) {
         memcpy(shares[i], &encode_buffer[rs_block_size * i], rs_block_size);
     }
     
-    printk(KERN_INFO, "encoding");
+    printk(KERN_INFO "encoding");
     cauchy_rs_encode(params, shares, &shares[data_blocks]);
     
     printk(KERN_INFO "freeing");
