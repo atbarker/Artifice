@@ -95,7 +95,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     struct crypto_skcipher *skcipher = NULL;
     struct skcipher_request *req = NULL;
     //uint8_t ivdata[KEY_SIZE];
-    //uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
+    uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
     int ret = -EFAULT;
 
     skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
@@ -123,14 +123,14 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
 
     /* IV will be random */
     //get_random_bytes(ivdata, 16);
-    //memset(ivdata, 0, KEY_SIZE);
+    memset(ivdata, 0, KEY_SIZE);
 
     printk(KERN_INFO "setting up skcipher");
     sk.tfm = skcipher;
     sk.req = req;
 
     sg_init_one(&sk.sg, data, datasize);
-    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, KEY_SIZE, iv);
+    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, KEY_SIZE, ivdata);
     init_completion(&sk.result.completion);
 
     ret = test_skcipher_encdec(&sk, enc);
@@ -144,7 +144,7 @@ out:
         crypto_free_skcipher(skcipher);
     if (req)
         skcipher_request_free(req);
-    //kfree(ivdata);
+    kfree(ivdata);
     return ret;
 }
 
@@ -156,7 +156,8 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     size_t rs_block_size = data_length / data_blocks;
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
-    uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
+    //uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
+    uint8_t *iv = NULL;
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int i = 0;
@@ -168,7 +169,7 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     //generate key and IV
     printk(KERN_INFO "IV and key");
     get_random_bytes(key, KEY_SIZE);
-    memset(iv, 0, KEY_SIZE);
+    //memset(iv, 0, KEY_SIZE);
     printk(KERN_INFO "encrypting");
     encrypt_payload(encode_buffer, data_length, key, iv, KEY_SIZE, 1);
 
@@ -193,7 +194,7 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     
     printk(KERN_INFO "freeing");
     kfree(encode_buffer);
-    kfree(iv);
+    //kfree(iv);
     printk(KERN_INFO "done");
     return 0;
 }
@@ -205,13 +206,14 @@ int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, siz
     size_t rs_block_size = data_length / data_blocks;
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
-    uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
+    //uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
+    uint8_t *iv = NULL;
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int ret;
     int i;
 
-    memset(iv, 0, KEY_SIZE);
+    //memset(iv, 0, KEY_SIZE);
 
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
@@ -235,7 +237,7 @@ int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, siz
     //}
     memcpy(data, encode_buffer, data_length);
 
-    kfree(iv);
+    //kfree(iv);
     kfree(encode_buffer);
     return 0;
 }
