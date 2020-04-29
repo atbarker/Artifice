@@ -184,12 +184,12 @@ afs_read_endio(struct bio *bio) {
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
 		afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
                 atomic_set(&req->rebuild_flag, 1);
-		req->sharenrs[i] = '0';
+		req->erasures[i] = '0';
 	    }
 	}
 
         //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
-	//gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+	//gfshare_ctx_dec_decode(req->encoder, req->erasures, req->carrier_blocks, req->data_block);
 	for(i = 0; i < req->config->num_carrier_blocks; i++){
             erasures[i] = 0;
 	}
@@ -336,10 +336,10 @@ rebuild_blocks(struct afs_map_request *req) {
     uint32_t block_num;
 
     for(i = 0; i < config->num_carrier_blocks; i++) {
-        req->sharenrs[i] = i + '0';
+        req->erasures[i] = i + '0';
     }
 
-    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    req->encoder = gfshare_ctx_init_enc(req->erasures, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
     gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -407,11 +407,11 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
         }
         afs_req_clean(req);
     } else {
-        req->encoder = gfshare_ctx_init_dec(req->sharenrs, req->config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+        req->encoder = gfshare_ctx_init_dec(req->erasures, req->config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
         for (i = 0; i < req->config->num_carrier_blocks; i++) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
-            req->sharenrs[i] = i + '0';
+            req->erasures[i] = i + '0';
         }
         ret = read_pages(req, false, req->config->num_carrier_blocks);
         afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
@@ -487,10 +487,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
     //TODO update this to better reflect the total number of carrier blocks
     for(i = 0; i < config->num_carrier_blocks; i++){
-        req->sharenrs[i] = i + '0';
+        req->erasures[i] = i + '0';
     }
 
-    //req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    //req->encoder = gfshare_ctx_init_enc(req->erasures, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
     //encode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, config->num_carrier_blocks - 2);

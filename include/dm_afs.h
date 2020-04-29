@@ -76,6 +76,8 @@ struct afs_private {
 
     //Encoding stuff
     cauchy_encoder_params params;
+    //picks shamir, AONT, or Reed-Solomon
+    uint8_t encoding_type;
 };
 
 /**

@@ -51,9 +51,10 @@ struct afs_map_request {
     // Write requests allocate a new page for a bio.
     uint8_t *allocated_write_page;
 
-    //encoding context and parameters
+    //encoding context and parameters (only needed for Shamir)
     gfshare_ctx *encoder;
-    uint8_t sharenrs[NUM_MAX_CARRIER_BLKS];
+    uint8_t erasures[NUM_MAX_CARRIER_BLKS];
+    uint8_t num_erasures;
 
     //data block number in the map and carrier block offsets
     uint32_t block;

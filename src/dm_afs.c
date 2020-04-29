@@ -274,6 +274,7 @@ init_request(struct afs_private *context) {
     req->vector = &context->vector;
     req->allocated_write_page = NULL;
     req->encoder = NULL;
+    req->num_erasures = 0;
     atomic_set(&req->rebuild_flag, 0);
     atomic64_set(&req->state, REQ_STATE_GROUND);
     for(i = 0; i < req->config->num_carrier_blocks; i++) {
@@ -438,6 +439,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     args = &context->args;
     ret = parse_afs_args(args, argc, argv);
     afs_assert(!ret, args_err, "unable to parse arguments");
+    context->encoding_type = AONT_RS;
 
     // Acquire the block device based on the args. This gives us a
     // wrapper on top of the kernel block device structure.
