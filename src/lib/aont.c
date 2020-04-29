@@ -90,7 +90,7 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
  *
  *Should operate of a 256 bit key to match the hash length
  */
-int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, size_t keylength, int enc) {
+int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t *iv, size_t keylength, int enc) {
     struct skcipher_def sk;
     struct crypto_skcipher *skcipher = NULL;
     struct skcipher_request *req = NULL;
@@ -156,6 +156,7 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     size_t rs_block_size = data_length / data_blocks;
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
+    uint8_t iv[KEY_SIZE];
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int i = 0;
@@ -165,8 +166,9 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     memcpy(encode_buffer, data, data_length);
 
     //generate key and IV
-    get_random_bytes(key, KEY_SIZE); 
-    encrypt_payload(encode_buffer, data_length, key, KEY_SIZE, 1);
+    get_random_bytes(key, KEY_SIZE);
+    memset(iv, 0, KEY_SIZE);
+    encrypt_payload(encode_buffer, data_length, key, iv, KEY_SIZE, 1);
 
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
@@ -195,12 +197,13 @@ int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, siz
     size_t rs_block_size = data_length / data_blocks;
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
+    uint8_t iv[KEY_SIZE];
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int ret;
     int i;
 
-    //memset(canary, 0, CANARY_SIZE);
+    memset(iv, 0, KEY_SIZE);
 
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
@@ -218,7 +221,7 @@ int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, siz
         key[i] = difference[i] ^ hash[i];
     }
 
-    encrypt_payload(encode_buffer, data_length, key, KEY_SIZE, 0);
+    encrypt_payload(encode_buffer, data_length, key, iv, KEY_SIZE, 0);
     //if(memcmp(canary, &encode_buffer[data_length], CANARY_SIZE)){
     //    return -1;
     //}
