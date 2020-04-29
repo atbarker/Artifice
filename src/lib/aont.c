@@ -156,7 +156,7 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     size_t rs_block_size = data_length / data_blocks;
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
-    uint8_t iv[KEY_SIZE];
+    uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int i = 0;
@@ -197,7 +197,7 @@ int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, siz
     size_t rs_block_size = data_length / data_blocks;
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
-    uint8_t iv[KEY_SIZE];
+    uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int ret;
