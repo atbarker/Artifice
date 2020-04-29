@@ -144,7 +144,7 @@ out:
         crypto_free_skcipher(skcipher);
     if (req)
         skcipher_request_free(req);
-    kfree(ivdata);
+    //kfree(ivdata);
     return ret;
 }
 
