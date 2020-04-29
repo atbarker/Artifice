@@ -18,8 +18,8 @@ static inline size_t get_share_size(size_t data_length, size_t data_blocks){
 
 int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t *iv, size_t keylength, int enc);
 
-int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *data, size_t data_length, uint8_t **shares, size_t data_blocks, size_t parity_blocks);
+int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_length, uint8_t **shares, uint8_t *iv, size_t data_blocks, size_t parity_blocks);
 
-int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, size_t data_length, uint8_t **shares, size_t data_blocks, size_t parity_blocks, uint8_t *erasures, uint8_t num_erasures);
+int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, uint8_t **shares, uint8_t *iv, size_t data_blocks, size_t parity_blocks, uint8_t *erasures, uint8_t num_erasures);
 
 #endif

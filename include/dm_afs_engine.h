@@ -55,6 +55,8 @@ struct afs_map_request {
     gfshare_ctx *encoder;
     uint8_t erasures[NUM_MAX_CARRIER_BLKS];
     uint8_t num_erasures;
+    //TODO, this should be SHA256 size
+    uint8_t iv[32];
 
     //data block number in the map and carrier block offsets
     uint32_t block;

@@ -95,7 +95,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     struct crypto_skcipher *skcipher = NULL;
     struct skcipher_request *req = NULL;
     //uint8_t ivdata[KEY_SIZE];
-    uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
+    //uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
     int ret = -EFAULT;
 
     skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
@@ -123,14 +123,15 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
 
     /* IV will be random */
     //get_random_bytes(ivdata, 16);
-    memset(ivdata, 0, KEY_SIZE);
+    memset(iv, 0, KEY_SIZE);
+    //memset(ivdata, 0, KEY_SIZE);
 
     printk(KERN_INFO "setting up skcipher");
     sk.tfm = skcipher;
     sk.req = req;
 
     sg_init_one(&sk.sg, data, datasize);
-    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, KEY_SIZE, ivdata);
+    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, KEY_SIZE, iv);
     init_completion(&sk.result.completion);
 
     ret = test_skcipher_encdec(&sk, enc);
@@ -149,7 +150,7 @@ out:
 }
 
 //TODO change sizes here
-int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *data, size_t data_length, uint8_t **shares, size_t data_blocks, size_t parity_blocks){
+int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_length, uint8_t **shares,  uint8_t *iv, size_t data_blocks, size_t parity_blocks){
     //uint8_t canary[CANARY_SIZE];
     //size_t cipher_size = data_length;
     //size_t encrypted_payload_size = data_length;
@@ -157,7 +158,6 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
     //uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
-    uint8_t *iv = NULL;
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int i = 0;
@@ -199,7 +199,7 @@ int encode_aont_package(uint8_t *canary, uint8_t *difference, const uint8_t *dat
     return 0;
 }
 
-int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, size_t data_length, uint8_t **shares, size_t data_blocks, size_t parity_blocks, uint8_t *erasures, uint8_t num_erasures){
+int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, uint8_t **shares, uint8_t *iv, size_t data_blocks, size_t parity_blocks, uint8_t *erasures, uint8_t num_erasures){
     //uint8_t canary[CANARY_SIZE];
     //size_t cipher_size = data_length + CANARY_SIZE;
     //size_t encrypted_payload_size = cipher_size + KEY_SIZE;
@@ -207,7 +207,6 @@ int decode_aont_package(uint8_t *canary, uint8_t *difference, uint8_t *data, siz
     uint8_t key[KEY_SIZE];
     uint8_t hash[HASH_SIZE];
     //uint8_t *iv = kmalloc(KEY_SIZE, GFP_KERNEL);
-    uint8_t *iv = NULL;
     cauchy_encoder_params params;
     uint8_t *encode_buffer = kmalloc(data_length, GFP_KERNEL);
     int ret;

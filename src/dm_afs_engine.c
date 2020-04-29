@@ -188,7 +188,7 @@ afs_read_endio(struct bio *bio) {
 
         //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
 	//gfshare_ctx_dec_decode(req->encoder, req->erasures, req->carrier_blocks, req->data_block);
-	decode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, req->config->num_carrier_blocks - 2, req->erasures, req->num_erasures);
+	decode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, req->config->num_carrier_blocks - 2, req->erasures, req->num_erasures);
 	
         // Confirm hash matches.
         //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
@@ -487,7 +487,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     //req->encoder = gfshare_ctx_init_enc(req->erasures, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
 
     //gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
-    //encode_aont_package(NULL, req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, 2, config->num_carrier_blocks - 2);
+    encode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, config->num_carrier_blocks - 2);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
