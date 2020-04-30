@@ -76,7 +76,7 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
         }
     default:
         //pr_info("skcipher encrypt returned with %d result %d\n",
-            rc, sk->result.err);
+        //    rc, sk->result.err);
         break;
     }
     init_completion(&sk->result.completion);
