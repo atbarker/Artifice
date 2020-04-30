@@ -1935,13 +1935,13 @@ int cauchy_rs_decode(
 
     // If nothing is erased,
     if (state->RecoveryCount <= 0) {
-        return 0;
+        goto done;
     }
 
     // If m=1,
     if (params.RecoveryCount == 1) {
         DecodeM1(state);
-        return 0;
+        goto done;
     }
 
     // Decode for m>1
@@ -1951,6 +1951,7 @@ int cauchy_rs_decode(
         memcpy(dataBlocks[i], blocks[i].Block, params.BlockBytes);
     }
 
+done:
     kfree(blocks);
     kfree(state);
     return 0;
