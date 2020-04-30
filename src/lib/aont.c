@@ -49,7 +49,7 @@ static void test_skcipher_cb(struct crypto_async_request *req, int error)
         return;
     result->err = error;
     complete(&result->completion);
-    pr_info("Encryption finished successfully\n");
+    //pr_info("Encryption finished successfully\n");
 }
 
 /* Perform cipher operation */
@@ -75,7 +75,7 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
             break;
         }
     default:
-        pr_info("skcipher encrypt returned with %d result %d\n",
+        //pr_info("skcipher encrypt returned with %d result %d\n",
             rc, sk->result.err);
         break;
     }
@@ -126,7 +126,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     memset(iv, 0, KEY_SIZE);
     //memset(ivdata, 0, KEY_SIZE);
 
-    printk(KERN_INFO "setting up skcipher");
+    //printk(KERN_INFO "setting up skcipher");
     sk.tfm = skcipher;
     sk.req = req;
 
@@ -138,7 +138,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     if (ret)
         goto out;
 
-    printk(KERN_INFO "Encryption triggered successfully\n");
+    //printk(KERN_INFO "Encryption triggered successfully\n");
 
 out:
     if (skcipher)
@@ -212,7 +212,6 @@ int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, 
     params.RecoveryCount = parity_blocks;
 
     ret = cauchy_rs_decode(params, shares, &shares[data_blocks], erasures, num_erasures);
-    printk(KERN_INFO "return value for decode %d", ret);
 
     for(i = 0; i < data_blocks; i++){
         memcpy(&encode_buffer[rs_block_size * i], shares[i], rs_block_size);
