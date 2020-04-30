@@ -1952,5 +1952,6 @@ int cauchy_rs_decode(
     }
 
     kfree(blocks);
+    kfree(state);
     return 0;
 }
