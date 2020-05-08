@@ -53,6 +53,7 @@ struct afs_map_request {
 
     //encoding context and parameters (only needed for Shamir)
     gfshare_ctx *encoder;
+    uint8_t encoding_type;
     uint8_t erasures[NUM_MAX_CARRIER_BLKS];
     uint8_t num_erasures;
     //TODO, this should be SHA256 size
