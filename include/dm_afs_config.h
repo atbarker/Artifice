@@ -87,6 +87,7 @@ enum {
     PASSIVE_DEV_SZ = 32,
     ENTROPY_DIR_SZ = 64,
     ENTROPY_HASH_SZ = 8,
+    CARRIER_HASH_SZ = 32,
 
     // Hash algorithms
     SHA1_SZ = 20,
@@ -103,7 +104,12 @@ enum {
     FS_FAT32 = 0,
     FS_EXT4 = 1,
     FS_NTFS = 2,
-    FS_ERR = -1
+    FS_ERR = -1,
+
+    // Carrier block encoding types
+    RS_ENTROPY = 0,
+    SHAMIR = 1,
+    AONT_RS = 2
 };
 
 #endif /* DM_AFS_CONFIG_H */

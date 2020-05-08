@@ -264,6 +264,8 @@ def main(args):
         prob4 = []
         prob5 = []
         prob6 = []
+        prob7 = []
+        prob8 = []
         for i in m_values:
             #1 entropy block, 1 data block, i parity blocks
             #in this case at least i-2 blocks must survive, the threshold is tied to the 
@@ -277,6 +279,8 @@ def main(args):
             prob4.append(prob_metadata_alive_sss(3, i, def_art_size, def_overwritten, def_free_blocks))
             prob5.append(prob_metadata_alive_ssms(2, i, def_art_size, def_overwritten, def_free_blocks))
             prob6.append(prob_metadata_alive_ssms(3, i, def_art_size, def_overwritten, def_free_blocks))
+            prob7.append(prob_metadata_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
+            prob8.append(prob_metadata_alive_aont(3, i, def_art_size, def_overwritten, def_free_blocks))
 
         plt.xlabel("Number of Carrier Blocks")
         plt.ylabel("Probability of Survival")
@@ -287,6 +291,8 @@ def main(args):
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
         #ssms = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
         #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        aont = plt.plot(m_values, prob7, label='AONT, threshold 2', marker="x")
+        aont2 = plt.plot(m_values, prob8, label='AONT, threshold 3', marker="+")
         plt.legend()
         plt.show()
 
@@ -323,8 +329,8 @@ def main(args):
         rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
         shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        ssms = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
-        ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #ssms = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
+        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         aont = plt.plot(m_values, prob7, label='AONT, threshold 2', marker="x")
         aont2 = plt.plot(m_values, prob8, label='AONT, threshold 3', marker="+")
         plt.legend()
@@ -347,10 +353,10 @@ def main(args):
         for i in m_values:
             prob1.append(prob_artifice_alive_rs(1, 1, 8, i, def_overwritten, def_free_blocks))
             prob2.append(prob_artifice_alive_sss(2, 8, i, def_overwritten, def_free_blocks))
-            prob3.append(prob_artifice_alive_ssms(2, 8, i, def_overwritten, def_free_blocks))
+            prob3.append(prob_artifice_alive_aont(2, 8, i, def_overwritten, def_free_blocks))
             prob4.append(prob_artifice_alive_rs(1, 2, 8, i, def_overwritten, def_free_blocks))
             prob5.append(prob_artifice_alive_sss(3, 8, i, def_overwritten, def_free_blocks))
-            prob6.append(prob_artifice_alive_ssms(3, 8, i, def_overwritten, def_free_blocks))           
+            prob6.append(prob_artifice_alive_aont(3, 8, i, def_overwritten, def_free_blocks))           
 
         plt.xlabel("Size of the Artifice Volume (blocks)")
         plt.ylabel("Probability of Survival")
@@ -358,9 +364,9 @@ def main(args):
         rs = plt.plot(m_values, prob1, label='RS, 1 data block')
         rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        #ssms = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
+        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
+        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
         plt.legend()
         plt.show()
 
@@ -378,10 +384,10 @@ def main(args):
         for i in m_values:
             prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, i, def_free_blocks))
             prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, i, def_free_blocks))
-            prob3.append(prob_artifice_alive_ssms(2, 8, def_art_size, i, def_free_blocks))
+            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, i, def_free_blocks))
             prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, i, def_free_blocks))
             prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, i, def_free_blocks))
-            prob6.append(prob_artifice_alive_ssms(3, 8, def_art_size, i, def_free_blocks))
+            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, i, def_free_blocks))
 
         plt.xlabel("Amount written per day (blocks)")
         plt.ylabel("Probability of Survival")
@@ -389,9 +395,9 @@ def main(args):
         rs = plt.plot(m_values, prob1, label='RS, 1 data block')
         rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        #ssms = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
+        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
+        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
         plt.legend()
         plt.show()
 
@@ -409,10 +415,10 @@ def main(args):
         for i in m_values:
             prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, def_overwritten, i))
             prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, def_overwritten, i))
-            prob3.append(prob_artifice_alive_ssms(2, 8, def_art_size, def_overwritten, i))
+            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, def_overwritten, i))
             prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, def_overwritten, i))
             prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, def_overwritten, i))
-            prob6.append(prob_artifice_alive_ssms(3, 8, def_art_size, def_overwritten, i))
+            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, def_overwritten, i))
 
         plt.xlabel("Unallocated Space (blocks)")
         plt.ylabel("Probability of Survival")
@@ -420,9 +426,9 @@ def main(args):
         rs = plt.plot(m_values, prob1, label='RS, 1 data block')
         rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
         shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        #ssms = plt.plot(m_values, prob3, label='SSMS, threshold 2', marker="x")
-        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
+        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
+        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
+        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
         plt.legend()
         plt.show()
 

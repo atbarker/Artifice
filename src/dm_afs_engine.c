@@ -10,6 +10,7 @@
 #include <linux/timekeeping.h>
 #include "lib/libgfshare.h"
 #include "lib/city.h"
+#include "lib/aont.h"
 
 #define CONTAINER_OF(MemberPtr, StrucType, MemberName) ((StrucType*)( (char*)(MemberPtr) - offsetof(StrucType, MemberName)))
 
@@ -170,6 +171,7 @@ afs_read_endio(struct bio *bio) {
     uint32_t segment_offset;
     uint32_t i;
     uint16_t checksum;
+    //TODO change these two to reflect the erasures
 
     bio_put(bio);
  
@@ -180,16 +182,20 @@ afs_read_endio(struct bio *bio) {
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
 		afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
                 atomic_set(&req->rebuild_flag, 1);
-		req->sharenrs[i] = '0';
+		req->erasures[i] = '0';
 	    }
 	}
 
         //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
-	gfshare_ctx_dec_decode(req->encoder, req->sharenrs, req->carrier_blocks, req->data_block);
+	if (req->encoding_type == SHAMIR) {
+	    gfshare_ctx_dec_decode(req->encoder, req->erasures, req->carrier_blocks, req->data_block);
+	} else if (req->encoding_type == AONT_RS) {
+	    decode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, req->config->num_carrier_blocks - 2, req->erasures, req->num_erasures);
+	}
 	
         // Confirm hash matches.
-        digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
-        ret = memcmp(req->map_entry_hash, digest, SHA128_SZ);
+        //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
+        //ret = memcmp(req->map_entry_hash, digest, SHA128_SZ);
         //TODO only run this check when explicitly rebuilding, while mounted it is kind of useless
         //afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
                 
@@ -229,8 +235,8 @@ afs_write_endio(struct bio *bio) {
     bio_put(bio); 
     if(atomic_dec_and_test(&req->bios_pending)) {
         digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
-        memcpy(req->map_entry_hash, digest, SHA128_SZ);
-        memset(req->map_entry_entropy, 0, ENTROPY_HASH_SZ);
+        //memcpy(req->map_entry_hash, digest, SHA128_SZ);
+        //memset(req->map_entry_entropy, 0, ENTROPY_HASH_SZ);
         for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE); 
             memcpy(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t));
@@ -327,10 +333,10 @@ rebuild_blocks(struct afs_map_request *req) {
     uint32_t block_num;
 
     for(i = 0; i < config->num_carrier_blocks; i++) {
-        req->sharenrs[i] = i + '0';
+        req->erasures[i] = i + '0';
     }
 
-    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+    req->encoder = gfshare_ctx_init_enc(req->erasures, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
     gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
@@ -377,7 +383,8 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
     req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
     req->map_entry_hash = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
-    //req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
+    req->map_entry_difference = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+    //req->map_entry_entropy = req->map_entry_hash + CARRIER_HASH_SZ;
 
     //The block is unallocated, zero fill the data block, remap and return, clean up request
     if (req->map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
@@ -397,11 +404,13 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
         }
         afs_req_clean(req);
     } else {
-        req->encoder = gfshare_ctx_init_dec(req->sharenrs, req->config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+	if (req->encoding_type == SHAMIR) {
+            req->encoder = gfshare_ctx_init_dec(req->erasures, req->config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+        }
 
         for (i = 0; i < req->config->num_carrier_blocks; i++) {
             req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
-            req->sharenrs[i] = i + '0';
+            req->erasures[i] = i + '0';
         }
         ret = read_pages(req, false, req->config->num_carrier_blocks);
         afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
@@ -433,8 +442,10 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
 
     req->map_entry = afs_get_map_entry(req->map, config, req->block);
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
+    //TODO the hash is specific to the secret sharing version
     req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
-    req->map_entry_entropy = req->map_entry_hash + SHA128_SZ;
+    req->map_entry_difference = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+    req->map_entry_entropy = req->map_entry_hash + CARRIER_HASH_SZ;
     // afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
 
     // If this write is a modification, then we perform a read-modify-write.
@@ -475,12 +486,16 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     }
     //TODO update this to better reflect the total number of carrier blocks
     for(i = 0; i < config->num_carrier_blocks; i++){
-        req->sharenrs[i] = i + '0';
+        req->erasures[i] = i + '0';
     }
 
-    req->encoder = gfshare_ctx_init_enc(req->sharenrs, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-
-    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    //encode the block
+    if(req->encoding_type == SHAMIR){
+        req->encoder = gfshare_ctx_init_enc(req->erasures, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+	gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    } else if (req->encoding_type == AONT_RS){
+        encode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, config->num_carrier_blocks - 2);
+    }
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
@@ -489,7 +504,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         req->map_entry_tuple[i].carrier_block_ptr = block_num;
 	req->block_nums[i] = block_num;
-        //memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
     ret = write_pages(req, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);
@@ -502,7 +517,9 @@ reset_entry:
         }
         req->map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    gfshare_ctx_free(req->encoder);
+    if (req->encoding_type == SHAMIR) {
+        gfshare_ctx_free(req->encoder);
+    }
     req->encoder = NULL;
 
 err:

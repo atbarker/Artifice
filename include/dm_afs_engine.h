@@ -44,14 +44,20 @@ struct afs_map_request {
     struct afs_map_tuple *map_entry_tuple;
     uint8_t *map_entry;
     uint8_t *map_entry_hash;
+    uint8_t *map_entry_difference;
     uint8_t *map_entry_entropy;
+    size_t share_size;
 
     // Write requests allocate a new page for a bio.
     uint8_t *allocated_write_page;
 
-    //encoding context and parameters
+    //encoding context and parameters (only needed for Shamir)
     gfshare_ctx *encoder;
-    uint8_t sharenrs[NUM_MAX_CARRIER_BLKS];
+    uint8_t encoding_type;
+    uint8_t erasures[NUM_MAX_CARRIER_BLKS];
+    uint8_t num_erasures;
+    //TODO, this should be SHA256 size
+    uint8_t iv[32];
 
     //data block number in the map and carrier block offsets
     uint32_t block;
