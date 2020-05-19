@@ -117,7 +117,7 @@ def calc_metadata_size_ssms(blocks, shares, threshold, replicas, verbose):
     effective_artifice_size = (blocks * amplification_factor) + metadata_size
 
     if verbose == True:
-        print("|---Metadata size for Secret Sharing-----|")
+        print("|---Metadata size for Secret Sharing Made Short-----|")
         print("Codeword configuration: reconstruct threshold {}, {} shares".format(threshold, shares))
         print("Write amplification factor: {}".format(shares))
         print("Record Size: {} bytes".format(record_size))
@@ -136,7 +136,7 @@ def calc_metadata_size_aont(blocks, parity, data, replicas, verbose):
     pointer_size = 4
     art_block_hash = 16
 
-    amplification_factor = parity/data
+    amplification_factor = (parity + data)/data
     carrier_block_tuple = pointer_size + small_checksum
     record_size = (parity * carrier_block_tuple) + art_block_hash
     pointers_per_pointerblock = (block_size / pointer_size - 1)
@@ -150,7 +150,7 @@ def calc_metadata_size_aont(blocks, parity, data, replicas, verbose):
     effective_artifice_size = (blocks * amplification_factor) + metadata_size
 
     if verbose == True:
-        print("|---Metadata size for Reed-Solomon-----|")
+        print("|---Metadata size for AONT-----|")
         print("Codeword configuration: {} data blocks, {} parity blocks".format(data, parity))
         print("Write amplification factor: {}".format(amplification_factor))
         print("Record Size: {} bytes".format(record_size))
@@ -173,10 +173,10 @@ def calc_total_size_sss(size, k, m):
     return (size * (m)) + calc_metadata_size_shamir(size, m, k, 8, False)
 
 def calc_total_size_ssms(size, k, m):
-    return (size * (m/k)) + calc_metadata_size_ssms(size, m, k, 8, False)
+    return (size * ((m+k)/k)) + calc_metadata_size_ssms(size, m, k, 8, False)
 
 def calc_total_size_aont(size, parity, data):
-    return (size * (parity / data)) + calc_metadata_size_aont(size, parity, data, 8, False)
+    return (size * ((parity + data) / data)) + calc_metadata_size_aont(size, parity, data, 8, False)
 
 def prob_metadata_alive_rs(e, d, m, art_size, blocks_over, free_blocks):
     prob = blocks_over / free_blocks
@@ -404,6 +404,41 @@ def main(args):
     elif args[1] == "freespace":
         print("Graph for size based on the amount of free space")
         #64GB to 1TB
+        m_values = np.power(2, np.arange(24, 29, 0.01))
+        prob1 = []
+        prob2 = []
+        prob3 = []
+        prob4 = []
+        prob5 = []
+        prob6 = []
+
+        for i in m_values:
+            prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, def_overwritten, i))
+            prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, def_overwritten, i))
+            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, def_overwritten, i))
+            prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, def_overwritten, i))
+            prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, def_overwritten, i))
+            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, def_overwritten, i))
+
+        plt.xlabel("Unallocated Space (blocks)")
+        plt.ylabel("Probability of Survival")
+        plt.title("Probability of Artifice Survival vs Size of Unallocated Space")
+        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
+        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
+        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
+        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
+        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
+        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
+        plt.legend()
+        plt.show()
+
+    elif args[1] == "overhead":
+        print("Graph for size of the artifice volume")
+        #vary by number of carrier blocks, include an equation used to generate the graph
+        #do we modulate the threshold or the total number of carrier blocks? In the case of SSMS or AONT then it will vary depending on the threshold
+        #For secret sharing we get a simple linear relationship, the size of the metadata raises linearly and the metadata structures are fixed
+        #In the case of AONT or SSMS we see the size complexity increase by a factor of threshold/
+        #metadata could possibly grow and shrink depending on how many blocks are in use (due to high overhead).
         m_values = np.power(2, np.arange(24, 29, 0.01))
         prob1 = []
         prob2 = []
