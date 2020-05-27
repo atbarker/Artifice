@@ -103,7 +103,7 @@ def calc_metadata_size_ssms(blocks, shares, threshold, replicas, verbose):
     #So say we have 8 shards per block, the data blocks for all those 8 shards can be represented by one map entry
     #store datablocks/threshold entries, determine the entry for a data block with data block # / threshold
     #essentiall index the same as a bitvector
-    amplification_factor = shares/threshold
+    amplification_factor = (shares + threshold)/threshold
     carrier_block_tuple = pointer_size + small_checksum
     record_size = (shares * carrier_block_tuple) + art_block_hash
     pointers_per_pointerblock = (block_size / pointer_size) - 1
