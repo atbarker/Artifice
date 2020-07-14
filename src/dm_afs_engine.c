@@ -380,6 +380,7 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
 
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
 
+
     req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
     req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
     req->map_entry_hash = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
@@ -446,7 +447,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
     req->map_entry_hash = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
     req->map_entry_difference = req->map_entry + (config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
     req->map_entry_entropy = req->map_entry_hash + CARRIER_HASH_SZ;
-    // afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
+    //afs_debug("write request [Size: %u | Block: %u | Sector Off: %u]", req_size, block_num, sector_offset);
+
 
     // If this write is a modification, then we perform a read-modify-write.
     // Otherwise, a new block is allocated and written to. We perform the
@@ -497,6 +499,8 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         encode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, config->num_carrier_blocks - 2);
     }
 
+    print_hex_dump(KERN_DEBUG, "encrypted_data:", DUMP_PREFIX_OFFSET, 16, 1, (void*)req->carrier_blocks[0], 128, true);
+
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
         //allocation_free(req->vector, req->map_entry_tuple[i].carrier_block_ptr);
@@ -504,7 +508,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         req->map_entry_tuple[i].carrier_block_ptr = block_num;
 	req->block_nums[i] = block_num;
-        memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
+        //memcpy(req->carrier_blocks[i], req->data_block, AFS_BLOCK_SIZE);
     }
     ret = write_pages(req, false, config->num_carrier_blocks);
     afs_action(!ret, ret = -EIO, reset_entry, "could not write page at block [%u]", block_num);

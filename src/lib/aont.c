@@ -131,7 +131,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     sk.req = req;
 
     sg_init_one(&sk.sg, data, datasize);
-    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, KEY_SIZE, iv);
+    skcipher_request_set_crypt(req, &sk.sg, &sk.sg, datasize, iv);
     init_completion(&sk.result.completion);
 
     ret = test_skcipher_encdec(&sk, enc);
@@ -165,12 +165,10 @@ int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_le
     //TODO Compute canary of the data block (small hash?)
     //memset(canary, 0, CANARY_SIZE);
     memcpy(encode_buffer, data, data_length);
-
     //generate key and IV
     get_random_bytes(key, KEY_SIZE);
     //memset(iv, 0, KEY_SIZE);
     encrypt_payload(encode_buffer, data_length, key, iv, KEY_SIZE, 1);
-
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
     params.RecoveryCount = parity_blocks;
@@ -187,6 +185,7 @@ int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_le
     
     cauchy_rs_encode(params, shares, &shares[data_blocks]);
     
+
     kfree(encode_buffer);
     //kfree(iv);
     return 0;
@@ -218,11 +217,9 @@ int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, 
     }
 
     calc_hash(encode_buffer, data_length, hash);
-
     for(i = 0; i < KEY_SIZE; i++){
         key[i] = difference[i] ^ hash[i];
     }
-
     encrypt_payload(encode_buffer, data_length, key, iv, KEY_SIZE, 0);
     //if(memcmp(canary, &encode_buffer[data_length], CANARY_SIZE)){
     //    return -1;

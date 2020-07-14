@@ -63,7 +63,7 @@ reload:
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 524288 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 16777216 artifice 0 pass /dev/sdc1 --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
@@ -76,7 +76,7 @@ debug_bench_full: build_bench
 	(cd scripts/bench; sudo python bench.py -i 30; sudo python bench.py -i 30 -o r; sudo python bench.py -i 30 -o rw)
 
 debug_write:
-	sudo dd if=/dev/zero of=/dev/mapper/artifice bs=4096 count=1 oflag=direct
+	sudo dd if=README.md of=/dev/mapper/artifice bs=4096 count=1 oflag=direct
 
 debug_read:
 	touch test_output
