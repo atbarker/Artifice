@@ -499,7 +499,6 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         encode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, config->num_carrier_blocks - 2);
     }
 
-    print_hex_dump(KERN_DEBUG, "encrypted_data:", DUMP_PREFIX_OFFSET, 16, 1, (void*)req->carrier_blocks[0], 128, true);
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
