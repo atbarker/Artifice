@@ -63,7 +63,7 @@ reload:
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 16777216 artifice 0 pass /dev/sdc1 --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
@@ -90,7 +90,7 @@ debug_end:
 #pilot and bonnie++ must be installed
 debug_pilot:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 33554432 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmesetup create artifice
+	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 	mkdir test
 	@sudo mkfs.ext4 /dev/mapper/artifice
 	@sudo mount /dev/mapper/artifice test
@@ -102,11 +102,11 @@ debug_pilot:
 
 debug_bonnie:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 33554432 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmesetup create artifice
+	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 	mkdir test
 	@sudo mkfs.ext4 /dev/mapper/artifice
 	@sudo mount /dev/mapper/artifice test
-	(cd benchmarks; sudo ./pilot.sh test 4096 root w; sudo ./pilot.sh test 4096 root r)
+	(cd benchmarks; sudo ./pilot.sh ../test 4096 root w; sudo ./pilot.sh ../test 4096 root r)
 	@sudo umount test
 	@sudo dmsetup remove artifice || true
 	@sudo rmmod dm_afs || true
