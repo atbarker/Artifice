@@ -104,6 +104,7 @@ enum {
     FS_FAT32 = 0,
     FS_EXT4 = 1,
     FS_NTFS = 2,
+    FS_SHADOW = 3,
     FS_ERR = -1,
 
     // Carrier block encoding types

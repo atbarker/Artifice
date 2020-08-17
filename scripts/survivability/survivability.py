@@ -403,8 +403,8 @@ def main(args):
 
     elif args[1] == "freespace":
         print("Graph for size based on the amount of free space")
-        #64GB to 1TB
-        m_values = np.power(2, np.arange(24, 29, 0.01))
+        #64GB to 512GB
+        m_values = np.power(2, np.arange(24, 27, 0.01))
         prob1 = []
         prob2 = []
         prob3 = []

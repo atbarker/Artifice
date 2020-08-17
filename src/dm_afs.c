@@ -42,6 +42,8 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
         ret = FS_EXT4;
     } else if (afs_ntfs_detect(page, device, fs)) {
         ret = FS_NTFS;
+    } else if (afs_shadow_detect(page, device, fs)){
+        ret = FS_SHADOW;
     } else {
         ret = FS_ERR;
     }

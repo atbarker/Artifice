@@ -10,7 +10,8 @@ ccflags-y += -I$(src)/include/ -g -msse3 -msse4.1 -mavx2 -mpreferred-stack-bound
 # Modules.
 AFS_MODULES :=	src/modules/dm_afs_fat32.o	\
 				src/modules/dm_afs_ext4.o	\
-				src/modules/dm_afs_ntfs.o
+				src/modules/dm_afs_ntfs.o       \
+                                src/modules/dm_afs_shadow.o
 
 # Libraries
 AFS_LIBRARIES := src/lib/bit_vector.o src/lib/cauchy_rs.o src/lib/libgfshare.o src/lib/city.o src/lib/aont.o

@@ -31,6 +31,7 @@ struct afs_passive_fs {
 bool afs_fat32_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs);
 bool afs_ext4_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs);
 bool afs_ntfs_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs);
+bool afs_shadow_detect(const void *data, struct block_device *device, struct afs_passive_fs *fs);
 
 /**
  * Acquire a free block from the free list.
