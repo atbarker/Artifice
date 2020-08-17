@@ -426,6 +426,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     uint64_t instance_size;
 
     // Make sure instance is large enough.
+    afs_debug("dm target length: %lu", ti->len);
     instance_size = ti->len * AFS_SECTOR_SIZE;
     afs_action(instance_size >= AFS_MIN_SIZE, ret = -EINVAL, err, "instance too small [%llu]", instance_size);
 

@@ -64,7 +64,7 @@ reload:
 
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 524288 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
@@ -77,7 +77,7 @@ debug_bench_full: build_bench
 	(cd scripts/bench; sudo python bench.py -i 30; sudo python bench.py -i 30 -o r; sudo python bench.py -i 30 -o rw)
 
 debug_write:
-	sudo dd if=/dev/zero of=/dev/mapper/artifice bs=4096 count=1 oflag=direct
+	sudo dd if=README.md of=/dev/mapper/artifice bs=4096 count=1 oflag=direct
 
 debug_read:
 	touch test_output
@@ -91,7 +91,7 @@ debug_end:
 #pilot and bonnie++ must be installed
 debug_pilot:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 33554432 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmesetup create artifice
+	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 	mkdir test
 	@sudo mkfs.ext4 /dev/mapper/artifice
 	@sudo mount /dev/mapper/artifice test
@@ -103,11 +103,11 @@ debug_pilot:
 
 debug_bonnie:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 33554432 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmesetup create artifice
+	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 	mkdir test
 	@sudo mkfs.ext4 /dev/mapper/artifice
 	@sudo mount /dev/mapper/artifice test
-	(cd benchmarks; sudo ./pilot.sh test 4096 root w; sudo ./pilot.sh test 4096 root r)
+	(cd benchmarks; sudo ./pilot.sh ../test 4096 root w; sudo ./pilot.sh ../test 4096 root r)
 	@sudo umount test
 	@sudo dmsetup remove artifice || true
 	@sudo rmmod dm_afs || true
