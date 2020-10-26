@@ -163,8 +163,8 @@ afs_req_clean(struct afs_map_request *req) {
 static void 
 afs_read_endio(struct bio *bio) {
     struct afs_map_request *req = bio->bi_private;
-    uint8_t *digest;
-    int ret = 0;
+    //uint8_t *digest;
+    //int ret = 0;
     struct bio_vec bv;
     struct bvec_iter iter;
     uint8_t *bio_data = NULL;
@@ -193,7 +193,7 @@ afs_read_endio(struct bio *bio) {
 	    decode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, req->config->num_carrier_blocks - 2, req->erasures, req->num_erasures);
 	}
 	
-        // Confirm hash matches.
+        //Confirm hash matches.
         //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         //ret = memcmp(req->map_entry_hash, digest, SHA128_SZ);
         //TODO only run this check when explicitly rebuilding, while mounted it is kind of useless
@@ -215,7 +215,7 @@ afs_read_endio(struct bio *bio) {
 	if(atomic_read(&req->rebuild_flag)) {
             //write a new function called write blocks, should have a flag to remap blocks
 	    //only after that is finished can we clean up the request so we return
-	    //rebuild_blocks(req);
+	    rebuild_blocks(req);
 	    return;
 	}
 
@@ -336,8 +336,12 @@ rebuild_blocks(struct afs_map_request *req) {
         req->erasures[i] = i + '0';
     }
 
-    req->encoder = gfshare_ctx_init_enc(req->erasures, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
-    gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    if(req->encoding_type == SHAMIR){
+        req->encoder = gfshare_ctx_init_enc(req->erasures, config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+        gfshare_ctx_enc_getshares(req->encoder, req->data_block, req->carrier_blocks);
+    }else if(req->encoding_type == AONT_RS){
+        encode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, config->num_carrier_blocks - 2);
+    }
 
     for (i = 0; i < config->num_carrier_blocks; i++) {
         // Allocate new block, or use old one.
@@ -358,8 +362,10 @@ reset_entry:
         }
         req->map_entry_tuple[i].carrier_block_ptr = AFS_INVALID_BLOCK;
     }
-    gfshare_ctx_free(req->encoder);
-    req->encoder = NULL;
+    if(req->encoding_type == SHAMIR){
+        gfshare_ctx_free(req->encoder);
+        req->encoder = NULL;
+    }
     return ret;
 }
 
