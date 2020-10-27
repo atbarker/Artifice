@@ -575,7 +575,11 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     afs_debug("constructor completed");
     ti->private = context;
-    afs_rebuild(ti);
+
+    //Start the repair process if we are mounting an existing volume
+    if(args->instance_type == TYPE_MOUNT){
+        afs_rebuild(ti);
+    }
     return 0;
 
 fwq_err:
