@@ -369,6 +369,18 @@ reset_entry:
     return ret;
 }
 
+
+/**
+ * Perform a basic rebuild request, essentially a stripped down read that doesn't have an originating BIO
+ */
+int
+afs_rebuild_request(struct afs_map_request *req){
+    int ret = 0;
+
+done:
+    return ret;
+}
+
 /**
  * Map a read request from userspace.
  */

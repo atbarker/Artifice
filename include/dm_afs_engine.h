@@ -92,8 +92,14 @@ void afs_req_clean(struct afs_map_request *req);
 
 /**
  * Rebuild a set of corrupted blocks
+ * Handles a read request and then starts a write request to remap blocks
  */
 int rebuild_blocks(struct afs_map_request *req);
+
+/**
+ * Map a rebuild request from userspace 
+ */
+int afs_rebuild_request(struct afs_map_request *req);
 
 /**
  * Map a read request from userspace.

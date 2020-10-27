@@ -69,6 +69,10 @@ struct afs_private {
     struct work_struct ground_ws;
     struct work_struct clean_ws;
 
+    struct afs_engine_queue rebuild_eq;
+    struct workqueue_struct *rebuild_wq;
+    struct work_struct rebuild_ws;
+
     // Map information.
     uint8_t *afs_map;
     uint8_t *afs_map_blocks;

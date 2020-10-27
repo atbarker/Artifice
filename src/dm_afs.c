@@ -174,6 +174,33 @@ done:
 }
 
 /**
+ * Work queue for the rebuild operation
+ * Iterates through all the blocks 
+ */
+static void
+afs_rebuildq(struct work_struct *ws)
+{
+    struct afs_map_request *req = NULL;
+    int ret = 0;
+
+    req = container_of(ws, struct afs_map_request, req_ws);
+
+    if(work_pending(ws)){
+        return;
+    }
+
+    atomic64_set(&req->state, REQ_STATE_FLIGHT);
+    ret = afs_rebuild_request(req);
+
+    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
+    return;
+
+done:
+    afs_req_clean(req);
+    return;
+}
+
+/**
  * Allocate a new bio and copy in the contents from another
  * one.
  * 
@@ -300,6 +327,28 @@ static void print_bio_info(struct bio *bio){
         }
     }
 }
+
+/**
+ * Iterate through the Map and rebuild blocks one by one
+ */
+static int
+afs_rebuild(struct dm_target *ti){
+    int i = 0;
+    struct afs_private *context = ti->private;
+    struct afs_map_request *req = NULL;
+
+    for(i = 0; i < context->config.num_blocks; i++){
+        req = init_request(context);
+        req->block = i;
+	req->sector_offset = 0;
+	req->request_size = AFS_BLOCK_SIZE;
+
+	req->eq = &context->rebuild_eq;
+	INIT_WORK(&req->req_ws, afs_rebuildq);
+	queue_work(context->rebuild_wq, &req->req_ws);
+    }
+    return 0;
+};
 
 /**
  * Map function for this target. This is the heart and soul
@@ -517,13 +566,16 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     //afs_action(!IS_ERR(context->ground_wq), ret = PTR_ERR(context->ground_wq), gwq_err, "could not create gwq [%d]", ret);
 
     context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE | WQ_MEM_RECLAIM, num_online_cpus(), "Artifice Flight WQ");
+    context->rebuild_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE | WQ_MEM_RECLAIM, 2, "Artifice Rebuild WQ");
     //context->flight_wq = alloc_ordered_workqueue("%s", WQ_HIGHPRI, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
 
     afs_eq_init(&context->flight_eq);
+    afs_eq_init(&context->rebuild_eq);
 
     afs_debug("constructor completed");
     ti->private = context;
+    afs_rebuild(ti);
     return 0;
 
 fwq_err:
@@ -560,7 +612,7 @@ afs_dtr(struct dm_target *ti)
     int err;
 
     // Wait for all requests to have processed. DO NOT busy wait.
-    while(!afs_eq_empty(&context->flight_eq)) {
+    while(!afs_eq_empty(&context->flight_eq) && !afs_eq_empty(&context->rebuild_eq)) {
         msleep(1);
     }
 
@@ -594,6 +646,7 @@ afs_dtr(struct dm_target *ti)
 
     // Destroy the workqueues.
     destroy_workqueue(context->flight_wq);
+    destroy_workqueue(context->rebuild_wq);
 
     // Free storage used by context.
     kfree(context);

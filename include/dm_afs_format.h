@@ -83,7 +83,7 @@ struct afs_config {
     uint8_t map_entry_sz; //size of each map entry (for indexing purposes)
     uint8_t unused_space_per_block; //additional padding in each block
     uint8_t num_map_entries_per_block;
-    uint32_t num_blocks;   //Total number of blocks on the disk
+    uint32_t num_blocks;   //Total number of artifice blocks (data blocks)
     uint32_t num_map_blocks;
     uint32_t num_ptr_blocks;
     uint64_t instance_size;
