@@ -376,7 +376,29 @@ reset_entry:
 int
 afs_rebuild_request(struct afs_map_request *req){
     int ret = 0;
+    int i = 0;
 
+    afs_action(atomic64_read(&req->state) == REQ_STATE_FLIGHT, ret = -EINVAL, done, "Request already completed");
+
+    req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
+    req->map_entry_tuple = (struct afs_map_tuple *)req->map_entry;
+    req->map_entry_hash = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+    req->map_entry_difference = req->map_entry + (req->config->num_carrier_blocks * sizeof(*req->map_entry_tuple));
+
+    if (req->map_entry_tuple[0].carrier_block_ptr == AFS_INVALID_BLOCK) {
+        afs_req_clean(req);
+    } else {
+        if (req->encoding_type == SHAMIR) {
+            req->encoder = gfshare_ctx_init_dec(req->erasures, req->config->num_carrier_blocks, 2, AFS_BLOCK_SIZE);
+        }
+
+        for (i = 0; i < req->config->num_carrier_blocks; i++) {
+            req->block_nums[i] = req->map_entry_tuple[i].carrier_block_ptr;
+            req->erasures[i] = i + '0';
+        }
+        ret = read_pages(req, false, req->config->num_carrier_blocks);
+        afs_action(!ret, ret = -EIO, done, "could not read page at block [%u]", req->map_entry_tuple[i].carrier_block_ptr);
+    }
 done:
     return ret;
 }
