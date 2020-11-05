@@ -257,7 +257,6 @@ __clone_bio(struct bio *bio_src, uint8_t **allocated_page, bool end_bio_src)
     bio_ret->bi_iter.bi_sector = bio_src->bi_iter.bi_sector;
     bio_ret->bi_iter.bi_size = req_size;
     bio_ret->bi_iter.bi_idx = 0;
-    bio_ret->bi_iter.bi_done = 0;
     bio_ret->bi_iter.bi_bvec_done = 0;
 
     // End bio if specified.
