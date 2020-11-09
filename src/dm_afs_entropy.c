@@ -76,7 +76,7 @@ int insert_entropy_ht(char *filename){
     entry->filename = filename;
 
     kern_path(filename, LOOKUP_FOLLOW, &p);
-    vfs_getattr(&p, &stat, STATX_ALL, KSTAT_QUERY_FLAGS);
+    vfs_getattr(&p, &stat, STATX_BASIC_STATS | STATX_BTIME, KSTAT_QUERY_FLAGS);
     entry->file_size = stat.size;
 
     hash_add_64(HASH_TABLE_NAME, &entry->hash_list, entry->key);

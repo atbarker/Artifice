@@ -191,7 +191,6 @@ hash_sha1(const void *data, const uint32_t data_len, uint8_t *digest)
     afs_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
 
     desc->tfm = tfm;
-    desc->flags = 0;
     ret = crypto_shash_digest(desc, data, data_len, digest);
     afs_assert(!ret, compute_done, "error computing sha1 [%d]", ret);
 
@@ -225,7 +224,6 @@ hash_sha256(const void *data, const uint32_t data_len, uint8_t *digest)
     afs_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
 
     desc->tfm = tfm;
-    desc->flags = 0;
     ret = crypto_shash_digest(desc, data, data_len, digest);
     afs_assert(!ret, compute_done, "error computing sha256 [%d]", ret);
 
@@ -259,7 +257,6 @@ hash_sha512(const void *data, const uint32_t data_len, uint8_t *digest)
     afs_action(desc, ret = -ENOMEM, desc_done, "could not allocate desc [%d]", ret);
 
     desc->tfm = tfm;
-    desc->flags = 0;
     ret = crypto_shash_digest(desc, data, data_len, digest);
     afs_assert(!ret, compute_done, "error computing sha512 [%d]", ret);
 
