@@ -48,7 +48,7 @@ static void test_skcipher_cb(struct crypto_async_request *req, int error)
     if (error == -EINPROGRESS)
         return;
     result->err = error;
-    complete(&result->completion);
+    //complete(&result->completion);
     //pr_info("Encryption finished successfully\n");
 }
 
@@ -57,29 +57,30 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
                      int enc)
 {
     int rc = 0;
+    DECLARE_CRYPTO_WAIT(wait);
 
     if (enc)
-        rc = crypto_skcipher_encrypt(sk->req);
+        rc = crypto_wait_req(crypto_skcipher_encrypt(sk->req), &wait);
     else
-        rc = crypto_skcipher_decrypt(sk->req);
+        rc = crypto_wait_req(crypto_skcipher_decrypt(sk->req), &wait);
 
     switch (rc) {
     case 0:
         break;
     case -EINPROGRESS:
     case -EBUSY:
-        rc = wait_for_completion_interruptible(
-            &sk->result.completion);
-        if (!rc && !sk->result.err) {
-            reinit_completion(&sk->result.completion);
-            break;
-        }
+        //rc = wait_for_completion_interruptible(
+        //    &sk->result.completion);
+        //if (!rc && !sk->result.err) {
+        //    reinit_completion(&sk->result.completion);
+        //    break;
+        //}
     default:
         //pr_info("skcipher encrypt returned with %d result %d\n",
         //    rc, sk->result.err);
         break;
     }
-    init_completion(&sk->result.completion);
+    //init_completion(&sk->result.completion);
 
     return rc;
 }
@@ -168,6 +169,7 @@ int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_le
     //generate key and IV
     get_random_bytes(key, KEY_SIZE);
     //memset(iv, 0, KEY_SIZE);
+    //TODO here we are going to have to wait for completion
     encrypt_payload(encode_buffer, data_length, key, iv, KEY_SIZE, 1);
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
