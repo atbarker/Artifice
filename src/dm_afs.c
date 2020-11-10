@@ -200,6 +200,26 @@ done:
     return;
 }
 
+void
+afs_cryptoq(struct work_struct *ws){
+    struct afs_map_request *req = NULL;
+    int ret = 0;
+    req = container_of(ws, struct afs_map_request, req_ws);
+
+    if(work_pending(ws)){
+        return;
+    }
+    ret = afs_read_decode(req);
+
+    afs_assert(!ret, done, "could not perform operation [%d:%d]", ret, bio_op(req->bio));
+    return;
+
+done:
+    afs_req_clean(req);
+    return;
+
+}
+
 /**
  * Allocate a new bio and copy in the contents from another
  * one.
@@ -295,6 +315,7 @@ init_request(struct afs_private *context) {
         return req;
     }
     
+    req->afs_context = context;
     req->bdev = context->bdev;
     req->map = context->afs_map;
     req->config = &context->config;
@@ -567,8 +588,11 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     context->flight_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE | WQ_MEM_RECLAIM, num_online_cpus(), "Artifice Flight WQ");
     context->rebuild_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE | WQ_MEM_RECLAIM, 2, "Artifice Rebuild WQ");
+    context->crypto_wq = alloc_workqueue("%s", WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE | WQ_MEM_RECLAIM, num_online_cpus(), "Artifice Crypt WQ");
     //context->flight_wq = alloc_ordered_workqueue("%s", WQ_HIGHPRI, "Artifice Flight WQ");
     afs_action(!IS_ERR(context->flight_wq), ret = PTR_ERR(context->flight_wq), fwq_err, "could not create fwq [%d]", ret);
+    afs_action(!IS_ERR(context->rebuild_wq), ret = PTR_ERR(context->rebuild_wq), fwq_err, "could not create rebuild wq [%d]", ret);
+    afs_action(!IS_ERR(context->crypto_wq), ret = PTR_ERR(context->crypto_wq), fwq_err, "could not create crypto wq [%d]", ret);
 
     afs_eq_init(&context->flight_eq);
     afs_eq_init(&context->rebuild_eq);
@@ -651,6 +675,7 @@ afs_dtr(struct dm_target *ti)
     // Destroy the workqueues.
     destroy_workqueue(context->flight_wq);
     destroy_workqueue(context->rebuild_wq);
+    destroy_workqueue(context->crypto_wq);
 
     // Free storage used by context.
     kfree(context);

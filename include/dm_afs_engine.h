@@ -20,6 +20,8 @@ struct afs_engine_queue;
 
 // A mapping request used to handle a single bio.
 struct afs_map_request {
+
+    struct afs_private *afs_context;
     // The array of pointers to blocks is populated by calling __get_free_page()
     // as Artifice blocks are the same size as Linux memory pages we can easily 
     // have aligned pages. On destruction these arrays should be cleaned by 
@@ -90,6 +92,13 @@ struct afs_engine_queue {
  * Cleanup a completed request.
  */
 void afs_req_clean(struct afs_map_request *req);
+
+/**
+ * Process decoding a read (assemble shards) 
+ *
+ * Because the crypto API cannot be called in an atomic context, which the endio functions are, we have to make another queue.
+ */
+int afs_read_decode(struct afs_map_request *req);
 
 /**
  * Rebuild a set of corrupted blocks

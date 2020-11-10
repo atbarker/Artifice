@@ -64,8 +64,10 @@ struct afs_private {
     // separate workqueue since the kernel workqueue is used for it.
     struct afs_engine_queue ground_eq;
     struct afs_engine_queue flight_eq;
+    struct afs_engine_queue crypto_eq;
     struct workqueue_struct *ground_wq;
     struct workqueue_struct *flight_wq;
+    struct workqueue_struct *crypto_wq;
     struct work_struct ground_ws;
     struct work_struct clean_ws;
 
@@ -100,6 +102,11 @@ int afs_create_map(struct afs_private *context);
  * metadata.
  */
 int afs_fill_map(struct afs_super_block *sb, struct afs_private *context);
+
+/**
+ * Process decoding and encoding things
+ */
+void afs_cryptoq(struct work_struct *ws);
 
 /**
  * Create the Artifice map blocks.
