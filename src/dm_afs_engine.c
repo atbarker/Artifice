@@ -179,8 +179,7 @@ afs_read_endio(struct bio *bio) {
 
     if(atomic_dec_and_test(&req->bios_pending)) {
 
-	//TODO: only do this when running a repair process, it is kind of pointless to do with every read
-	for(i = 0; i < req->config->num_carrier_blocks; i++) {
+	/*for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
 	    if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) { 
 		afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
@@ -201,7 +200,6 @@ afs_read_endio(struct bio *bio) {
         //Confirm hash matches.
         //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
         //ret = memcmp(req->map_entry_hash, digest, SHA128_SZ);
-        //TODO only run this check when explicitly rebuilding, while mounted it is kind of useless
         //afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
                 
 	segment_offset = 0;
@@ -225,9 +223,73 @@ afs_read_endio(struct bio *bio) {
 	}
 
         //cleanup
-        afs_req_clean(req);
+        afs_req_clean(req);*/
+
+	//TODO this should just queue work
+	INIT_WORK(&req->req_ws, afs_cryptoq);
+        queue_work(req->afs_context->crypto_wq, &req->req_ws);
     }
     return;
+}
+
+int
+afs_read_decode(struct afs_map_request *req){
+    struct bio_vec bv;
+    struct bvec_iter iter;
+    uint8_t *bio_data = NULL;
+    uint32_t segment_offset;
+    uint32_t i;
+    uint16_t checksum;
+    unsigned long flags;
+
+    //TODO: only do this when running a repair process, it is kind of pointless to do with every read
+    for(i = 0; i < req->config->num_carrier_blocks; i++) {
+        checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
+        if(memcmp(&req->map_entry_tuple[i].checksum, &checksum, sizeof(uint16_t))) {
+            afs_debug("corrupted block: %d,  carrier block: %d, stored checksum %d, checksum %d, carrier block location %d", req->block, i, req->map_entry_tuple[i].checksum, checksum, req->map_entry_tuple[i].carrier_block_ptr);
+            atomic_set(&req->rebuild_flag, 1);
+            req->erasures[i] = '0';
+        }
+    }
+
+        //memcpy(req->data_block, req->carrier_blocks[0], AFS_BLOCK_SIZE);
+    if (req->encoding_type == SHAMIR) {
+        gfshare_ctx_dec_decode(req->encoder, req->erasures, req->carrier_blocks, req->data_block);
+    } else if (req->encoding_type == AONT_RS) {
+        //spin_lock_irqsave(&req->req_lock, flags);
+        decode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, req->config->num_carrier_blocks - 2, req->erasures, req->num_erasures);
+        //spin_unlock_irqrestore(&req->req_lock, flags);
+    }
+
+        //Confirm hash matches.
+        //digest = cityhash128_to_array(CityHash128(req->data_block, AFS_BLOCK_SIZE));
+        //ret = memcmp(req->map_entry_hash, digest, SHA128_SZ);
+        //TODO only run this check when explicitly rebuilding, while mounted it is kind of useless
+        //afs_action(!ret, ret = -ENOENT, err, "data block is corrupted [%u]", req->block);
+
+    segment_offset = 0;
+    bio_for_each_segment (bv, req->bio, iter) {
+        bio_data = kmap(bv.bv_page);
+        if (bv.bv_len <= (req->request_size - segment_offset)) {
+            memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, bv.bv_len);
+        } else {
+            memcpy(bio_data + bv.bv_offset, req->data_block + (req->sector_offset * AFS_SECTOR_SIZE) + segment_offset, req->request_size - segment_offset);
+            kunmap(bv.bv_page);
+            break;
+        }
+        segment_offset += bv.bv_len;
+        kunmap(bv.bv_page);
+    }
+    if(atomic_read(&req->rebuild_flag)) {
+        //write a new function called write blocks, should have a flag to remap blocks
+        //only after that is finished can we clean up the request so we return
+        rebuild_blocks(req);
+        return 0;
+    }
+
+    //cleanup
+    afs_req_clean(req);
+    return 0;
 }
 
 static void 
