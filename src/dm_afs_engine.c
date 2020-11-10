@@ -177,17 +177,7 @@ afs_read_endio(struct bio *bio) {
 
     bio_put(bio);
 
-    if(in_atomic()){
-	    afs_debug("in atomic"); 
-    } else {
-	    afs_debug("not atomic");
-    }
     if(atomic_dec_and_test(&req->bios_pending)) {
-	if(in_atomic()){
-            afs_debug("in atomic");
-        } else {
-            afs_debug("not atomic");
-        }
 
 	//TODO: only do this when running a repair process, it is kind of pointless to do with every read
 	for(i = 0; i < req->config->num_carrier_blocks; i++) {
@@ -434,6 +424,11 @@ afs_read_request(struct afs_map_request *req, struct bio *bio) {
     afs_action(atomic64_read(&req->state) == REQ_STATE_FLIGHT, ret = -EINVAL, done, "Request already completed");
 
     //afs_debug("read request [Size: %u | Block: %u | Sector Off: %u]", req_size, req->block, sector_offset);
+    if(in_atomic()){
+            afs_debug("in atomic");
+    } else {
+            afs_debug("not atomic");
+    }
 
 
     req->map_entry = afs_get_map_entry(req->map, req->config, req->block);
