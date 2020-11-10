@@ -36,6 +36,12 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
     // Add more detection functions as a series of else..if blocks.
     // TODO: add afs_shadow_detect...
     // TODO: modify passive block device size (config.bdev_size) to exclude reserved block so those are removed from the allocation vector
+
+    /** Remove this later **/
+    afs_ntfs_detect(page, device, fs);
+    return FS_ERR;
+    /** done **/
+
     if (afs_fat32_detect(page, device, fs)) {
         ret = FS_FAT32;
     } else if (afs_ext4_detect(page, device, fs)) {
@@ -540,7 +546,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     case FS_ERR:
         // TODO: Change.
-        // afs_action(0, ret = -ENOENT, fs_err, "unknown file system");
+        afs_action(0, ret = -ENOENT, fs_err, "unknown file system");
         break;
 
     default:
