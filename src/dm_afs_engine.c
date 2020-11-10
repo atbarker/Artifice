@@ -191,9 +191,9 @@ afs_read_endio(struct bio *bio) {
 	if (req->encoding_type == SHAMIR) {
 	    gfshare_ctx_dec_decode(req->encoder, req->erasures, req->carrier_blocks, req->data_block);
 	} else if (req->encoding_type == AONT_RS) {
-	    //spin_lock_irqsave(&req->req_lock, flags);
+	    spin_lock_irqsave(&req->req_lock, flags);
 	    decode_aont_package(req->map_entry_difference, req->data_block, AFS_BLOCK_SIZE, req->carrier_blocks, req->iv, 2, req->config->num_carrier_blocks - 2, req->erasures, req->num_erasures);
-	    //spin_unlock_irqrestore(&req->req_lock, flags);
+	    spin_unlock_irqrestore(&req->req_lock, flags);
 	}
 	
         //Confirm hash matches.
