@@ -514,7 +514,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     ret = parse_afs_args(args, argc, argv);
     afs_assert(!ret, args_err, "unable to parse arguments");
     //TODO, set this as a command line option
-    context->encoding_type = SHAMIR;
+    context->encoding_type = AONT_RS;
 
     // Acquire the block device based on the args. This gives us a
     // wrapper on top of the kernel block device structure.
