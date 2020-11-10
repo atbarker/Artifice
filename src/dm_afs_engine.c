@@ -8,6 +8,7 @@
 #include <dm_afs_io.h>
 #include <linux/delay.h>
 #include <linux/timekeeping.h>
+#include <linux/hardirq.h>
 #include "lib/libgfshare.h"
 #include "lib/city.h"
 #include "lib/aont.h"
@@ -175,8 +176,19 @@ afs_read_endio(struct bio *bio) {
     //TODO change these two to reflect the erasures
 
     bio_put(bio);
- 
+
+    if(in_atomic()){
+	    afs_debug("in atomic"); 
+    } else {
+	    afs_debug("not atomic");
+    }
     if(atomic_dec_and_test(&req->bios_pending)) {
+	if(in_atomic()){
+            afs_debug("in atomic");
+        } else {
+            afs_debug("not atomic");
+        }
+
 	//TODO: only do this when running a repair process, it is kind of pointless to do with every read
 	for(i = 0; i < req->config->num_carrier_blocks; i++) {
             checksum = cityhash32_to_16(req->carrier_blocks[i], AFS_BLOCK_SIZE);
