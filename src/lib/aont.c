@@ -98,6 +98,7 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
     //uint8_t ivdata[KEY_SIZE];
     //uint8_t *ivdata = kmalloc(KEY_SIZE, GFP_KERNEL);
     int ret = -EFAULT;
+    DECLARE_CRYPTO_WAIT(wait);
 
     skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
     if (IS_ERR(skcipher)) {
@@ -112,9 +113,11 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
         goto out;
     }
 
-    skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
-                      test_skcipher_cb,
-                      &sk.result);
+    //skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+    //                  test_skcipher_cb,
+    //                  &sk.result);
+    
+    skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP, crypto_req_done, &wait);
 
     if (crypto_skcipher_setkey(skcipher, key, KEY_SIZE)) {
         pr_info("key could not be set\n");
@@ -133,13 +136,17 @@ int encrypt_payload(uint8_t *data, const size_t datasize, uint8_t *key, uint8_t 
 
     sg_init_one(&sk.sg, data, datasize);
     skcipher_request_set_crypt(req, &sk.sg, &sk.sg, datasize, iv);
-    init_completion(&sk.result.completion);
+    //init_completion(&sk.result.completion);
 
-    ret = test_skcipher_encdec(&sk, enc);
-    if (ret)
+    //ret = test_skcipher_encdec(&sk, enc);
+    if (enc)
+        ret = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
+    else
+        ret = crypto_wait_req(crypto_skcipher_decrypt(req), &wait);
+    if (ret){
+	printk(KERN_INFO "Error when encrypting\n");
         goto out;
-
-    //printk(KERN_INFO "Encryption triggered successfully\n");
+    }
 
 out:
     if (skcipher)
