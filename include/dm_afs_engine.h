@@ -33,6 +33,7 @@ struct afs_map_request {
     // Parent data block bio and number of pending carrier block bios.
     struct bio *bio;
     atomic_t bios_pending;
+    spinlock_t req_lock;
 
     // We need these from the instance context to process a request.
     uint8_t *map;

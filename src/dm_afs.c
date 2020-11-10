@@ -305,6 +305,7 @@ init_request(struct afs_private *context) {
     req->num_erasures = 0;
     req->encoding_type = context->encoding_type;
     atomic_set(&req->rebuild_flag, 0);
+    spin_lock_init(&req->req_lock);
     atomic64_set(&req->state, REQ_STATE_GROUND);
     for(i = 0; i < req->config->num_carrier_blocks; i++) {
         req->carrier_blocks[i] = (uint8_t*)__get_free_page(GFP_KERNEL);
