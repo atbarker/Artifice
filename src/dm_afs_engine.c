@@ -175,6 +175,10 @@ afs_read_endio(struct bio *bio) {
     return;
 }
 
+/**
+ * Handle read decoding in seperate queued function because a bio endio is an atomic context, makes the crypto API freak out
+ *
+ */
 int
 afs_read_decode(struct afs_map_request *req){
     struct bio_vec bv;
@@ -183,14 +187,11 @@ afs_read_decode(struct afs_map_request *req){
     uint32_t segment_offset;
     uint32_t i;
     uint16_t checksum;
-    unsigned long flags;
-
     /*if(in_atomic()){
             afs_debug("in atomic");
     } else {
             afs_debug("not atomic");
     }*/
-
 
     //TODO: only do this when running a repair process, it is kind of pointless to do with every read
     for(i = 0; i < req->config->num_carrier_blocks; i++) {

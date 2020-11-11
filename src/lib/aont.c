@@ -41,7 +41,7 @@ static int calc_hash(const uint8_t *data, size_t datalen, uint8_t *digest) {
 }
 
 /* Callback function */
-static void test_skcipher_cb(struct crypto_async_request *req, int error)
+/*static void test_skcipher_cb(struct crypto_async_request *req, int error)
 {
     struct tcrypt_result *result = req->data;
 
@@ -50,10 +50,10 @@ static void test_skcipher_cb(struct crypto_async_request *req, int error)
     result->err = error;
     //complete(&result->completion);
     //pr_info("Encryption finished successfully\n");
-}
+}*/
 
 /* Perform cipher operation */
-static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
+/*static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
                      int enc)
 {
     int rc = 0;
@@ -83,7 +83,7 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
     //init_completion(&sk->result.completion);
 
     return rc;
-}
+}*/
 
 
 /*
