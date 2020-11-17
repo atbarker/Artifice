@@ -124,23 +124,22 @@ struct ntfs_volume {
     off_t    data_start_off;
 
     // Metafiles (as records).
-    union {
-        struct {
-            struct mft_header *mft;
-            struct mft_header *mft_mirr;
-            struct mft_header *log_file;
-            struct mft_header *volume;
-            struct mft_header *attr_def;
-            struct mft_header *root_dir;
-            struct mft_header *bitmap;
-            struct mft_header *boot;
-            struct mft_header *bad_clus;
-            struct mft_header *secure;
-            struct mft_header *up_case;
-            struct mft_header *extend;
-        } named;
-        struct mft_header *index[12];
-    } metafiles;
+    struct mft_header *metafiles[12];
+};
+
+enum metafile {
+    $mft      = 0,
+    $mft_mirr = 1,
+    $log_file = 2,
+    $volume   = 3,
+    $attr_def = 4,
+    $root_dir = 5,
+    $bitmap   = 6,
+    $boot     = 7,
+    $bad_clus = 8,
+    $secure   = 9,
+    $up_case  = 10,
+    $extend   = 11
 };
 
 static const char ntfs_magic[] = "NTFS    ";
@@ -274,24 +273,64 @@ enum ntfs_attributes {
 
 static int
 read_mft_records(char *record, struct ntfs_volume *vol, struct block_device *device, uint32_t number) {
-    int mft_offset;
     int ret;
     afs_assert(number % vol->mft_records_per_cluster == 0,
             invalid_record, "Asked for MFT record that is not aligned: %d", number);
-    uint64_t cluster = vol->mft_cluster + number * vol->mft_records_per_cluster;
-    for (mft_offset = 0; mft_offset < vol->mft_record_size; mft_offset += vol->bytes_per_cluster) {
-        ret = read_ntfs_cluster(record + mft_offset, vol, device, cluster + mft_offset,
-                /*used_vmalloc=*/true);
-        if (ret)
-            return ret;
-    }
+    uint64_t cluster = vol->mft_cluster + number / vol->mft_records_per_cluster;
+    ret = read_ntfs_cluster(record, vol, device, cluster, /*used_vmalloc=*/true);
+    if (ret)
+        return ret;
     return 0;
 
 invalid_record:
     return 1;
 }
 
-static size_t read_data(struct ntfs_volume *vol, char *buffer, size_t max_bytes, struct mft_header *header) {
+static size_t read_nonresident_data(struct ntfs_volume *vol, char *buffer, struct attribute_nonresident *attr, size_t max, struct block_device *device) {
+    size_t amt_to_read = MIN(max, attr->content_actual_size);
+    off_t amt_written = 0;
+    char *runlist = (char*)attr + attr->offset_to_runlist;
+    int64_t cluster;
+
+    size_t i = 0;
+
+    afs_assert(attr->start_vcn_runlist == 0, stop, "We do not support non-0 starting VCNs yet");
+
+    uint8_t field_sizes = runlist[0];
+    while (field_sizes) {
+        afs_debug("Field sizes: %d", field_sizes);
+        uint8_t offset_size_bytes = (field_sizes >> 4) & 0xF;
+        uint8_t offset_size_bits = offset_size_bytes << 3;
+        uint8_t length_size_bytes = (field_sizes) & 0xF;
+        uint8_t length_size_bits = length_size_bytes << 3;
+
+        afs_debug("Offset size, length size %d %d", offset_size_bits, length_size_bits);
+
+        // Use int64_t because offset and length fields may be up to 8 bytes large
+        int64_t length = (*(int64_t*)(runlist + 1)) & ((1UL << length_size_bits) - 1);
+        int64_t offset = (*(int64_t*)(runlist + 1 + (length_size_bits >> 3))) & ((1UL << offset_size_bits) - 1);
+
+        afs_debug("Got offset and length: %lld %lld", offset, length);
+
+        afs_debug("Attempting to read %lu bytes", amt_to_read);
+
+        for (cluster = offset; cluster < offset + length; cluster++) {
+            read_ntfs_cluster(buffer + amt_written, vol, device, cluster, true);
+            amt_written += vol->bytes_per_cluster;
+            if (amt_written >= amt_to_read) {
+                afs_debug("Stopping runlist reading %lu >= %lu at %lld/%lld", amt_written, amt_to_read, cluster, offset + length);
+                goto stop;
+            }
+        }
+
+        i += length_size_bytes + offset_size_bytes + 1;
+        field_sizes = runlist[i];
+    }
+stop:
+    return amt_written;
+}
+
+static size_t read_data(struct ntfs_volume *vol, char *buffer, ssize_t max_bytes, struct mft_header *header, struct block_device *device) {
     char *record = (char*)header;
     int record_offset = header->offset_to_first_attribute;
     off_t buffer_offset = 0;
@@ -299,11 +338,22 @@ static size_t read_data(struct ntfs_volume *vol, char *buffer, size_t max_bytes,
     while (record_offset < vol->mft_record_size) {
         struct attribute_header *attr_header = (struct attribute_header*)(record + record_offset);
         uint32_t type_id = le32_to_cpu(attr_header->type_id);
-        size_t amount = MIN(max_bytes - buffer_offset, attr_header->length);
         afs_debug("Got attribute with type: %x", type_id);
         switch(type_id) {
             case $DATA:
-                memcpy(buffer + buffer_offset, (char*)(attr_header + 1), amount);
+                afs_debug("Found data");
+                if (!attr_header->nonresident_flag) {
+                    ssize_t amount = MIN(max_bytes - buffer_offset, attr_header->length);
+                    if (amount < 0) {
+                        afs_debug("Preempting any further reads");
+                        goto done_with_attributes;
+                    }
+                    memcpy(buffer + buffer_offset, (char*)(attr_header + 1), amount);
+                    buffer_offset += amount;
+                } else {
+                    afs_debug("Found non-resident data");
+                    buffer_offset += read_nonresident_data(vol, buffer + buffer_offset, (struct attribute_nonresident*)attr_header, max_bytes - buffer_offset, device);
+                }
                 break;
             case $ATTRIBUTE_LIST:
                 afs_debug("Found $ATTRIBUTE_LIST so cannot guarantee correctness");
@@ -324,16 +374,17 @@ done_with_attributes:
     return buffer_offset;
 }
 
-static void
-extract_bitmap(struct ntfs_volume *vol) {
-    size_t max = vol->cluster_count / 8;
+static int
+extract_bitmap(struct ntfs_volume *vol, struct block_device *device) {
+    ssize_t max = vol->cluster_count / 8;
+    afs_debug("Got maximum bitmap size of %ld", max);
     uint8_t *bitmap = vmalloc(max);
-    vol->data_start_off = vol->mft_cluster;
-    size_t read = read_data(vol, bitmap, max, vol->metafiles.named.bitmap);
+    vol->data_start_off = 0;
+    size_t read = read_data(vol, bitmap, max, vol->metafiles[$bitmap], device);
     if (!read) {
         afs_debug("Didn't read anything from the bitmap");
         vfree(bitmap);
-        return;
+        return 1;
     }
 
     size_t i = 0;
@@ -344,25 +395,46 @@ extract_bitmap(struct ntfs_volume *vol) {
     afs_debug("Read %ld entries from bitmap", read);
     for (i = 0; i < read; ++i) {
         // hweight is the number of bits set
-        total_unused_clusters = 8 - hweight8(bitmap[i]);
+        total_unused_clusters += 8 - hweight8(bitmap[i]);
     }
 
     afs_debug("Total number of unused clusters %ld", total_unused_clusters);
 
     size_t empty_block_idx = 0;
-    uint32_t *empty_blocks = vmalloc(total_unused_clusters * vol->afs_blocks_per_cluster);
+    uint32_t *empty_blocks = vmalloc(sizeof(uint32_t) * total_unused_clusters * vol->afs_blocks_per_cluster);
+    if (!empty_blocks) {
+        afs_debug("Could not allocate empty block list");
+        vfree(bitmap);
+        return 1;
+    }
     for (i = 0; i < read; ++i) {
         for (bpos = 0; bpos < 8; ++bpos) {
             char bit = (bitmap[i] >> bpos) & 0x1;
             if (!bit) {
-                for (block_num = 0; i < vol->afs_blocks_per_cluster; ++block_num) {
-                    empty_blocks[empty_block_idx++] = (read * 8 + bpos) * vol->afs_blocks_per_cluster + block_num;
+                if (empty_block_idx == total_unused_clusters * vol->afs_blocks_per_cluster) {
+                    afs_debug("Incorrect precalculation of free clusters. Stopping early...");
+                    goto stop;
+                }
+                for (block_num = 0; block_num < vol->afs_blocks_per_cluster; ++block_num) {
+                    uint32_t block = (i * 8 + bpos) * vol->afs_blocks_per_cluster + block_num;
+                    // Be careful. This will print A LOT
+                    // afs_debug("Adding %u (%ld/%ld)", block, empty_block_idx, total_unused_clusters * vol->afs_blocks_per_cluster);
+                    empty_blocks[empty_block_idx++] = block;
                 }
             }
         }
     }
+
+    vfree(bitmap);
+    afs_debug("NTFS bitmap successfully read");
     vol->empty_blocks = empty_blocks;
     vol->num_empty_afs_blocks = total_unused_clusters;
+    return 0;
+
+stop:
+    vfree(bitmap);
+    vfree(empty_blocks);
+    return 1;
 }
 
 static int
@@ -372,6 +444,7 @@ ntfs_map(struct ntfs_volume *vol, void *data, struct block_device *device)
     int mft_number;
     int i;
     int status;
+    int ret;
 
     // Allocate space for metafiles
     char *records = vmalloc(12 * vol->mft_record_size);
@@ -380,21 +453,27 @@ ntfs_map(struct ntfs_volume *vol, void *data, struct block_device *device)
 
     // Read MFT metafiles
     for (mft_number = 0; mft_number < 12; mft_number += vol->mft_records_per_cluster) {
-        read_mft_records(records + mft_number * vol->mft_record_size, vol, device, mft_number);
+        char *record_cluster = records + mft_number * vol->mft_record_size;
+        read_mft_records(record_cluster, vol, device, mft_number);
         for (i = 0; i < vol->mft_records_per_cluster; ++i) {
-            afs_debug("Reading MFT entry number %d", mft_number + i);
-            if (mft_number + i >= 12) break;
-            vol->metafiles.index[mft_number + i] =
-                (struct mft_header *)(records + (mft_number + i) * vol->mft_record_size);
+            afs_debug("Reading MFT entry number %d %d", mft_number, mft_number + i);
+            vol->metafiles[mft_number + i] =
+                (struct mft_header *)(record_cluster + (i * vol->mft_record_size));
         }
     }
 
-    mft = vol->metafiles.named.mft;
+    mft = vol->metafiles[$mft];
     afs_assert(mft->allocated_size_of_record == vol->mft_record_size,
             ntfs_map_invalid, "MFT sizes do not match: %d != %d",
             mft->allocated_size_of_record, vol->mft_record_size);
 
-    extract_bitmap(vol);
+    afs_debug("extracting bitmap");
+    ret = extract_bitmap(vol, device);
+    if (ret) {
+        goto ntfs_map_invalid;
+    }
+
+    return 0;
 
 ntfs_map_invalid:
     vfree(records);
