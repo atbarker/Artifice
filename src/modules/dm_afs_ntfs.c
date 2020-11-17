@@ -307,8 +307,8 @@ static size_t read_nonresident_data(struct ntfs_volume *vol, char *buffer, struc
         afs_debug("Offset size, length size %d %d", offset_size_bits, length_size_bits);
 
         // Use int64_t because offset and length fields may be up to 8 bytes large
-        int64_t length = (*(int64_t*)(runlist + 1)) & ((1UL << length_size_bits) - 1);
-        int64_t offset = (*(int64_t*)(runlist + 1 + (length_size_bits >> 3))) & ((1UL << offset_size_bits) - 1);
+        int64_t length = (*(int64_t*)(runlist + i + 1)) & ((1UL << length_size_bits) - 1);
+        int64_t offset = (*(int64_t*)(runlist + i + 1 + (length_size_bits >> 3))) & ((1UL << offset_size_bits) - 1);
 
         afs_debug("Got offset and length: %lld %lld", offset, length);
 
