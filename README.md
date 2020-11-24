@@ -20,6 +20,8 @@ It is described in the workshop paper ["Artifice: A Deniable Steganographic File
 
 ## Build
 
+Artifice is tested on and designed for Linux kernel versions 4.4 to 5.0.
+
 ```
 $ make
 $ sudo insmod dm-afs.ko afs_debug_mode=1
@@ -43,7 +45,7 @@ Before we can explain the design of Artifice, it is important to understand it's
 
 Hence, when you create a dm-target for `artifice`, you will have a block device which may look like `/dev/mapper/artifice` (depending on how you name your instance). Any kind of I/O on this virtual block device is sent over to the Artifice kernel module. This module intercepts this IO, remaps it to the location it needs to be remapped to, and then "submits" it. 
 
-Accordingly, the idea is that one can technically format `/dev/mapper/artifice` with a file system such as "FAT32", and Artifice can remap each of the FAT32 writes over to an underlying physical block device (such as `/dev/sdb`). Based on our design, we will only utilize the free blocks in `/dev/sdb`, hence, `/dev/sdb` needs to be formatted with a supported file system, and there should be enough free space left in that underlying file system.
+Accordingly, the idea is that one will format `/dev/mapper/artifice` with a file system such as "FAT32", and Artifice can remap each of the FAT32 writes over to an underlying physical block device (such as `/dev/sdb`). Based on our design, we will only utilize the free blocks in the file system on `/dev/sdb`, hence, `/dev/sdb` needs to be formatted with a supported file system, and there should be enough free space left in that underlying file system to fit the desired Artifice volume(s).
 
 Support for underlying file systems is added through `modules`.
 
@@ -57,20 +59,19 @@ On the other hand, we need discrete support for the passive file system. This is
 
 Currently, we have modules for `FAT32`, `NTFS`, and `EXT4`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Additionally support for log structured file systems like F2FS is a long term goal.
 
-### How do we keep mapped data safe, and unrecognizable: Reed-Solomon + Entropy or Secret sharing.
+### How do we keep mapped data safe, and unrecognizable: Information Dispersal Algorithms.
 
 Since Artifice is mapping I/O from the active to the passive file system, the data which is being mapped would be clearly visible if one were to begin inspecting the physical device (`/dev/sdb`) directly. This presents a problem, since the existence of this data proves the existence of the Artifice subsystem. 
 
-We can encrypt this data so that it looks random, however, that leads us to the problem of key management. Managing different keys for each data block is not possible, and using a single key for the encryption of all data blocks is a security hazard. In the case of a rubber-hose attack, all the data stands to be compromised. Hence, to provide obfuscation and security of the data, we use `entropy blocks`.
+Managing different keys or IVs for each data block is resource intensive, and using a single key for the encryption of all data blocks is a security hazard. Hence, to provide obfuscation and security of the data, we use an information dispersal algorithm (IDA) to provide combinatoric security.
 
-When a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data combined with random blocks from the `entropy file` through Reed-Solomon error correcting codes. For subsequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is used again to recover the data. Without access to this entropy information, it is impossible to recreate the data, depending on the configuration of the Reed-Solomon code word.
+An easily known information dispersal algorithm is called Shamir Secret Sharing, which provides us with relatively strong combinatoric security. We can also utilize an algorithm that combines Rivest's All or Nothing Transform with Reed Solomon erasure codes to provide a similar threshold scheme (slightly weaker than Shamir's scheme with only computational security) but with vastly improves space efficiency.
+
+There is another option for an information dispersal algorithm that involves combining existing sources of entropy on the disk (any random appearing file) with Reed-Solomon erasure codes. In this scheme when a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data combined with random blocks from the `entropy file` through Reed-Solomon error correcting codes. For subsequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is used again to recover the data. Without access to this entropy information, it is impossible to recreate the data, depending on the configuration of the Reed-Solomon code word.
 
 This is the main selling point for the use of `entropy blocks`. The fact is, a user can store the entropy files on a portable flash drive, and in case of an emergency, discard this flash drive. Now, even if their passphrase was to be compromised and an adversary was able to figure out the names of the entropy files, the adversary will still not have access to those files. And without access to those files, the adversary will not have access to the data.
 
 However, filenames can be rather large and we need to preserve as much space as possible. Hence, we provide an optimization: When Artifice is first started, it reads the `entropy directory` and stores the name for each file into a hash table. To reduce space consumption, an `8` byte hash of the filename is stored instead of the filename itself. This hash also acts as the key into the entropy hash table.
-
-
-Alternatively Artifice can make use of Shamir Secret Sharing instead of Reed-Solomon erasure codes. In this case Artifice does not need entropy blocks, smaller metadata records, and is more reliable in the face of overwrite by the public file system.
 
 ### Carrier Blocks
 
