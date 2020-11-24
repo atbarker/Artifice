@@ -1,9 +1,0 @@
-Questions to be answered:
-
-How do we write the carrier blocks to the disk such that they can be found again?
-
-How do we handle multiple files, directories?
-
-How do we handle erasure coding and/or error correction?
-
-How do we maintain the assurance of decent performance and deniability for all the above?

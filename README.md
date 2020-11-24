@@ -152,14 +152,15 @@ Artifice intends to limit writes to locations that have been recently deleted by
 
 While there is a great deal of psuedorandom information in unallocated blocks not everything on the disk is psuedorandom. In addition if a pseudorandom block is stored in the free space of a file system then an adversary should be able to restore it and the file it was part of. If the restored file was pseudorandom because it was DRM protected media, then the adversary should be able to view or play the media contained in the file. If the restored file is pseudorandom because it is encrypted then it should be decryptable into a readable file. A file that cannot be recovered in these two ways is suspicious.
 
-There is a relatively simple way around this, hiding pseudorandom data in a secure delete file system. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
+There is a relatively simple way around this, hiding pseudorandom data in a file system capable of secure deletion or securely wiping a drive before using Artifice. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and we hypothesize is no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
 
 ## TODO
 
 * `64 bit` block pointer support and `64 bit` EXT4.
-* Secret sharing for metadata blocks.
-* Persistant data structure to track the free space.
-* Secure delete file system.
+* Secret sharing for metadata blocks over encryption.
+* In house library for encryption and cryptographic hashing (avoid the kernel crypto API).
+* Persistant data structure to track the free space to be saved to the disk alongside metadata, useful for multiple snapshot defence.
+* Secure delete file system (yet unamed).
 * Yet unnamed secure delete file system, NTFS, and APFS support.
 
 ## Guidelines
