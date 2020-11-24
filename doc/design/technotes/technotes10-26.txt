@@ -1,0 +1,26 @@
+Austen Barker:
+
+Artifice on disk carrier block control flow and storage, White board work by Austen and Yash
+Abstracts away any error correcting/erasure coding or entropy block sources for now.
+
+Artifice Super block (MKS-SB)
+	Contains a table with signatures of carrier blocks and a pointer to each carrier block.
+	One entry in this table points to another table with human readable file names
+	Linear scan of the disk to find this super block on matryoshka startup before disk reads/writes.
+		What is the time complexity of this?
+		What effect would multiple copies of the SB have on read/write performance and linear scan time.
+	Perhaps also load our secondary table to identify what blocks are associated with what files and names.
+	After startup this should be stored in memory so long as MKS is running
+
+To get a block once we have the matryoshka super block.
+	-Device mapper requests a block
+	-follow pointer from our super block to get the block and decrypt it (probably using a simple password)
+	-Compare block signature with the signature from the super block 
+	-follow pointer in our carrier block to our entropy block, reconstruct data
+	-Map this to user space
+
+First implement this for use in a FAT file system, then EXT2/3.
+Is there some way we can decouple what the public file system is so long as we get a list of free block addresses to use?
+	Contain the detection of what file system is in use and free block addresses in a seperate library.
+
+Do we assume that there will be free space in MKS? The presence of free space is what supports the idea of nested MKS.
