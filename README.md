@@ -2,7 +2,9 @@
 
 The Artifice File System is a pseudo file system which exists in the free space of another file system. By doing so, Artifice remains hidden from suspecting users and hence can be used to store information with concrete deniability. Artifice is implemented using device mapper, and it performs a block to block mapping of information.
 
-For contributions to this project, please contact `Yash Gupta`, `Austen Barker`, or `Eugene Chou` {ygupta,atbarker,euchou}@ucsc.edu.
+For contributions to this project, please contact `Austen Barker` at atbarker@ucsc.edu.
+
+Artifice was developed in the [Storage Systems Research Center](ssrc.ucsc.edu) (SSRC).
 
 ## Build
 
@@ -159,8 +161,17 @@ There is a relatively simple way around this, hiding pseudorandom data in a secu
 ### TODO
 
 * `64 bit` block pointer support and `64 bit` EXT4.
-* Fix random block allocation bugs.
 * Secret sharing for metadata blocks.
 * Persistant data structure to track the free space.
 * Secure delete file system.
 * Yet unnamed secure delete file system, NTFS, and APFS support.
+
+### Collaborators
+
+`Yash Gupta`, ygupta@ucsc.edu
+`Eugene Chou` euchou@ucsc.edu 
+`Darrell Long` darrell@ucsc.edu
+`Sabrina Au` scau@ucsc.edu
+`Kyle Fredrickson` kyfredi@ucsc.edu
+`James Houghton` jhoughton@virginia.edu
+`Ethan Miller` elm@ucsc.edu
