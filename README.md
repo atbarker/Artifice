@@ -8,15 +8,26 @@ Artifice was developed in the [Storage Systems Research Center](https://www.ssrc
 
 It is described in the workshop paper ["Artifice: A Deniable Steganographic File System"](https://www.ssrc.ucsc.edu/pub/barker-foci19.html) presented at [FOCI'19](https://www.usenix.org/conference/foci19) and the conference paper ["Artifice: Data in Disguise"](https://www.ssrc.ucsc.edu/pub/barker-msst20.html) presented at [MSST'20](https://storageconference.us/).
 
+### Collaborators
+
+`Yash Gupta`, ygupta@ucsc.edu
+`Eugene Chou` euchou@ucsc.edu 
+`Darrell Long` darrell@ucsc.edu
+`Sabrina Au` scau@ucsc.edu
+`Kyle Fredrickson` kyfredi@ucsc.edu
+`James Houghton` jhoughton@virginia.edu
+`Ethan Miller` elm@ucsc.edu
+
 ## Build
 
 ```
 $ make
 $ sudo insmod dm-afs.ko afs_debug_mode=1
 $ sudo rmmod dm_afs
-
-Please look at the Makefile targets `debug_create`, `debug_mount` and `debug_end` for information on how to setup a dm-target.
 ```
+Please look at the Makefile targets `debug_create`, `debug_mount` and `debug_end` for information on how to setup a dm-target.
+
+There are also a variety of other Makefile targets for benchmarking and IO testing that also appear with the `debug_*` prefix. 
 
 ## Design
 
