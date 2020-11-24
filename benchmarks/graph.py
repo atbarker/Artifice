@@ -5,26 +5,29 @@ import numpy as np
 
 #public, public_std = (303187.77, 323907.92), (1956.91, 27188.35)
 #hidden, hidden_std = (51876, 34476), (1232.92, 2291.85)
-public, public_std = (303.18777, 323.90792), (1.95691, 27.18835)
-hidden, hidden_std = (51.876, 34.476), (1.23292, 2.29185)
+#public, public_std = (303.18777, 323.90792), (1.95691, 27.18835)
+public, public_std = (771.3, 519.505), (121.1, 20.074)
+hiddenAONT, hidden_stdAONT = (134.1, 77.25), (1.981, 2.714)
+hiddenSSS, hidden_stdSSS = (55.547, 54.131), (1.277, 1.490)
+#hidden, hidden_std = (51.876, 34.476), (1.23292, 2.29185)
 
 width = 0.25
 r1 = np.arange(len(public))  # the x locations for the groups
 r2 = [x + width for x in r1]
-r3 = [x - (width/2) for x in r2]
+r3 = [x + (width) for x in r2]
 
 fig, ax = plt.subplots()
 rects1 = ax.bar(r1, public, width, yerr=public_std,
                 label='Public Volume', align='center')
-rects2 = ax.bar(r2, hidden, width, yerr=hidden_std,
-                label='Artifice', align='center')
-#rects2 = ax.bar(r3, usb, width, yerr=usb_std,
-#                label='USB Flash Drive')
+rects2 = ax.bar(r2, hiddenAONT, width, yerr=hidden_stdAONT,
+                label='Artifice AONT-RS', align='center')
+rects2 = ax.bar(r3, hiddenSSS, width, yerr=hidden_stdSSS,
+                label='Artifice SSS', align='center')
 
 # Add some text for labels, title and custom x-axis tick labels, etc.
 ax.set_ylabel('Throughput (MB/s)')
 ax.set_title('Artifice Performance')
-ax.set_xticks(r3)
+ax.set_xticks(r2)
 ax.set_xticklabels(('Read', 'Write'))
 ax.legend()
 
