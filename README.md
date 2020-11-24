@@ -4,7 +4,7 @@ The Artifice File System is a pseudo file system which exists in the free space 
 
 For contributions to this project, please contact `Austen Barker` at atbarker@ucsc.edu.
 
-Artifice was developed in the [Storage Systems Research Center](ssrc.ucsc.edu) (SSRC).
+Artifice was developed in the [Storage Systems Research Center](https://www.ssrc.ucsc.edu/index.html) (SSRC).
 
 ## Build
 
