@@ -181,12 +181,3 @@ Add 'ForEachMacros' definitions as required in the code.
 
 Code which has not been formatted with these options will be rejected for a merge.
 
-### Collaborators
-
-`Yash Gupta`, ygupta@ucsc.edu
-`Eugene Chou` euchou@ucsc.edu 
-`Darrell Long` darrell@ucsc.edu
-`Sabrina Au` scau@ucsc.edu
-`Kyle Fredrickson` kyfredi@ucsc.edu
-`James Houghton` jhoughton@virginia.edu
-`Ethan Miller` elm@ucsc.edu
