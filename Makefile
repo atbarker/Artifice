@@ -62,33 +62,42 @@ reload:
 #   16777216 = 8GB Artifice Instance
 #   33554432 = 16GB Instance
 
+#create an artifice instance with debug mode enabled
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
 	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 
+#mount an existing artifice instance with debug mode enabled
 debug_mount:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
 	@echo 0 1048576 artifice 1 pass /dev/sdb1 | sudo dmsetup create artifice
 
+#run a pass of the bench script as a sanity check
 debug_bench: build_bench
 	(cd scripts/bench; sudo python bench.py -i 1)
 
+#run test for read, write, and combined
 debug_bench_full: build_bench
 	(cd scripts/bench; sudo python bench.py -i 30; sudo python bench.py -i 30 -o r; sudo python bench.py -i 30 -o rw)
 
+#perform a single block write
 debug_write:
 	sudo dd if=README.md of=/dev/mapper/artifice bs=4096 count=1 oflag=direct
 
+#performa a single block read, save output to a file
 debug_read:
-	touch test_output
+	touch read_test_output
 	sudo dd if=/dev/mapper/artifice of=test_output bs=4096 count=1 oflag=direct
 
+#unmount the artifice instance
 debug_end:
 	@sudo dmsetup remove artifice || true
 	@sudo rmmod dm_afs || true
 
-#For this target make sure that 100GB of free space is available, 4GB of RAM
+#For this target make sure that 100GB of free space is available, 4GB of RAM in the system
 #pilot and bonnie++ must be installed
+#These two tests are for benchmarking. There is an effective artifice size of 16GB
+#Performance results for papers were generated using these targets
 debug_bonnie:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
 	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
