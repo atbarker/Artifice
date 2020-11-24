@@ -16,24 +16,6 @@ $ sudo rmmod dm_afs
 Please look at the Makefile targets `debug_create`, `debug_mount` and `debug_end` for information on how to setup a dm-target.
 ```
 
-## Guidelines
-
-All code pushed to the repository is formatted using `clang-format`. Style guide parameters are as follows:
-
-```
-{
-    BasedOnStyle: WebKit,
-    AlignTrailingComments: true,
-    AllowShortIfStatementsOnASingleLine: true,
-    AlwaysBreakAfterDefinitionReturnType: true,
-    PointerAlignment: Right,
-    ForEachMacros: ['list_for_each_entry', 'list_for_each_entry_safe', 'bio_for_each_segment']
-}
-```
-Add 'ForEachMacros' definitions as required in the code.
-
-Code which has not been formatted with these options will be rejected for a merge.
-
 ## Design
 
 The design portion of this markdown is not intended to be reference information. It won't make sense unless you read from start to end.
@@ -60,7 +42,7 @@ Since the writes are simple mappings, theoretically, you could use _any_ file sy
 
 On the other hand, we need discrete support for the passive file system. This is where `Artifice Modules` come into play. A modules task, given a physical block device, is to figure out whether or not a particular fule system exists on the physical block device. Moreover, if a module detects that a certain file system is present, then it needs to provide pointers to the free blocks in the file system to be used by Artifice. If a module cannot detect the presence of a particular file system on a physical block device, then it simply returns a `false` and does not need to fill up free block information.
 
-Currently, we plan to add modules to support `FAT32`, `EXT4` and `NTFS`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Additionally support for log structured file systems like F2FS is a long term goal.
+Currently, we have modules for `FAT32`, `NTFS`, and `EXT4`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Additionally support for log structured file systems like F2FS is a long term goal.
 
 ### How do we keep mapped data safe, and unrecognizable: Reed-Solomon + Entropy or Secret sharing.
 
@@ -158,13 +140,31 @@ While there is a great deal of psuedorandom information in unallocated blocks no
 
 There is a relatively simple way around this, hiding pseudorandom data in a secure delete file system. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
 
-### TODO
+## TODO
 
 * `64 bit` block pointer support and `64 bit` EXT4.
 * Secret sharing for metadata blocks.
 * Persistant data structure to track the free space.
 * Secure delete file system.
 * Yet unnamed secure delete file system, NTFS, and APFS support.
+
+## Guidelines
+
+All code pushed to the repository is formatted using `clang-format`. Style guide parameters are as follows:
+
+```
+{
+    BasedOnStyle: WebKit,
+    AlignTrailingComments: true,
+    AllowShortIfStatementsOnASingleLine: true,
+    AlwaysBreakAfterDefinitionReturnType: true,
+    PointerAlignment: Right,
+    ForEachMacros: ['list_for_each_entry', 'list_for_each_entry_safe', 'bio_for_each_segment']
+}
+```
+Add 'ForEachMacros' definitions as required in the code.
+
+Code which has not been formatted with these options will be rejected for a merge.
 
 ### Collaborators
 
