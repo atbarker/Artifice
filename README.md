@@ -33,7 +33,7 @@ There are also a variety of other Makefile targets for benchmarking and IO testi
 
 ## Design
 
-![Artifice Design Overview](https://github.com/atbarker/Artifice/blob/master/newartificediagram.png)
+![Artifice Design Overview](https://github.com/atbarker/Artifice/blob/master/doc/newartificediagram.png)
 
 The design portion of this markdown is not intended to be reference information. It won't make sense unless you read from start to end.
 
@@ -69,7 +69,7 @@ Since Artifice is mapping I/O from the active to the passive file system, the da
 
 Managing different keys or IVs for each data block is resource intensive, and using a single key for the encryption of all data blocks is a security hazard. Hence, to provide obfuscation and security of the data, we use an information dispersal algorithm (IDA) to provide combinatoric security.
 
-![Artifice Encoding Schemes](https://github.com/atbarker/Artifice/blob/master/EncodingSchemes.png)
+![Artifice Encoding Schemes](https://github.com/atbarker/Artifice/blob/master/doc/EncodingSchemes.png)
 
 An easily known information dispersal algorithm is called Shamir Secret Sharing, which provides us with relatively strong combinatoric security. We can also utilize an algorithm that combines Rivest's All or Nothing Transform with Reed Solomon erasure codes to provide a similar threshold scheme (slightly weaker than Shamir's scheme with only computational security) but with vastly improves space efficiency.
 
@@ -98,7 +98,7 @@ This metadata for a single data block is known as a `map entry`, since it signif
 
 ### Artifice Map
 
-![Artifice Map](https://github.com/atbarker/Artifice/blob/master/artifice_map.png)
+![Artifice Map](https://github.com/atbarker/Artifice/blob/master/doc/artifice_map.png)
 
 The Artifice map is the _huge_ chunk of memory which contains a `map entry` for every possible data block. For example, if you create an Artifice instance of size 4MB, then the Artifice map will contain `1024` map entries (we map per 4KB block).
 
