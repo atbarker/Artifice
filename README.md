@@ -67,6 +67,8 @@ Since Artifice is mapping I/O from the active to the passive file system, the da
 
 Managing different keys or IVs for each data block is resource intensive, and using a single key for the encryption of all data blocks is a security hazard. Hence, to provide obfuscation and security of the data, we use an information dispersal algorithm (IDA) to provide combinatoric security.
 
+![Artifice Encoding Schemes](https://github.com/atbarker/Artifice/blob/master/EncodingSchemes.png)
+
 An easily known information dispersal algorithm is called Shamir Secret Sharing, which provides us with relatively strong combinatoric security. We can also utilize an algorithm that combines Rivest's All or Nothing Transform with Reed Solomon erasure codes to provide a similar threshold scheme (slightly weaker than Shamir's scheme with only computational security) but with vastly improves space efficiency.
 
 There is another option for an information dispersal algorithm that involves combining existing sources of entropy on the disk (any random appearing file) with Reed-Solomon erasure codes. In this scheme when a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data combined with random blocks from the `entropy file` through Reed-Solomon error correcting codes. For subsequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is used again to recover the data. Without access to this entropy information, it is impossible to recreate the data, depending on the configuration of the Reed-Solomon code word.
@@ -93,6 +95,8 @@ Given this, we can finally look at the metadata which is stored for a `single` d
 This metadata for a single data block is known as a `map entry`, since it signifies a single entry into the `Artifice Map`.
 
 ### Artifice Map
+
+![Artifice Map](https://github.com/atbarker/Artifice/blob/master/artifice_map.png)
 
 The Artifice map is the _huge_ chunk of memory which contains a `map entry` for every possible data block. For example, if you create an Artifice instance of size 4MB, then the Artifice map will contain `1024` map entries (we map per 4KB block).
 
