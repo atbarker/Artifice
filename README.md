@@ -63,6 +63,8 @@ Currently, we have modules for `FAT32`, `NTFS`, and `EXT4`. Although we have pla
 
 ### How do we keep mapped data safe, and unrecognizable: Information Dispersal Algorithms.
 
+NOTE: Currently the Reed-Solomon+Entropy scheme is not included. It will be added back into the device mapper soon.
+
 Since Artifice is mapping I/O from the active to the passive file system, the data which is being mapped would be clearly visible if one were to begin inspecting the physical device (`/dev/sdb`) directly. This presents a problem, since the existence of this data proves the existence of the Artifice subsystem. 
 
 Managing different keys or IVs for each data block is resource intensive, and using a single key for the encryption of all data blocks is a security hazard. Hence, to provide obfuscation and security of the data, we use an information dispersal algorithm (IDA) to provide combinatoric security.
