@@ -33,6 +33,8 @@ There are also a variety of other Makefile targets for benchmarking and IO testi
 
 ## Design
 
+![Artifice Design Overview](https://github.com/atbarker/Artifice/blob/master/newartificediagram.png)
+
 The design portion of this markdown is not intended to be reference information. It won't make sense unless you read from start to end.
 
 This design document has **NOT** been updated for information on a `shadow` (nested) Artifice instance.
