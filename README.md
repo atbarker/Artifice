@@ -4,9 +4,10 @@ The Artifice File System is a pseudo file system which exists in the free space 
 
 For contributions to this project, please contact `Austen Barker` at atbarker@ucsc.edu.
 
-Artifice was developed in the [Storage Systems Research Center](https://www.ssrc.ucsc.edu/index.html) (SSRC).
+Artifice was developed at the UC Santa Cruz [Storage Systems Research Center](https://www.ssrc.ucsc.edu/index.html) (SSRC) with support from National  Science  Foundation  grant  number  IIP-1266400, and award CNS-1814347.
 
 It is described in the workshop paper ["Artifice: A Deniable Steganographic File System"](https://www.ssrc.ucsc.edu/pub/barker-foci19.html) presented at [FOCI'19](https://www.usenix.org/conference/foci19) and the conference paper ["Artifice: Data in Disguise"](https://www.ssrc.ucsc.edu/pub/barker-msst20.html) presented at [MSST'20](https://storageconference.us/).
+
 
 ### Collaborators
 
