@@ -12,11 +12,17 @@ It is described in the workshop paper ["Artifice: A Deniable Steganographic File
 ### Collaborators
 
 `Yash Gupta`, ygupta@ucsc.edu
-`Eugene Chou` euchou@ucsc.edu 
+
+`Eugene Chou` euchou@ucsc.edu
+
 `Darrell Long` darrell@ucsc.edu
+
 `Sabrina Au` scau@ucsc.edu
+
 `Kyle Fredrickson` kyfredi@ucsc.edu
+
 `James Houghton` jhoughton@virginia.edu
+
 `Ethan Miller` elm@ucsc.edu
 
 ## Build
