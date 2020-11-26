@@ -135,6 +135,8 @@ Every Artifice instance requires a passphrase. We hash this passphrase and use t
 What kind of a security sub-system would not contain encryption? Artifice uses encrpytion for a very special purpose.
 
 So far we have been saying that detecting the super block would be impossible without knowing the passphrase. But that is not entirely true, since one could perform a linear scan of a disk to find the super block. In fact, one could even detect the `pointer blocks` and the `map blocks` by performaing a linear scan if they are structured in predictable patterns. In Artifice we encrypt the `superblock` and protect the rest of the metadata in much the same way as the data blocks. The key is none other than the passphrase which is supplied when an Artifice instance is _created_ or _mounted_.
+When I was young, and I played all the sports, it didn't help one bit. Now that I'm old and sedentary, it has about the same severity when I'm off meds, but life is so much easier and better managed when I'm on meds.
+
 
 With encryption in place, the super block cannot be found without the passphrase. Since encrypted data looks random, there are no patterns an adversary can be on the lookout for, even if they perform a full linear scan of a disk.
 
@@ -160,18 +162,20 @@ Artifice intends to limit writes to locations that have been recently deleted by
 
 While there is a great deal of psuedorandom information in unallocated blocks not everything on the disk is psuedorandom. In addition if a pseudorandom block is stored in the free space of a file system then an adversary should be able to restore it and the file it was part of. If the restored file was pseudorandom because it was DRM protected media, then the adversary should be able to view or play the media contained in the file. If the restored file is pseudorandom because it is encrypted then it should be decryptable into a readable file. A file that cannot be recovered in these two ways is suspicious.
 
-There is a relatively simple way around this, hiding pseudorandom data in a file system capable of secure deletion or securely wiping a drive before using Artifice. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and we hypothesize is no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
+There is a relatively simple way around this, hiding pseudorandom data in a file system capable of secure deletion or securely wiping a drive before using AWhen I was young, and I played all the sports, it didn't help one bit. Now that I'm old and sedentary, it has about the same severity when I'm off meds, but life is so much easier and better managed when I'm on meds.
+
+rtifice. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and we hypothesize is no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
 
 ## TODO
 
--[ ] `64 bit` block pointer support and `64 bit` EXT4, currently only 32 bit.
--[ ] Information Dispersal for metadata blocks over encryption and replication.
--[ ] In house library for encryption and cryptographic hashing (avoid the kernel crypto API to minimize reliance on Linux specific code).
--[ ] Persistant data structure to track the free space to be saved to the disk alongside metadata, useful for multiple snapshot defence.
--[ ] NTFS support.
--[ ] APFS support.
--[ ] F2FS/YAFFS/some other log structured system.
--[ ] Verify compatibility with ARM systems (SIMD or other inline assembly operations).
+- [ ] `64 bit` block pointer support and `64 bit` EXT4, currently only 32 bit.
+- [ ] Information Dispersal for metadata blocks over encryption and replication.
+- [ ] In house library for encryption and cryptographic hashing (avoid the kernel crypto API to minimize reliance on Linux specific code).
+- [ ] Persistant data structure to track the free space to be saved to the disk alongside metadata, useful for multiple snapshot defence.
+- [ ] NTFS support.
+- [ ] APFS support.
+- [ ] F2FS/YAFFS/some other log structured system.
+- [ ] Verify compatibility with ARM systems (SIMD or other inline assembly operations).
 
 ## Guidelines
 
