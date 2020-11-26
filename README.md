@@ -59,7 +59,7 @@ Since the writes are simple mappings, theoretically, you could use _any_ file sy
 
 On the other hand, we need discrete support for the passive file system. This is where `Artifice Modules` come into play. A modules task, given a physical block device, is to figure out whether or not a particular fule system exists on the physical block device. Moreover, if a module detects that a certain file system is present, then it needs to provide pointers to the free blocks in the file system to be used by Artifice. If a module cannot detect the presence of a particular file system on a physical block device, then it simply returns a `false` and does not need to fill up free block information.
 
-Currently, we have modules for `FAT32`, `NTFS`, and `EXT4`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Additionally support for log structured file systems like F2FS is a long term goal.
+Currently, we have modules for `FAT32`, `NTFS`, and `EXT4`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Support for log structured or flash specific file systems like `F2FS` or `YAFFS` is a long term goal.
 
 ### How do we keep mapped data safe, and unrecognizable: Information Dispersal Algorithms.
 
@@ -164,12 +164,14 @@ There is a relatively simple way around this, hiding pseudorandom data in a file
 
 ## TODO
 
-* `64 bit` block pointer support and `64 bit` EXT4.
-* Secret sharing for metadata blocks over encryption.
-* In house library for encryption and cryptographic hashing (avoid the kernel crypto API).
-* Persistant data structure to track the free space to be saved to the disk alongside metadata, useful for multiple snapshot defence.
-* Secure delete file system (yet unamed).
-* Yet unnamed secure delete file system, NTFS, and APFS support.
+-[ ] `64 bit` block pointer support and `64 bit` EXT4, currently only 32 bit.
+-[ ] Information Dispersal for metadata blocks over encryption and replication.
+-[ ] In house library for encryption and cryptographic hashing (avoid the kernel crypto API to minimize reliance on Linux specific code).
+-[ ] Persistant data structure to track the free space to be saved to the disk alongside metadata, useful for multiple snapshot defence.
+-[ ] NTFS support.
+-[ ] APFS support.
+-[ ] F2FS/YAFFS/some other log structured system.
+-[ ] Verify compatibility with ARM systems (SIMD or other inline assembly operations).
 
 ## Guidelines
 
