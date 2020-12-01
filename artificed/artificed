@@ -1,0 +1,5 @@
+#!/bin/bash
+
+PREFIX=.
+
+python3 $PREFIX/artificed.py
