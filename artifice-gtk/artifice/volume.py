@@ -12,12 +12,43 @@ gi.require_version('GLib', '2.0')
 gi.require_version('Gio', '2.0')
 from gi.repository import Gtk, GLib, Gio, UDisks
 
+AFS_FULL_PREFIX = "/dev/mapper/artifice_"
 
 logger = getLogger(__name__)
 
 import subprocess
 
 from pydbus import SystemBus
+
+class AlertWindow(Gtk.Window):
+    def __init__(self, title, retry=False):
+        Gtk.Window.__init__(self, title=title)
+        self.set_border_width(6)
+        self.label = Gtk.Label(title)
+        self.label.set_margin_top(5)
+        self.label.set_margin_left(10)
+        self.label.set_margin_right(10)
+        self.dialog = Gtk.Dialog(title=title)
+        self.populate_dialog()
+        # print(title)
+
+    def run(self):
+        response = self.dialog.run()
+        self.dialog.destroy()
+
+    def populate_dialog(self):
+        self.dialog.vbox.pack_start(self.label, True, True, 0)
+        self.dialog.vbox.set_spacing(5)
+
+        self.dialog.add_buttons(
+            Gtk.STOCK_OK, Gtk.ResponseType.OK
+        )
+        self.dialog.get_action_area().set_property("halign", Gtk.Align.CENTER)
+        self.dialog.set_default_response(Gtk.ResponseType.OK)
+        self.dialog.set_default_size(150, 100)
+
+        self.label.show()
+        self.dialog.show()
 
 class PromptWindow(Gtk.Window):
     def __init__(self, title, retry=False):
@@ -256,14 +287,16 @@ class Volume(object):
         if not passphrase:
             logger.debug("No passphrase given")
             return
+        self.artifice_operation.Remove(self.unlocked_device_suffix)
         dm_success = self.artifice_operation.MountOrCreate(self.unlocked_device_suffix, passphrase, self.device_file)
         if not dm_success:
-            logger.info("DM_CREATE: Giving up")
+            AlertWindow("Could not mount volume").run()
+            logger.info("Create: Giving up")
             return
         else:
             self.reload_udisks_client()
-            self.unlocked_udisks_object = self._find_udisks_object_by_unix_device_path(AFS_PREFIX + self.unlocked_device_suffix)
-            self.unlocked_udisks_object.get_block().props.crypto_backing_device = self.device_file
+            self.unlocked_udisks_object = self._find_udisks_object_by_unix_device_path(AFS_FULL_PREFIX + self.unlocked_device_suffix)
+            # self.unlocked_udisks_object.get_block().props.crypto_backing_device = self.device_file
             self.update_list_box_row()
 
     def lock(self):
