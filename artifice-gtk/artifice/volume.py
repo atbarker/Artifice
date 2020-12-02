@@ -79,7 +79,14 @@ class Volume(object):
             self.udisks_object = None
 
         self.system_bus = SystemBus()
-        self.artifice_operation = self.system_bus.get("edu.ucsc.ssrc.artifice.ArtificeOperation")
+
+        try:
+            self.artifice_operation = self.system_bus.get("edu.ucsc.ssrc.artifice.ArtificeOperation")
+        except GLib.Error as e:
+            print(e)
+            self.manager.show_warning(title=_("Cannot communicate with Artifice"),
+                                      body=_("Please check that artificed is running."))
+            exit(1)
 
         self.spinner_is_showing = False
         self.dialog_is_showing = False
