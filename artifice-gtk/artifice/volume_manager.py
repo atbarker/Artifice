@@ -236,6 +236,21 @@ class VolumeManager(object):
         dialog.run()
         dialog.close()
 
+    def show_ok_cancel(self, title: str, body: str):
+        dialog = Gtk.MessageDialog(self.window,
+                                   Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                                   Gtk.MessageType.WARNING,
+                                   Gtk.ButtonsType.OK_CANCEL,
+                                   title)
+        dialog.format_secondary_markup(body)
+        # Make the body selectable to allow users to easily copy/paste the error message
+        dialog.get_message_area().get_children()[-1].set_selectable(True)
+
+        res = dialog.run()
+        dialog.close()
+        dialog.destroy()
+        return res
+
     def acquire_mount_op_lock(self):
         while True:
             if self.mount_op_lock.acquire(timeout=0.1):

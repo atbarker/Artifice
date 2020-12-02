@@ -264,19 +264,25 @@ class Volume(object):
             logger.debug("No passphrase given")
             return
         self.artifice_operation.Remove(self.unlocked_device_suffix)
-        self.show_spinner()
-        dm_success = self.artifice_operation.MountOrCreate(self.unlocked_device_suffix, passphrase, self.device_file)
-        self.hide_spinner()
+        dm_success = self.artifice_operation.Mount(self.unlocked_device_suffix, passphrase, self.device_file)
         if not dm_success:
-            self.manager.show_warning(title=_("Could not unlock %s" % self.device_file),
-                                      body=_("Check that artificed is running, afs.ko is loaded, and the device is not mounted."))
-            logger.info("Create: Giving up")
-            return
-        else:
-            self.reload_udisks_client()
-            self.unlocked_udisks_object = self._find_udisks_object_by_unix_device_path(AFS_FULL_PREFIX + self.unlocked_device_suffix)
-            # self.unlocked_udisks_object.get_block().props.crypto_backing_device = self.device_file
-            self.update_list_box_row()
+            res = self.manager.show_ok_cancel(
+                    title=_("No Artifice filesystem detected"),
+                    body=_("Press OK to make a new filesystem. This will erase any existing Artifice filesystem on this device"))
+            if res != Gtk.ResponseType.OK:
+                logger.info("User cancelled")
+                return
+            self.show_spinner()
+            dm_success = self.artifice_operation.Create(self.unlocked_device_suffix, passphrase, self.device_file)
+            self.hide_spinner()
+            if not dm_success:
+                logger.info("Create: Giving up")
+                self.manager.show_warning(_("Failed to create Artifice volume"), _("Make sure your device is using a supported filesystem, and that the Artifice kernel module is loaded."))
+                return
+        self.reload_udisks_client()
+        self.unlocked_udisks_object = self._find_udisks_object_by_unix_device_path(AFS_FULL_PREFIX + self.unlocked_device_suffix)
+        # self.unlocked_udisks_object.get_block().props.crypto_backing_device = self.device_file
+        self.update_list_box_row()
 
     def lock(self):
         logger.info("Locking volume %s", self.device_file)
@@ -317,13 +323,12 @@ class Volume(object):
 
     def open(self):
         logger.info("Opening volume %s", self.device_file)
-        # mount_points = self.udisks_object.get_filesystem().props.mount_points
-        # if not mount_points:
-        #     self.mount()
-        #     self.open()
-        # else:
-        #     self.manager.open_uri(GLib.filename_to_uri(mount_points[0]))
-        self.mount()
+        mount_points = self.unlocked_udisks_object.get_filesystem().props.mount_points
+        if not mount_points:
+            self.mount()
+            self.open()
+        else:
+            self.manager.open_uri(GLib.filename_to_uri(mount_points[0]))
         self.update_list_box_row()
 
     def confirmation_prompt(self, title, body):
