@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+echo "Enabling artifice"
+
+ln -s /usr/lib/systemd/system/artificed.service /etc/systemd/system/multi-user.target.wants/
+
+cp /usr/lib/modules/dm_afs.ko /lib/modules/`uname -r`/kernel/
