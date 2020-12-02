@@ -88,7 +88,6 @@ class VolumeManager(object):
 
         for gio_volume in gio_volumes:
             device_file = gio_volume.get_identifier(Gio.VOLUME_IDENTIFIER_KIND_UNIX_DEVICE)
-            print(device_file)
             if not device_file:
                 continue
 

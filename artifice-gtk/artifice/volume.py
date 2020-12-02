@@ -20,48 +20,16 @@ import subprocess
 
 from pydbus import SystemBus
 
-class AlertWindow(Gtk.Window):
-    def __init__(self, title, retry=False):
-        Gtk.Window.__init__(self, title=title)
-        self.set_border_width(6)
+class PromptWindow(object):
+    def __init__(self, window, title, retry=False):
+        # Gtk.Window.__init__(self, title=title)
         self.label = Gtk.Label(title)
         self.label.set_margin_top(5)
         self.label.set_margin_left(10)
         self.label.set_margin_right(10)
-        self.dialog = Gtk.Dialog(title=title)
-        self.populate_dialog()
-        # print(title)
-
-    def run(self):
-        response = self.dialog.run()
-        self.dialog.destroy()
-
-    def populate_dialog(self):
-        self.dialog.vbox.pack_start(self.label, True, True, 0)
-        self.dialog.vbox.set_spacing(5)
-
-        self.dialog.add_buttons(
-            Gtk.STOCK_OK, Gtk.ResponseType.OK
-        )
-        self.dialog.get_action_area().set_property("halign", Gtk.Align.CENTER)
-        self.dialog.set_default_response(Gtk.ResponseType.OK)
-        self.dialog.set_default_size(150, 100)
-
-        self.label.show()
-        self.dialog.show()
-
-class PromptWindow(Gtk.Window):
-    def __init__(self, title, retry=False):
-        Gtk.Window.__init__(self, title=title)
-        self.set_border_width(6)
-        self.label = Gtk.Label(title)
-        self.label.set_margin_top(5)
-        self.label.set_margin_left(10)
-        self.label.set_margin_right(10)
-        self.dialog = Gtk.Dialog(title=title)
+        self.dialog = Gtk.Dialog(parent=window, flags=Gtk.DialogFlags.DESTROY_WITH_PARENT, title=title)
         self.populate_dialog()
         self.result = None
-        # print(title)
 
     def prompt(self):
         response = self.dialog.run()
@@ -176,7 +144,6 @@ class Volume(object):
 
     @property
     def backing_file_name(self) -> str:
-        return "BACKING_FILENAME"
         if not self.is_file_container:
             return str()
         if self.is_unlocked:
@@ -275,22 +242,27 @@ class Volume(object):
 
     def unlock(self, open_after_unlock=False, first_unlock=True):
         logger.info("Unlocking volume %s", self.device_file)
-        print(self.device_file)
-        unlocked_device_suffix = PromptWindow("Unlocked device name").prompt()
+        if self.udisks_object.get_filesystem() and self.udisks_object.get_filesystem().props.mount_points:
+            self.udisks_object.get_filesystem().call_unmount_sync(GLib.Variant('a{sv}', {}), None)
+
+        unlocked_device_suffix = PromptWindow(self.manager.window, "Unlocked device name").prompt()
         if not unlocked_device_suffix:
             logger.debug("No device file given")
             return
 
         logger.debug("Updating unlocked device file to %s", unlocked_device_suffix)
         self.unlocked_device_suffix = unlocked_device_suffix
-        passphrase = PromptWindow("Passphrase to decrypt").prompt()
+        passphrase = PromptWindow(self.manager.window, "Passphrase to decrypt").prompt()
         if not passphrase:
             logger.debug("No passphrase given")
             return
         self.artifice_operation.Remove(self.unlocked_device_suffix)
+        self.show_spinner()
         dm_success = self.artifice_operation.MountOrCreate(self.unlocked_device_suffix, passphrase, self.device_file)
+        self.hide_spinner()
         if not dm_success:
-            AlertWindow("Could not mount volume").run()
+            self.manager.show_warning(title=_("Could not unlock %s" % self.device_file),
+                                      body=_("Check that artificed is running, afs.ko is loaded, and the device is not mounted."))
             logger.info("Create: Giving up")
             return
         else:
@@ -347,6 +319,17 @@ class Volume(object):
         self.mount()
         self.update_list_box_row()
 
+    def confirmation_prompt(self, title, body):
+        dialog = Gtk.MessageDialog(self.manager.window,
+                                   Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                                   Gtk.MessageType.WARNING,
+                                   Gtk.ButtonsType.OK_CANCEL,
+                                   title)
+        dialog.format_secondary_markup(body)
+        resp = dialog.run()
+        dialog.close()
+        return resp == Gtk.ResponseType.OK
+
     def mount(self):
         logger.info("Mounting volume %s", self.device_file)
         if not self.unlocked_udisks_object:
@@ -354,10 +337,13 @@ class Volume(object):
         # self.udisks_object.get_filesystem().call_mount_sync(GLib.Variant('a{sv}', {}),  # options
         #                                                     None)                       # cancellable
         if not self.unlocked_udisks_object.get_filesystem():
-            logger.info("Creating ext4 filesystem inside")
-            self.artifice_operation.MkfsExt4(self.unlocked_device_suffix)
-            self.update_list_box_row()
-            logger.info("Done")
+            resp = confirmation_prompt("No filesystem detected", "Do you want to create an ext4 filesystem on the Artifice volume? You will not be able to use this device without a filesystem.")
+            if resp:
+                self.artifice_operation.MkfsExt4(self.unlocked_device_suffix)
+                self.update_list_box_row()
+                logger.info("Done")
+            else:
+                return
 
         self.unlocked_udisks_object.get_filesystem().call_mount_sync(GLib.Variant('a{sv}', {}), None)
         # self.artifice_operation.Mount(self.unlocked_device_suffix, "/mnt")
