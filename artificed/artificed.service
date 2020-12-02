@@ -1,0 +1,11 @@
+[Unit]
+Description=Artifice Daemon
+
+[Service]
+Type=dbus
+BusName=edu.ucsc.ssrc.artifice.ArtificeOperation
+PIDFile=/run/artificed.pid
+ExecStart=/usr/local/bin/artificed
+
+[Install]
+WantedBy=multi-user.target
