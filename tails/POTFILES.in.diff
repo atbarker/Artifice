@@ -1,0 +1,20 @@
+diff --git a/po/POTFILES.in b/po/POTFILES.in
+index 16a3215a2c..a91454ef44 100644
+--- a/po/POTFILES.in
++++ b/po/POTFILES.in
+@@ -73,3 +73,15 @@ config/chroot_local-includes/usr/share/tails/unlock-veracrypt-volumes/volume.ui.
+ config/chroot_local-includes/usr/share/tails-installer/tails-installer.ui.in
+ config/chroot_local-includes/usr/share/whisperback/whisperback.ui.in
+ config/chroot_local-includes/usr/local/share/mime/packages/unlock-veracrypt-volumes.xml.in
++
++# AFS
++config/chroot_local-includes/usr/local/bin/artifice/artifice/ui/main.ui
++config/chroot_local-includes/usr/local/bin/artifice/artifice/ui/volume.ui
++config/chroot_local-includes/usr/local/bin/artifice/artifice/volume.py
++config/chroot_local-includes/usr/local/bin/artifice/artifice/volume_list.py
++config/chroot_local-includes/usr/local/bin/artifice/artifice/volume_manager.py
++config/chroot_local-includes/usr/local/bin/artifice/ui/main.ui
++config/chroot_local-includes/usr/local/bin/artifice/ui/volume.ui
++config/chroot_local-includes/usr/local/bin/artifice/volume.py
++config/chroot_local-includes/usr/local/bin/artifice/volume_list.py
++config/chroot_local-includes/usr/local/bin/artifice/volume_manager.py

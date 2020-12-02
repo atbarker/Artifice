@@ -18,7 +18,7 @@ for file in $(find . -type "f,l" -not -name "patch.sh")
 do
     echo "$file -> $tails_location/$file"
     mkdir -p $tails_location/$(dirname $file)
-    cp -r $file $tails_location/$file
+    cp -r -L --remove-destination $file $tails_location/$file
 done
 
 echo "Done"
