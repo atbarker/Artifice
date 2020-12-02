@@ -95,4 +95,4 @@ class ContainerList(VolumeList):
 
 class DeviceList(VolumeList):
     """Manages physically connected drives and partitions"""
-    placeholder_label = _("No dm-crypt devices detected")
+    placeholder_label = _("No physical devices detected")
