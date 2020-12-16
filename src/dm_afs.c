@@ -541,7 +541,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
     case FS_ERR:
         // TODO: Change.
-        afs_action(0, ret = -ENOENT, fs_err, "unknown file system");
+        // afs_action(0, ret = -ENOENT, fs_err, "unknown file system");
         break;
 
     default:

@@ -18,33 +18,32 @@
  * @return  boolean.
  */
 
-// All integers in BPB and EBPB are stored on disk as little endian.
 struct ntfs_bpb {
-    uint16_t bytes_per_sector;
-    int8_t   sectors_per_cluster;
-    uint16_t reserved_sector_count; // always 9
-    int8_t   table_count;           // unused, always 0
-    uint16_t root_entry_count;      // unused, always 0
-    uint16_t sector_count;          // unused, always 0
-    int8_t   media_type;
-    uint16_t sectors_per_table;     // unused, always 0
-    uint16_t sectors_per_track;
-    uint16_t heads;
-    uint32_t hidden_sector_count;
-    uint32_t sector_count_32;       // unused
-    uint32_t reserved;              // unused
+    __le16 bytes_per_sector;
+    __u8   sectors_per_cluster;
+    __le16 reserved_sector_count; // always 9
+    __u8   table_count;           // unused, always 0
+    __le16 root_entry_count;      // unused, always 0
+    __le16 sector_count;          // unused, always 0
+    __u8   media_type;
+    __le16 sectors_per_table;     // unused, always 0
+    __le16 sectors_per_track;
+    __le16 heads;
+    __le32 hidden_sector_count;
+    __le32 sector_count_32;       // unused
+    __le32 _reserved;              // unused
 } __attribute__((packed));
 
 struct ntfs_ebpb {
-    uint64_t sector_count_64;
-    uint64_t master_file_table_cluster;
-    uint64_t master_file_table_mirror_cluster;
-    int8_t   clusters_per_record;   // positive: clus per rec, negative: bytes per rec
-    int8_t   reserved1[3];
-    int8_t   clusters_per_index_buffer; // pos: clus per IB, neg: bytes per IB
-    int8_t   reserved2[3];
-    uint64_t serial_number;
-    uint32_t checksum;
+    __le64 sector_count_64;
+    __le64 master_file_table_cluster;
+    __le64 master_file_table_mirror_cluster;
+    __u8   clusters_per_record;   // positive: clus per rec, negative: bytes per rec
+    __u8   _reserved_200[3];
+    __u8   clusters_per_index_buffer; // pos: clus per IB, neg: bytes per IB
+    __u8   _reserved_216[3];
+    __le64 serial_number;
+    __le32 checksum;
 } __attribute__((packed));
 
 struct ntfs_boot_sector {
@@ -57,51 +56,50 @@ struct ntfs_boot_sector {
 
 struct mft_header {
     char record_signature[4];
-    uint16_t offset_to_update_seq;
-    uint16_t entries_in_fixup_array;
-    uint64_t logfile_sequence_number;
-    uint16_t record_usage_count;
-    uint16_t hardlink_count;
-    uint16_t offset_to_first_attribute;
-    uint16_t flags;
-    uint32_t size_of_record;
-    uint32_t allocated_size_of_record;
-    uint64_t base_file_record;
-    uint16_t next_attr_id;
-    uint16_t unused;
-    uint32_t mft_record_number;
+    __le16 offset_to_update_seq;
+    __le16 entries_in_fixup_array;
+    __le64 logfile_sequence_number;
+    __le16 record_usage_count;
+    __le16 hardlink_count;
+    __le16 offset_to_first_attribute;
+    __le16 flags;
+    __le32 size_of_record;
+    __le32 allocated_size_of_record;
+    __le64 base_file_record;
+    __le16 next_attr_id;
+    __le16 unused;
+    __le32 mft_record_number;
 } __attribute__((packed));
 
 struct attribute_header {
-    uint32_t type_id;
-    uint32_t length;
-    uint8_t nonresident_flag;
-    uint8_t name_length;
-    uint16_t offset_to_name;
-    uint16_t flags;
+    __le32 type_id;
+    __le32 length;
+    __u8 nonresident_flag;
+    __u8 name_length;
+    __le16 offset_to_name;
+    __le16 flags;
 } __attribute((packed));
 
 struct attribute_resident {
     struct attribute_header header;
-    uint16_t attribute_id;
-    uint32_t content_length;
-    uint16_t offset_to_content;
+    __le16 attribute_id;
+    __le32 content_length;
+    __le16 offset_to_content;
 } __attribute((packed));
 
 struct attribute_nonresident {
     struct attribute_header header;
-    uint16_t attribute_id;
-    uint64_t start_vcn_runlist;
-    uint64_t end_vcn_runlist;
-    uint16_t offset_to_runlist;
-    uint16_t compression_unit_size;
-    uint32_t reserved;
-    uint64_t content_allocated_size;
-    uint64_t content_actual_size;
-    uint64_t content_initialized_size;
+    __le16 attribute_id;
+    __le64 start_vcn_runlist;
+    __le64 end_vcn_runlist;
+    __le16 offset_to_runlist;
+    __le16 compression_unit_size;
+    __le32 _reserved;
+    __le64 content_allocated_size;
+    __le64 content_actual_size;
+    __le64 content_initialized_size;
 } __attribute((packed));
 
-// All data endianness corrected for this CPU
 struct ntfs_volume {
     uint16_t bytes_per_sector;
     uint64_t sector_count;
@@ -163,9 +161,6 @@ read_boot_sector(struct ntfs_volume *vol, const void *data)
 
     reserved_sector_count = le16_to_cpu(boot_sector->bpb.reserved_sector_count);
 
-    // afs_assert(reserved_sector_count == 9, boot_sector_invalid,
-    //         "Reserved sector count: %d != 9", reserved_sector_count);
-
     afs_assert(boot_sector->bpb.table_count == 0, boot_sector_invalid,
             "Table count: %d != 0", boot_sector->bpb.table_count);
 
@@ -186,11 +181,12 @@ read_boot_sector(struct ntfs_volume *vol, const void *data)
     vol->mft_mirror_cluster = le64_to_cpu(boot_sector->ebpb.master_file_table_mirror_cluster);
     vol->cluster_count = vol->sector_count / vol->sectors_per_cluster;
 
+    // If `clusters_per_record` > 0, it is really the number of clusters
+    // per record. If it is < 0, the real number of clusters per record is
+    // 2^`clusters_per_record`. The true value is stored in `mft_record_size`.
     if (boot_sector->ebpb.clusters_per_record > 0) {
-        afs_debug("Got positive clusters per record");
         vol->mft_record_size = vol->bytes_per_cluster * boot_sector->ebpb.clusters_per_record;
     } else {
-        afs_debug("Got negative clusters per record");
         vol->mft_record_size =  1 << (-boot_sector->ebpb.clusters_per_record);
     }
 
@@ -229,26 +225,6 @@ int read_ntfs_cluster(void *page, struct ntfs_volume *vol, struct block_device *
     return 0;
 }
 
-#define MIN(x, y) (x < y ? (x) : (y))
-
-void print_filename(struct attribute_header *attr_header) {
-    char buffer[64] = {0};
-
-    afs_debug("About to print filename");
-
-    if (attr_header->nonresident_flag) {
-        // struct attribute_nonresident *attr = attr_header;
-        afs_debug("Non-resident: ignoring...");
-    } else {
-        struct attribute_resident *attr = (struct attribute_resident*)attr_header;
-        char *attr_start = (char*)attr;
-        char *filename = attr_start + attr->offset_to_content;
-        memcpy(buffer, filename, MIN(64, attr->content_length));
-        afs_debug("Got filename %ls", (wchar_t*)buffer);
-        afs_debug("Got attr length %u", attr->content_length);
-    }
-}
-
 const uint32_t ATTRS_DONE = 0xFFFFFFFF;
 
 enum ntfs_attributes {
@@ -272,48 +248,65 @@ enum ntfs_attributes {
 };
 
 static int
-read_mft_records(char *record, struct ntfs_volume *vol, struct block_device *device, uint32_t number) {
+read_mft_records(char *record, struct ntfs_volume *vol, struct block_device *device, uint32_t number, bool used_vmalloc) {
     int ret;
+    uint64_t cluster;
+
     afs_assert(number % vol->mft_records_per_cluster == 0,
-            invalid_record, "Asked for MFT record that is not aligned: %d", number);
-    uint64_t cluster = vol->mft_cluster + number / vol->mft_records_per_cluster;
-    ret = read_ntfs_cluster(record, vol, device, cluster, /*used_vmalloc=*/true);
+            unaligned_record, "Asked for MFT record that is not aligned: %d", number);
+
+    cluster = vol->mft_cluster + number / vol->mft_records_per_cluster;
+    ret = read_ntfs_cluster(record, vol, device, cluster, used_vmalloc);
     if (ret)
         return ret;
     return 0;
 
-invalid_record:
+unaligned_record:
     return 1;
 }
 
+#define MIN(x, y) (x < y ? (x) : (y))
+
+// Read all bytes of the data runs contained in a DATA attribute within an MFT header.
 static size_t read_nonresident_data(struct ntfs_volume *vol, char *buffer, struct attribute_nonresident *attr, size_t max, struct block_device *device) {
     size_t amt_to_read = MIN(max, attr->content_actual_size);
     off_t amt_written = 0;
     char *runlist = (char*)attr + attr->offset_to_runlist;
-    int64_t cluster;
-
     size_t i = 0;
+    uint8_t field_sizes = runlist[i];
 
-    afs_assert(attr->start_vcn_runlist == 0, stop, "We do not support non-0 starting VCNs yet");
+    afs_assert(attr->start_vcn_runlist == 0, stop,
+               "Artifice has not implemented support for non-0 starting VCNs.");
 
-    uint8_t field_sizes = runlist[0];
     while (field_sizes) {
-        afs_debug("Field sizes: %d", field_sizes);
+        /* NTFS runs use variable-sized fields. The size of the offset and lengths of the runs
+         * are determined by which bits are set in the first and second nibbles of `runlist`.
+         * The high nibble tells us how many bytes large the offset is,
+         * and the low nibble tells us how many bytes large the length for this run is.
+         */
         uint8_t offset_size_bytes = (field_sizes >> 4) & 0xF;
         uint8_t offset_size_bits = offset_size_bytes << 3;
+        uint64_t offset_size_mask = ((1UL << offset_size_bits) - 1);
+
         uint8_t length_size_bytes = (field_sizes) & 0xF;
         uint8_t length_size_bits = length_size_bytes << 3;
+        uint64_t length_size_mask = ((1UL << length_size_bits) - 1);
 
+        int64_t length, offset, cluster;
+
+        afs_debug("Field size octet: %d", field_sizes);
         afs_debug("Offset size, length size %d %d", offset_size_bits, length_size_bits);
 
         // Use int64_t because offset and length fields may be up to 8 bytes large
-        int64_t length = (*(int64_t*)(runlist + i + 1)) & ((1UL << length_size_bits) - 1);
-        int64_t offset = (*(int64_t*)(runlist + i + 1 + (length_size_bits >> 3))) & ((1UL << offset_size_bits) - 1);
+        length = (*(int64_t*)(runlist + i + 1)) & (length_size_mask);
+        offset = (*(int64_t*)(runlist + i + 1 + length_size_bytes)) & (offset_size_mask);
 
         afs_debug("Got offset and length: %lld %lld", offset, length);
 
         afs_debug("Attempting to read %lu bytes", amt_to_read);
 
+        // Move through each logical cluster number for this run, reading the data
+        // from each cluster.
         for (cluster = offset; cluster < offset + length; cluster++) {
             read_ntfs_cluster(buffer + amt_written, vol, device, cluster, true);
             amt_written += vol->bytes_per_cluster;
@@ -323,14 +316,17 @@ static size_t read_nonresident_data(struct ntfs_volume *vol, char *buffer, struc
             }
         }
 
-        i += length_size_bytes + offset_size_bytes + 1;
+        // Move to the next field size octet.
+        i += 1 + length_size_bytes + offset_size_bytes;
         field_sizes = runlist[i];
     }
 stop:
     return amt_written;
 }
 
-static size_t read_data(struct ntfs_volume *vol, char *buffer, ssize_t max_bytes, struct mft_header *header, struct block_device *device) {
+// Read all data from a particular file.
+// This is only used for reading the $Bitmap metafile.
+static size_t read_file(struct ntfs_volume *vol, char *buffer, ssize_t max_bytes, struct mft_header *header, struct block_device *device) {
     char *record = (char*)header;
     int record_offset = header->offset_to_first_attribute;
     off_t buffer_offset = 0;
@@ -341,8 +337,11 @@ static size_t read_data(struct ntfs_volume *vol, char *buffer, ssize_t max_bytes
         afs_debug("Got attribute with type: %x", type_id);
         switch(type_id) {
             case $DATA:
-                afs_debug("Found data");
+                // Read this data run into `buffer`.
+                afs_debug("Found data in NTFS cluster");
                 if (!attr_header->nonresident_flag) {
+                    // Data is resident in this MFT entry.
+                    // The data is stored immediately after the MFT header.
                     ssize_t amount = MIN(max_bytes - buffer_offset, attr_header->length);
                     if (amount < 0) {
                         afs_debug("Preempting any further reads");
@@ -352,11 +351,20 @@ static size_t read_data(struct ntfs_volume *vol, char *buffer, ssize_t max_bytes
                     buffer_offset += amount;
                 } else {
                     afs_debug("Found non-resident data");
+                    // Data is not resident, so we need to lookup the logical clusters
+                    // in each of the contained data runs within this data attribute.
                     buffer_offset += read_nonresident_data(vol, buffer + buffer_offset, (struct attribute_nonresident*)attr_header, max_bytes - buffer_offset, device);
                 }
                 break;
             case $ATTRIBUTE_LIST:
-                afs_debug("Found $ATTRIBUTE_LIST so cannot guarantee correctness");
+                // The Attribute List attribute is not supported.
+                // It may define additional data sections that will not be detected
+                // by dm-afs.
+                // Attribute List should never be required for $Bitmap.
+                // TODO: Add support for Attribute List.
+                afs_debug("$ATTRIBUTE_LIST attribute found. This is not yet supported, "
+                          "so the correctness of the output from this function is "
+                          "not guaranteed.");
                 break;
             case ATTRS_DONE:
                 goto done_with_attributes;
@@ -364,6 +372,8 @@ static size_t read_data(struct ntfs_volume *vol, char *buffer, ssize_t max_bytes
                 break;
         }
 
+        // If the attribute length is 0, either we have read
+        // bad data from the disk, or we are not reading an attribute header.
         if (attr_header->length == 0) {
             afs_debug("BUG: Got attr header length of 0");
             break;
@@ -374,25 +384,28 @@ done_with_attributes:
     return buffer_offset;
 }
 
+#undef MIN
+
 static int
 extract_bitmap(struct ntfs_volume *vol, struct block_device *device) {
     ssize_t max = vol->cluster_count / 8;
-    afs_debug("Got maximum bitmap size of %ld", max);
     uint8_t *bitmap = vmalloc(max);
+    size_t i, read, total_unused_clusters, empty_block_idx;
+    uint32_t *empty_blocks;
+
+    afs_debug("Got maximum bitmap size of %ld", max);
+
+    // The NTFS $Bitmap clusters start at 0, so we will also start at 0.
     vol->data_start_off = 0;
-    size_t read = read_data(vol, bitmap, max, vol->metafiles[$bitmap], device);
+    read = read_file(vol, bitmap, max, vol->metafiles[$bitmap], device);
     if (!read) {
-        afs_debug("Didn't read anything from the bitmap");
+        afs_debug("Didn't read anything from $Bitmap");
         vfree(bitmap);
         return 1;
     }
 
-    size_t i = 0;
-    unsigned short bpos = 0;
-    int block_num = 0;
-
-    size_t total_unused_clusters = 0;
-    afs_debug("Read %ld entries from bitmap", read);
+    total_unused_clusters = 0;
+    afs_debug("Read %ld entries from $Bitmap", read);
     for (i = 0; i < read; ++i) {
         // hweight is the number of bits set
         total_unused_clusters += 8 - hweight8(bitmap[i]);
@@ -400,27 +413,40 @@ extract_bitmap(struct ntfs_volume *vol, struct block_device *device) {
 
     afs_debug("Total number of unused clusters %ld", total_unused_clusters);
 
-    size_t empty_block_idx = 0;
-    uint32_t *empty_blocks = vmalloc(sizeof(uint32_t) * total_unused_clusters * vol->afs_blocks_per_cluster);
+    empty_block_idx = 0;
+    empty_blocks = vmalloc(sizeof(uint32_t) * total_unused_clusters * vol->afs_blocks_per_cluster);
     if (!empty_blocks) {
         afs_debug("Could not allocate empty block list");
         vfree(bitmap);
         return 1;
     }
+
     for (i = 0; i < read; ++i) {
+        unsigned short bpos;
         for (bpos = 0; bpos < 8; ++bpos) {
             char bit = (bitmap[i] >> bpos) & 0x1;
-            if (!bit) {
-                if (empty_block_idx == total_unused_clusters * vol->afs_blocks_per_cluster) {
+            int block_num;
+
+            // If cluster is in use, we just ignore it.
+            if (bit)
+                continue;
+
+            for (block_num = 0; block_num < vol->afs_blocks_per_cluster; ++block_num) {
+                uint32_t block = (i * 8 + bpos) * vol->afs_blocks_per_cluster + block_num;
+                // If there are problems adding empty blocks to `empty_blocks`,
+                // you may wish to uncomment the following line.
+                // Be careful, this will print A LOT!
+                //
+                // afs_debug("Adding %u (%ld/%ld)", block, empty_block_idx,
+                //           total_unused_clusters * vol->afs_blocks_per_cluster);
+
+                // Verify that we are not about to overrun `empty_blocks`.
+                if (empty_block_idx >= total_unused_clusters * vol->afs_blocks_per_cluster) {
                     afs_debug("Incorrect precalculation of free clusters. Stopping early...");
                     goto stop;
                 }
-                for (block_num = 0; block_num < vol->afs_blocks_per_cluster; ++block_num) {
-                    uint32_t block = (i * 8 + bpos) * vol->afs_blocks_per_cluster + block_num;
-                    // Be careful. This will print A LOT
-                    // afs_debug("Adding %u (%ld/%ld)", block, empty_block_idx, total_unused_clusters * vol->afs_blocks_per_cluster);
-                    empty_blocks[empty_block_idx++] = block;
-                }
+
+                empty_blocks[empty_block_idx++] = block;
             }
         }
     }
@@ -429,6 +455,7 @@ extract_bitmap(struct ntfs_volume *vol, struct block_device *device) {
     afs_debug("NTFS bitmap successfully read");
     vol->empty_blocks = empty_blocks;
     vol->num_empty_afs_blocks = total_unused_clusters;
+    // `empty_blocks` is not freed as it is passed back to dm_afs.
     return 0;
 
 stop:
@@ -441,38 +468,39 @@ static int
 ntfs_map(struct ntfs_volume *vol, void *data, struct block_device *device)
 {
     struct mft_header *mft;
-    int mft_number;
-    int i;
-    int status;
-    int ret;
+    int mft_number, status, ret;
 
     // Allocate space for metafiles
     char *records = vmalloc(12 * vol->mft_record_size);
     afs_action(!IS_ERR(records), status = PTR_ERR(records),
-        could_not_allocate, "couldn't allocate space for metafile records [%d]", status);
+        could_not_allocate, "Couldn't allocate space for metafile records [%d]", status);
 
     // Read MFT metafiles
     for (mft_number = 0; mft_number < 12; mft_number += vol->mft_records_per_cluster) {
+        int i;
         char *record_cluster = records + mft_number * vol->mft_record_size;
-        read_mft_records(record_cluster, vol, device, mft_number);
+        read_mft_records(record_cluster, vol, device, mft_number, /*used_vmalloc=*/true);
         for (i = 0; i < vol->mft_records_per_cluster; ++i) {
-            afs_debug("Reading MFT entry number %d %d", mft_number, mft_number + i);
+            afs_debug("Reading MFT entry number (base: %d) (actual: %d)",
+                      mft_number, mft_number + i);
             vol->metafiles[mft_number + i] =
                 (struct mft_header *)(record_cluster + (i * vol->mft_record_size));
         }
     }
 
+    // Verify that the size of each record from the NTFS boot sector
+    // matches what is reported by the $MFT metafile.
     mft = vol->metafiles[$mft];
     afs_assert(mft->allocated_size_of_record == vol->mft_record_size,
             ntfs_map_invalid, "MFT sizes do not match: %d != %d",
             mft->allocated_size_of_record, vol->mft_record_size);
 
-    afs_debug("extracting bitmap");
     ret = extract_bitmap(vol, device);
     if (ret) {
         goto ntfs_map_invalid;
     }
 
+    vfree(records);
     return 0;
 
 ntfs_map_invalid:
@@ -504,20 +532,19 @@ afs_ntfs_detect(const void *data, struct block_device *device, struct afs_passiv
         goto vol_err;
     }
 
+    // If this is an NTFS volume, find the sectors that Artifice can use.
     ret = ntfs_map(&vol, (void *)data, device);
     if (ret) {
         afs_debug("Failed to map filesystem");
         goto vol_err;
     }
 
-    // vol->data_start_off = (off_t)((vol->tables * vol->sec_fat) + vol->reserved);
-
     if (fs) {
         fs->total_blocks = vol.num_afs_blocks;
         fs->sectors_per_block = AFS_BLOCK_SIZE / AFS_SECTOR_SIZE;
         fs->block_list = vol.empty_blocks;
         fs->list_len = vol.num_empty_afs_blocks;
-        fs->data_start_off = vol.data_start_off; // Data start in sectors, blocks are relative to this.
+        fs->data_start_off = vol.data_start_off;
         return true;
     }
 
