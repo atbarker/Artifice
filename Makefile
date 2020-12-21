@@ -114,4 +114,12 @@ debug_pilot:
 	@sudo dmsetup remove artifice || true
 	@sudo rmmod dm_afs || true
 
+debug_base:
+	@rm -rf test
+	@mkdir test
+	@sudo mkfs.ext4 /dev/sdb1
+	@sudo mount /dev/sdb1 test 
+	(cd benchmarks; sudo ./pilot.sh ../test 4096 root w; sudo ./pilot.sh ../test 4096 root r)
+	@sudo umount test
+
 ######################################################################
