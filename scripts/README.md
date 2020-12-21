@@ -2,7 +2,9 @@
 
 ## Metadata Overhead Calculator
 
-Please contact Yash for more information about this script.
+This script calculates Artifice metadata overhead for a given storage configuration.
+
+Please contact Yash Gupta for more information about this script.
 
 ## Survivability
 
@@ -17,7 +19,9 @@ The 'disk' option calculates the probability of survival for a disk given the me
 
 ## Benchmarking
 
-The 'bench' folder contains scripts for benchmarking Artifice.
+The 'bench' folder contains in house scripts for benchmarking Artifice.
+
+The 'benchmarks' folder contains scripts for running a bonnie++ benchmark on Artifice using the [Pilot Benchmark Framework](https://github.com/ascar-io/pilot-bench) to achieve precise results.
 
 ## Read Test
 

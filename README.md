@@ -2,37 +2,45 @@
 
 The Artifice File System is a pseudo file system which exists in the free space of another file system. By doing so, Artifice remains hidden from suspecting users and hence can be used to store information with concrete deniability. Artifice is implemented using device mapper, and it performs a block to block mapping of information.
 
-For contributions to this project, please contact `Yash Gupta`, `Austen Barker`, or `Eugene Chou` {ygupta,atbarker,euchou}@ucsc.edu.
+For contributions to this project, please contact `Austen Barker` at atbarker@ucsc.edu.
+
+Artifice was developed at the UC Santa Cruz [Storage Systems Research Center](https://www.ssrc.ucsc.edu/index.html) (SSRC) with support from National  Science  Foundation  grant  number  IIP-1266400, and award CNS-1814347.
+
+It is described in the workshop paper ["Artifice: A Deniable Steganographic File System"](https://www.ssrc.ucsc.edu/pub/barker-foci19.html) presented at [FOCI'19](https://www.usenix.org/conference/foci19) and the conference paper ["Artifice: Data in Disguise"](https://www.ssrc.ucsc.edu/pub/barker-msst20.html) presented at [MSST'20](https://storageconference.us/).
+
+
+### Collaborators
+
+`Yash Gupta`, ygupta@ucsc.edu
+
+`Eugene Chou` euchou@ucsc.edu
+
+`Darrell Long` darrell@ucsc.edu
+
+`Sabrina Au` scau@ucsc.edu
+
+`Kyle Fredrickson` kyfredi@ucsc.edu
+
+`James Houghton` jhoughton@virginia.edu
+
+`Ethan Miller` elm@ucsc.edu
 
 ## Build
+
+Artifice is tested on and designed for Linux kernel versions 4.4 to 5.0.
 
 ```
 $ make
 $ sudo insmod dm-afs.ko afs_debug_mode=1
 $ sudo rmmod dm_afs
-
+```
 Please look at the Makefile targets `debug_create`, `debug_mount` and `debug_end` for information on how to setup a dm-target.
-```
 
-## Guidelines
-
-All code pushed to the repository is formatted using `clang-format`. Style guide parameters are as follows:
-
-```
-{
-    BasedOnStyle: WebKit,
-    AlignTrailingComments: true,
-    AllowShortIfStatementsOnASingleLine: true,
-    AlwaysBreakAfterDefinitionReturnType: true,
-    PointerAlignment: Right,
-    ForEachMacros: ['list_for_each_entry', 'list_for_each_entry_safe', 'bio_for_each_segment']
-}
-```
-Add 'ForEachMacros' definitions as required in the code.
-
-Code which has not been formatted with these options will be rejected for a merge.
+There are also a variety of other Makefile targets for benchmarking and IO testing that also appear with the `debug_*` prefix. 
 
 ## Design
+
+![Artifice Design Overview](https://github.com/atbarker/Artifice/blob/master/doc/newartificediagram.png)
 
 The design portion of this markdown is not intended to be reference information. It won't make sense unless you read from start to end.
 
@@ -46,7 +54,7 @@ Before we can explain the design of Artifice, it is important to understand it's
 
 Hence, when you create a dm-target for `artifice`, you will have a block device which may look like `/dev/mapper/artifice` (depending on how you name your instance). Any kind of I/O on this virtual block device is sent over to the Artifice kernel module. This module intercepts this IO, remaps it to the location it needs to be remapped to, and then "submits" it. 
 
-Accordingly, the idea is that one can technically format `/dev/mapper/artifice` with a file system such as "FAT32", and Artifice can remap each of the FAT32 writes over to an underlying physical block device (such as `/dev/sdb`). Based on our design, we will only utilize the free blocks in `/dev/sdb`, hence, `/dev/sdb` needs to be formatted with a supported file system, and there should be enough free space left in that underlying file system.
+Accordingly, the idea is that one will format `/dev/mapper/artifice` with a file system such as "FAT32", and Artifice can remap each of the FAT32 writes over to an underlying physical block device (such as `/dev/sdb`). Based on our design, we will only utilize the free blocks in the file system on `/dev/sdb`, hence, `/dev/sdb` needs to be formatted with a supported file system, and there should be enough free space left in that underlying file system to fit the desired Artifice volume(s).
 
 Support for underlying file systems is added through `modules`.
 
@@ -58,22 +66,25 @@ Since the writes are simple mappings, theoretically, you could use _any_ file sy
 
 On the other hand, we need discrete support for the passive file system. This is where `Artifice Modules` come into play. A modules task, given a physical block device, is to figure out whether or not a particular fule system exists on the physical block device. Moreover, if a module detects that a certain file system is present, then it needs to provide pointers to the free blocks in the file system to be used by Artifice. If a module cannot detect the presence of a particular file system on a physical block device, then it simply returns a `false` and does not need to fill up free block information.
 
-Currently, we plan to add modules to support `FAT32`, `EXT4` and `NTFS`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Additionally support for log structured file systems like F2FS is a long term goal.
+Currently, we have modules for `FAT32`, `NTFS`, and `EXT4`. Although we have planned support for `APFS`, APFS is a propietory file system by Apple, and as such its specifications are unclear. Support for log structured or flash specific file systems like `F2FS` or `YAFFS` is a long term goal.
 
-### How do we keep mapped data safe, and unrecognizable: Reed-Solomon + Entropy or Secret sharing.
+### How do we keep mapped data safe, and unrecognizable: Information Dispersal Algorithms.
+
+NOTE: Currently the Reed-Solomon+Entropy scheme is not included. It will be added back into the device mapper soon.
 
 Since Artifice is mapping I/O from the active to the passive file system, the data which is being mapped would be clearly visible if one were to begin inspecting the physical device (`/dev/sdb`) directly. This presents a problem, since the existence of this data proves the existence of the Artifice subsystem. 
 
-We can encrypt this data so that it looks random, however, that leads us to the problem of key management. Managing different keys for each data block is not possible, and using a single key for the encryption of all data blocks is a security hazard. In the case of a rubber-hose attack, all the data stands to be compromised. Hence, to provide obfuscation and security of the data, we use `entropy blocks`.
+Managing different keys or IVs for each data block is resource intensive, and using a single key for the encryption of all data blocks is a security hazard. Hence, to provide obfuscation and security of the data, we use an information dispersal algorithm (IDA) to provide combinatoric security.
 
-When a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data combined with random blocks from the `entropy file` through Reed-Solomon error correcting codes. For subsequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is used again to recover the data. Without access to this entropy information, it is impossible to recreate the data, depending on the configuration of the Reed-Solomon code word.
+![Artifice Encoding Schemes](https://github.com/atbarker/Artifice/blob/master/doc/EncodingSchemes.png)
+
+An easily known information dispersal algorithm is called Shamir Secret Sharing, which provides us with relatively strong combinatoric security. We can also utilize an algorithm that combines Rivest's All or Nothing Transform with Reed Solomon erasure codes to provide a similar threshold scheme (slightly weaker than Shamir's scheme with only computational security) but with vastly improves space efficiency.
+
+There is another option for an information dispersal algorithm that involves combining existing sources of entropy on the disk (any random appearing file) with Reed-Solomon erasure codes. In this scheme when a user creates a new instance of Artifice, they are required to specify an `entropy directory` which contains a number of high-entropy files (such as DRM protected media). When a certain data block is to be mapped, a random file, termed the `entropy file`, is selected from within this directory and the data combined with random blocks from the `entropy file` through Reed-Solomon error correcting codes. For subsequent reads on the same data block, the filename and the block offset within the file is looked up in the metadata, and the same `entropy block` is used again to recover the data. Without access to this entropy information, it is impossible to recreate the data, depending on the configuration of the Reed-Solomon code word.
 
 This is the main selling point for the use of `entropy blocks`. The fact is, a user can store the entropy files on a portable flash drive, and in case of an emergency, discard this flash drive. Now, even if their passphrase was to be compromised and an adversary was able to figure out the names of the entropy files, the adversary will still not have access to those files. And without access to those files, the adversary will not have access to the data.
 
 However, filenames can be rather large and we need to preserve as much space as possible. Hence, we provide an optimization: When Artifice is first started, it reads the `entropy directory` and stores the name for each file into a hash table. To reduce space consumption, an `8` byte hash of the filename is stored instead of the filename itself. This hash also acts as the key into the entropy hash table.
-
-
-Alternatively Artifice can make use of Shamir Secret Sharing instead of Reed-Solomon erasure codes. In this case Artifice does not need entropy blocks, smaller metadata records, and is more reliable in the face of overwrite by the public file system.
 
 ### Carrier Blocks
 
@@ -93,6 +104,8 @@ Given this, we can finally look at the metadata which is stored for a `single` d
 This metadata for a single data block is known as a `map entry`, since it signifies a single entry into the `Artifice Map`.
 
 ### Artifice Map
+
+![Artifice Map](https://github.com/atbarker/Artifice/blob/master/doc/artifice_map.png)
 
 The Artifice map is the _huge_ chunk of memory which contains a `map entry` for every possible data block. For example, if you create an Artifice instance of size 4MB, then the Artifice map will contain `1024` map entries (we map per 4KB block).
 
@@ -129,6 +142,8 @@ Every Artifice instance requires a passphrase. We hash this passphrase and use t
 What kind of a security sub-system would not contain encryption? Artifice uses encrpytion for a very special purpose.
 
 So far we have been saying that detecting the super block would be impossible without knowing the passphrase. But that is not entirely true, since one could perform a linear scan of a disk to find the super block. In fact, one could even detect the `pointer blocks` and the `map blocks` by performaing a linear scan if they are structured in predictable patterns. In Artifice we encrypt the `superblock` and protect the rest of the metadata in much the same way as the data blocks. The key is none other than the passphrase which is supplied when an Artifice instance is _created_ or _mounted_.
+When I was young, and I played all the sports, it didn't help one bit. Now that I'm old and sedentary, it has about the same severity when I'm off meds, but life is so much easier and better managed when I'm on meds.
+
 
 With encryption in place, the super block cannot be found without the passphrase. Since encrypted data looks random, there are no patterns an adversary can be on the lookout for, even if they perform a full linear scan of a disk.
 
@@ -154,13 +169,36 @@ Artifice intends to limit writes to locations that have been recently deleted by
 
 While there is a great deal of psuedorandom information in unallocated blocks not everything on the disk is psuedorandom. In addition if a pseudorandom block is stored in the free space of a file system then an adversary should be able to restore it and the file it was part of. If the restored file was pseudorandom because it was DRM protected media, then the adversary should be able to view or play the media contained in the file. If the restored file is pseudorandom because it is encrypted then it should be decryptable into a readable file. A file that cannot be recovered in these two ways is suspicious.
 
-There is a relatively simple way around this, hiding pseudorandom data in a secure delete file system. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
+There is a relatively simple way around this, hiding pseudorandom data in a file system capable of secure deletion or securely wiping a drive before using AWhen I was young, and I played all the sports, it didn't help one bit. Now that I'm old and sedentary, it has about the same severity when I'm off meds, but life is so much easier and better managed when I'm on meds.
 
-### TODO
+rtifice. A secure delete file system is one where the data is stored encrypted similar to systems like dm-crypt but when it is time to delete said data, the key is simply discarded. We achieve destruction by encryption, without the key the encrypted data is irrecoverable. So the contents of all deleted information is plausibly deniable and we hypothesize is no longer suspicious as all free space is irrecoverable random information. This approach can also provide resistance to a multiple snapshot attack. This final point relies on the existence of a log structured secure delete file system.
 
-* `64 bit` block pointer support and `64 bit` EXT4.
-* Fix random block allocation bugs.
-* Secret sharing for metadata blocks.
-* Persistant data structure to track the free space.
-* Secure delete file system.
-* Yet unnamed secure delete file system, NTFS, and APFS support.
+## TODO
+
+- [ ] `64 bit` block pointer support and `64 bit` EXT4, currently only 32 bit.
+- [ ] Information Dispersal for metadata blocks over encryption and replication.
+- [ ] In house library for encryption and cryptographic hashing (avoid the kernel crypto API to minimize reliance on Linux specific code).
+- [ ] Persistant data structure to track the free space to be saved to the disk alongside metadata, useful for multiple snapshot defence.
+- [ ] NTFS support.
+- [ ] APFS support.
+- [ ] F2FS/YAFFS/some other log structured system.
+- [ ] Verify compatibility with ARM systems (SIMD or other inline assembly operations).
+
+## Guidelines
+
+All code pushed to the repository is formatted using `clang-format`. Style guide parameters are as follows:
+
+```
+{
+    BasedOnStyle: WebKit,
+    AlignTrailingComments: true,
+    AllowShortIfStatementsOnASingleLine: true,
+    AlwaysBreakAfterDefinitionReturnType: true,
+    PointerAlignment: Right,
+    ForEachMacros: ['list_for_each_entry', 'list_for_each_entry_safe', 'bio_for_each_segment']
+}
+```
+Add 'ForEachMacros' definitions as required in the code.
+
+Code which has not been formatted with these options will be rejected for a merge.
+

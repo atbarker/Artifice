@@ -1,0 +1,2 @@
+piid,readings_num,readings_mean,readings_mean_formatted,readings_subsession_var,readings_subsession_var_formatted,readings_subsession_ci,readings_subsession_ci_formatted,unit_readings_num,unit_readings_mean,unit_readings_mean_formatted,unit_readings_var,unit_readings_var_formatted,unit_readings_subsession_var,unit_readings_subsession_var_formatted,unit_readings_ci_width,unit_readings_ci_width_formatted,unit_readings_optimal_subsession_size
+0,30,34476,34476,9.41785e+06,9.41785e+06,2291.86,2291.86,0,,,,,,,,,
