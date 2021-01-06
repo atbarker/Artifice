@@ -1,0 +1,16 @@
+1:[2020-11-11 11:57:04] <info> Saving results to directory pilot_result_20201111_195704
+2:[2020-11-11 11:57:04] <info> Pilot 0.14 (compiled by gcc-7.3.1 on Apr  1 2019)
+3:[2020-11-11 11:57:04] <debug> Program path and args: sudo bonnie++ -d ../test -r 4096 -u root -q
+4:[2020-11-11 11:57:04] <debug> Total number of PIs: 1
+5:[2020-11-11 11:57:04] <debug> PI[0] name: throughput, unit: KB/s, reading must satisfy: yes, mean method: harmonic
+6:[2020-11-11 11:57:04] <info> Preset mode activated: quick
+7:[2020-11-11 11:57:04] <info> Setting the required width of confidence interval to 9000% of mean
+8:[2020-11-11 11:57:04] <info> Setting the limit of autocorrelation coefficient to 0.8
+9:[2020-11-11 11:57:04] <info> Setting the required minimum subsession sample size to 30
+10:[2020-11-11 11:57:04] <info> Disabled short round detection because work amount information is not set.
+11:[2020-11-11 11:57:04] <info> Starting workload round 0 with work_amount 0
+12:[2020-11-11 11:57:04] <debug> Executing client program: s b - . - 4 - r -
+13:[2020-11-11 11:57:28] <error> Client program returned 5
+14:[2020-11-11 11:57:28] <info> Finished workload round 0
+15:[2020-11-11 11:57:28] <info> [PI 0] analyzing results
+16:[2020-11-11 11:57:28] <debug> refresh_wps_analysis_results(): need more than 3 rounds data for WPS analysis
