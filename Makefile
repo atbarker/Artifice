@@ -118,7 +118,8 @@ debug_pilot:
 	mkdir test
 	@sudo mkfs.ext4 /dev/mapper/artifice
 	@sudo mount /dev/mapper/artifice test
-	(cd scripts/benchmarks; sudo ./pilot.sh ../../test 4096 root w; sudo ./pilot.sh ../../test 4096 root r)
+	#(cd scripts/benchmarks; sudo ./pilot.sh ../../test 4096 root w; sudo ./pilot.sh ../../test 4096 root r)
+	(cd scripts/benchmarks; sudo ./pilot.sh ../../test 4096 root r)
 	@sudo umount test
 	@sudo dmsetup remove artifice || true
 	@sudo rmmod dm_afs || true
