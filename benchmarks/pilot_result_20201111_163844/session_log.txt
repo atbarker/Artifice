@@ -1,0 +1,449 @@
+1:[2020-11-11 08:38:44] <info> Saving results to directory pilot_result_20201111_163844
+2:[2020-11-11 08:38:44] <info> Pilot 0.14 (compiled by gcc-7.3.1 on Apr  1 2019)
+3:[2020-11-11 08:38:44] <debug> Program path and args: sudo bonnie++ -d ../test -r 4096 -u root -q
+4:[2020-11-11 08:38:44] <debug> Total number of PIs: 1
+5:[2020-11-11 08:38:44] <debug> PI[0] name: throughput, unit: KB/s, reading must satisfy: yes, mean method: harmonic
+6:[2020-11-11 08:38:44] <info> Preset mode activated: quick
+7:[2020-11-11 08:38:44] <info> Setting the required width of confidence interval to 20% of mean
+8:[2020-11-11 08:38:44] <info> Setting the limit of autocorrelation coefficient to 0.8
+9:[2020-11-11 08:38:44] <info> Setting the required minimum subsession sample size to 30
+10:[2020-11-11 08:38:44] <info> Disabled short round detection because work amount information is not set.
+11:[2020-11-11 08:38:44] <info> Starting workload round 0 with work_amount 0
+12:[2020-11-11 08:38:44] <debug> Executing client program: s b - . - 4 - r -
+13:[2020-11-11 08:49:14] <info> Got output from client program: 1.97,1.97,artificedev,1,1605110317,8G,,740,98,55121,4,27002,9,3643,98,54335,14,2278,49,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19540us,5445ms,4378ms,5640us,19417us,1013ms,373us,314us,318us,225us,35us,61us
+14:[2020-11-11 08:49:14] <debug> [PI 0] new reading: 55121
+15:[2020-11-11 08:49:14] <info> Finished workload round 0
+16:[2020-11-11 08:49:14] <debug> [PI 0] has no unit readings data in round 0
+17:[2020-11-11 08:49:14] <info> [PI 0] analyzing results
+18:[2020-11-11 08:49:14] <debug> refresh_wps_analysis_results(): need more than 3 rounds data for WPS analysis
+19:[2020-11-11 08:49:14] <info> 0   | throughput: 
+20:[2020-11-11 08:49:14] <debug> No need to refresh analytical result
+21:[2020-11-11 08:49:14] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+22:[2020-11-11 08:49:14] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+23:[2020-11-11 08:49:14] <info> Starting workload round 1 with work_amount 0
+24:[2020-11-11 08:49:14] <debug> Executing client program: s b - . - 4 - r -
+25:[2020-11-11 08:59:55] <info> Got output from client program: 1.97,1.97,artificedev,1,1605111796,8G,,753,98,54685,4,26380,9,3673,99,53868,14,2231,48,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19837us,5979ms,5810ms,4424us,26864us,1013ms,131us,705us,319us,133us,36us,65us
+26:[2020-11-11 08:59:55] <debug> [PI 0] new reading: 54685
+27:[2020-11-11 08:59:55] <info> Finished workload round 1
+28:[2020-11-11 08:59:55] <debug> [PI 0] has no unit readings data in round 1
+29:[2020-11-11 08:59:55] <info> [PI 0] analyzing results
+30:[2020-11-11 08:59:55] <debug> Need more than 3 samples to calculate required sample size
+31:[2020-11-11 08:59:55] <debug> Need more than 3 samples to calculate required sample size
+32:[2020-11-11 08:59:55] <debug> refresh_wps_analysis_results(): need more than 3 rounds data for WPS analysis
+33:[2020-11-11 08:59:55] <info> 1   | throughput: 
+34:[2020-11-11 08:59:55] <debug> No need to refresh analytical result
+35:[2020-11-11 08:59:55] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+36:[2020-11-11 08:59:55] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+37:[2020-11-11 08:59:55] <info> Starting workload round 2 with work_amount 0
+38:[2020-11-11 08:59:55] <debug> Executing client program: s b - . - 4 - r -
+39:[2020-11-11 09:10:40] <info> Got output from client program: 1.97,1.97,artificedev,1,1605108400,8G,,723,98,55239,4,25759,9,3521,98,54503,14,1906,49,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17094us,5312ms,6441ms,7528us,19217us,1013ms,7683us,452us,365us,1138us,53us,62us
+40:[2020-11-11 09:10:40] <debug> [PI 0] new reading: 55239
+41:[2020-11-11 09:10:40] <info> Finished workload round 2
+42:[2020-11-11 09:10:40] <debug> [PI 0] has no unit readings data in round 2
+43:[2020-11-11 09:10:40] <info> [PI 0] analyzing results
+44:[2020-11-11 09:10:40] <debug> No need to refresh analytical result
+45:[2020-11-11 09:10:40] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.639415
+46:[2020-11-11 09:10:40] <debug> Don't have enough data to calculate required readings sample size yet
+47:[2020-11-11 09:10:40] <debug> No need to refresh analytical result
+48:[2020-11-11 09:10:40] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.639415
+49:[2020-11-11 09:10:40] <debug> Don't have enough data to calculate required readings sample size yet
+50:[2020-11-11 09:10:40] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+51:[2020-11-11 09:10:40] <info> 2   | throughput: 
+52:[2020-11-11 09:10:40] <debug> No need to refresh analytical result
+53:[2020-11-11 09:10:40] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+54:[2020-11-11 09:10:40] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+55:[2020-11-11 09:10:40] <info> Starting workload round 3 with work_amount 0
+56:[2020-11-11 09:10:40] <debug> Executing client program: s b - . - 4 - r -
+57:[2020-11-11 09:21:22] <info> Got output from client program: 1.97,1.97,artificedev,1,1605108078,8G,,765,98,53273,3,26387,9,3542,94,54561,14,2213,55,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,15678us,12274ms,8633ms,39118us,81816us,1015ms,239us,729us,701us,54us,23us,50us
+58:[2020-11-11 09:21:22] <debug> [PI 0] new reading: 53273
+59:[2020-11-11 09:21:22] <info> Finished workload round 3
+60:[2020-11-11 09:21:22] <debug> [PI 0] has no unit readings data in round 3
+61:[2020-11-11 09:21:22] <info> [PI 0] analyzing results
+62:[2020-11-11 09:21:22] <debug> No need to refresh analytical result
+63:[2020-11-11 09:21:22] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.300434
+64:[2020-11-11 09:21:22] <debug> Don't have enough data to calculate required readings sample size yet
+65:[2020-11-11 09:21:22] <debug> No need to refresh analytical result
+66:[2020-11-11 09:21:22] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.300434
+67:[2020-11-11 09:21:22] <debug> Don't have enough data to calculate required readings sample size yet
+68:[2020-11-11 09:21:22] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+69:[2020-11-11 09:21:22] <info> 3   | throughput: 
+70:[2020-11-11 09:21:22] <debug> No need to refresh analytical result
+71:[2020-11-11 09:21:22] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+72:[2020-11-11 09:21:22] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+73:[2020-11-11 09:21:22] <info> Starting workload round 4 with work_amount 0
+74:[2020-11-11 09:21:22] <debug> Executing client program: s b - . - 4 - r -
+75:[2020-11-11 09:31:46] <info> Got output from client program: 1.97,1.97,artificedev,1,1605109588,8G,,772,98,58375,4,26551,9,3996,99,55757,14,1914,49,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17537us,3913ms,6952ms,5461us,24032us,1013ms,3935us,395us,293us,106us,37us,58us
+76:[2020-11-11 09:31:46] <debug> [PI 0] new reading: 58375
+77:[2020-11-11 09:31:46] <info> Finished workload round 4
+78:[2020-11-11 09:31:46] <debug> [PI 0] has no unit readings data in round 4
+79:[2020-11-11 09:31:46] <info> [PI 0] analyzing results
+80:[2020-11-11 09:31:46] <debug> No need to refresh analytical result
+81:[2020-11-11 09:31:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.419367
+82:[2020-11-11 09:31:46] <debug> Don't have enough data to calculate required readings sample size yet
+83:[2020-11-11 09:31:46] <debug> No need to refresh analytical result
+84:[2020-11-11 09:31:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.419367
+85:[2020-11-11 09:31:46] <debug> Don't have enough data to calculate required readings sample size yet
+86:[2020-11-11 09:31:46] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+87:[2020-11-11 09:31:46] <info> 4   | throughput: R m5.534e+04 c v 
+88:[2020-11-11 09:31:46] <debug> No need to refresh analytical result
+89:[2020-11-11 09:31:46] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+90:[2020-11-11 09:31:46] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+91:[2020-11-11 09:31:46] <info> Starting workload round 5 with work_amount 0
+92:[2020-11-11 09:31:46] <debug> Executing client program: s b - . - 4 - r -
+93:[2020-11-11 09:42:31] <info> Got output from client program: 1.97,1.97,artificedev,1,1605122815,8G,,792,98,54905,3,26059,9,3757,98,53355,14,2012,52,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17758us,7299ms,8440ms,9831us,22049us,1014ms,1382us,888us,317us,599us,33us,1105us
+94:[2020-11-11 09:42:31] <debug> [PI 0] new reading: 54905
+95:[2020-11-11 09:42:31] <info> Finished workload round 5
+96:[2020-11-11 09:42:31] <debug> [PI 0] has no unit readings data in round 5
+97:[2020-11-11 09:42:31] <info> [PI 0] analyzing results
+98:[2020-11-11 09:42:31] <debug> No need to refresh analytical result
+99:[2020-11-11 09:42:31] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.507165
+100:[2020-11-11 09:42:31] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.335809
+101:[2020-11-11 09:42:31] <debug> Don't have enough data to calculate required readings sample size yet
+102:[2020-11-11 09:42:31] <debug> No need to refresh analytical result
+103:[2020-11-11 09:42:31] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.507165
+104:[2020-11-11 09:42:31] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.335809
+105:[2020-11-11 09:42:31] <debug> Don't have enough data to calculate required readings sample size yet
+106:[2020-11-11 09:42:31] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+107:[2020-11-11 09:42:31] <info> 5   | throughput: R m5.527e+04 c v 
+108:[2020-11-11 09:42:31] <debug> No need to refresh analytical result
+109:[2020-11-11 09:42:31] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+110:[2020-11-11 09:42:31] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+111:[2020-11-11 09:42:31] <info> Starting workload round 6 with work_amount 0
+112:[2020-11-11 09:42:31] <debug> Executing client program: s b - . - 4 - r -
+113:[2020-11-11 09:53:50] <info> Got output from client program: 1.97,1.97,artificedev,1,1605122487,8G,,706,98,51075,3,25416,9,3408,97,49086,13,1964,56,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18252us,6697ms,5587ms,14847us,243ms,1013ms,8125us,813us,330us,82us,132us,139us
+114:[2020-11-11 09:53:50] <debug> [PI 0] new reading: 51075
+115:[2020-11-11 09:53:50] <info> Finished workload round 6
+116:[2020-11-11 09:53:50] <debug> [PI 0] has no unit readings data in round 6
+117:[2020-11-11 09:53:50] <info> [PI 0] analyzing results
+118:[2020-11-11 09:53:50] <debug> No need to refresh analytical result
+119:[2020-11-11 09:53:50] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.202912
+120:[2020-11-11 09:53:50] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.220808
+121:[2020-11-11 09:53:50] <debug> Don't have enough data to calculate required readings sample size yet
+122:[2020-11-11 09:53:50] <debug> No need to refresh analytical result
+123:[2020-11-11 09:53:50] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.202912
+124:[2020-11-11 09:53:50] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.220808
+125:[2020-11-11 09:53:50] <debug> Don't have enough data to calculate required readings sample size yet
+126:[2020-11-11 09:53:50] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+127:[2020-11-11 09:53:50] <info> 6   | throughput: R m5.467e+04 c v 
+128:[2020-11-11 09:53:50] <debug> No need to refresh analytical result
+129:[2020-11-11 09:53:50] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+130:[2020-11-11 09:53:50] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+131:[2020-11-11 09:53:50] <info> Starting workload round 7 with work_amount 0
+132:[2020-11-11 09:53:50] <debug> Executing client program: s b - . - 4 - r -
+133:[2020-11-11 10:04:36] <info> Got output from client program: 1.97,1.97,artificedev,1,1605123677,8G,,788,98,56522,3,25585,9,3687,98,53512,14,2104,53,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,16402us,2435ms,10662ms,7687us,158ms,1013ms,795us,714us,340us,691us,38us,1026us
+134:[2020-11-11 10:04:36] <debug> [PI 0] new reading: 56522
+135:[2020-11-11 10:04:36] <info> Finished workload round 7
+136:[2020-11-11 10:04:36] <debug> [PI 0] has no unit readings data in round 7
+137:[2020-11-11 10:04:36] <info> [PI 0] analyzing results
+138:[2020-11-11 10:04:36] <debug> No need to refresh analytical result
+139:[2020-11-11 10:04:36] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.389288
+140:[2020-11-11 10:04:36] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.652631
+141:[2020-11-11 10:04:36] <debug> Don't have enough data to calculate required readings sample size yet
+142:[2020-11-11 10:04:36] <debug> No need to refresh analytical result
+143:[2020-11-11 10:04:36] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.389288
+144:[2020-11-11 10:04:36] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.652631
+145:[2020-11-11 10:04:36] <debug> Don't have enough data to calculate required readings sample size yet
+146:[2020-11-11 10:04:36] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+147:[2020-11-11 10:04:36] <info> 7   | throughput: R m5.49e+04 c v 
+148:[2020-11-11 10:04:36] <debug> No need to refresh analytical result
+149:[2020-11-11 10:04:36] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+150:[2020-11-11 10:04:36] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+151:[2020-11-11 10:04:36] <info> Starting workload round 8 with work_amount 0
+152:[2020-11-11 10:04:36] <debug> Executing client program: s b - . - 4 - r -
+153:[2020-11-11 10:15:29] <info> Got output from client program: 1.97,1.97,artificedev,1,1605123093,8G,,758,98,54428,3,25548,9,3825,99,53259,14,2133,53,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,20105us,7875ms,8576ms,4688us,24938us,1013ms,5774us,422us,432us,100us,22us,87us
+154:[2020-11-11 10:15:29] <debug> [PI 0] new reading: 54428
+155:[2020-11-11 10:15:29] <info> Finished workload round 8
+156:[2020-11-11 10:15:29] <debug> [PI 0] has no unit readings data in round 8
+157:[2020-11-11 10:15:29] <info> [PI 0] analyzing results
+158:[2020-11-11 10:15:29] <debug> No need to refresh analytical result
+159:[2020-11-11 10:15:29] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.41097
+160:[2020-11-11 10:15:29] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.637018
+161:[2020-11-11 10:15:29] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.380736
+162:[2020-11-11 10:15:29] <debug> Don't have enough data to calculate required readings sample size yet
+163:[2020-11-11 10:15:29] <debug> No need to refresh analytical result
+164:[2020-11-11 10:15:29] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.41097
+165:[2020-11-11 10:15:29] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.637018
+166:[2020-11-11 10:15:29] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.380736
+167:[2020-11-11 10:15:29] <debug> Don't have enough data to calculate required readings sample size yet
+168:[2020-11-11 10:15:29] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+169:[2020-11-11 10:15:29] <info> 8   | throughput: R m5.485e+04 c v 
+170:[2020-11-11 10:15:29] <debug> No need to refresh analytical result
+171:[2020-11-11 10:15:29] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+172:[2020-11-11 10:15:29] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+173:[2020-11-11 10:15:29] <info> Starting workload round 9 with work_amount 0
+174:[2020-11-11 10:15:29] <debug> Executing client program: s b - . - 4 - r -
+175:[2020-11-11 10:26:00] <info> Got output from client program: 1.97,1.97,artificedev,1,1605120402,8G,,733,98,55844,4,26621,9,4048,98,55024,14,2127,54,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18599us,2361ms,5797ms,5782us,20839us,1012ms,2600us,733us,307us,153us,41us,1470us
+176:[2020-11-11 10:26:00] <debug> [PI 0] new reading: 55844
+177:[2020-11-11 10:26:00] <info> Finished workload round 9
+178:[2020-11-11 10:26:00] <debug> [PI 0] has no unit readings data in round 9
+179:[2020-11-11 10:26:00] <info> [PI 0] analyzing results
+180:[2020-11-11 10:26:00] <debug> No need to refresh analytical result
+181:[2020-11-11 10:26:00] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.411953
+182:[2020-11-11 10:26:00] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.702271
+183:[2020-11-11 10:26:00] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.410155
+184:[2020-11-11 10:26:00] <debug> Don't have enough data to calculate required readings sample size yet
+185:[2020-11-11 10:26:00] <debug> No need to refresh analytical result
+186:[2020-11-11 10:26:00] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.411953
+187:[2020-11-11 10:26:00] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.702271
+188:[2020-11-11 10:26:00] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.410155
+189:[2020-11-11 10:26:00] <debug> Don't have enough data to calculate required readings sample size yet
+190:[2020-11-11 10:26:00] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+191:[2020-11-11 10:26:00] <info> 9   | throughput: R m5.495e+04 c v 
+192:[2020-11-11 10:26:00] <debug> No need to refresh analytical result
+193:[2020-11-11 10:26:00] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+194:[2020-11-11 10:26:00] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+195:[2020-11-11 10:26:00] <info> Starting workload round 10 with work_amount 0
+196:[2020-11-11 10:26:00] <debug> Executing client program: s b - . - 4 - r -
+197:[2020-11-11 10:36:32] <info> Got output from client program: 1.97,1.97,artificedev,1,1605120189,8G,,783,98,57817,3,25966,8,4257,98,55731,13,2023,56,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,16355us,2277ms,7584ms,3641us,20755us,1013ms,5578us,802us,535us,735us,25us,53us
+198:[2020-11-11 10:36:32] <debug> [PI 0] new reading: 57817
+199:[2020-11-11 10:36:32] <info> Finished workload round 10
+200:[2020-11-11 10:36:32] <debug> [PI 0] has no unit readings data in round 10
+201:[2020-11-11 10:36:32] <info> [PI 0] analyzing results
+202:[2020-11-11 10:36:32] <debug> No need to refresh analytical result
+203:[2020-11-11 10:36:32] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.273678
+204:[2020-11-11 10:36:32] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.593277
+205:[2020-11-11 10:36:32] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.274596
+206:[2020-11-11 10:36:32] <debug> Don't have enough data to calculate required readings sample size yet
+207:[2020-11-11 10:36:32] <debug> No need to refresh analytical result
+208:[2020-11-11 10:36:32] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.273678
+209:[2020-11-11 10:36:32] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.593277
+210:[2020-11-11 10:36:32] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.274596
+211:[2020-11-11 10:36:32] <debug> Don't have enough data to calculate required readings sample size yet
+212:[2020-11-11 10:36:32] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+213:[2020-11-11 10:36:32] <info> 10  | throughput: R m5.521e+04 c v 
+214:[2020-11-11 10:36:32] <debug> No need to refresh analytical result
+215:[2020-11-11 10:36:32] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+216:[2020-11-11 10:36:32] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+217:[2020-11-11 10:36:32] <info> Starting workload round 11 with work_amount 0
+218:[2020-11-11 10:36:32] <debug> Executing client program: s b - . - 4 - r -
+219:[2020-11-11 10:46:58] <info> Got output from client program: 1.97,1.97,artificedev,1,1605120773,8G,,724,98,56657,3,26742,9,3806,99,55578,14,2123,67,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19088us,4313ms,8499ms,4392us,46586us,1013ms,730us,439us,315us,211us,16us,71us
+220:[2020-11-11 10:46:58] <debug> [PI 0] new reading: 56657
+221:[2020-11-11 10:46:58] <info> Finished workload round 11
+222:[2020-11-11 10:46:58] <debug> [PI 0] has no unit readings data in round 11
+223:[2020-11-11 10:46:58] <info> [PI 0] analyzing results
+224:[2020-11-11 10:46:58] <debug> No need to refresh analytical result
+225:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.173357
+226:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.333987
+227:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.559156
+228:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: -0.00910347
+229:[2020-11-11 10:46:58] <trace> optimal subsession size (q) = 4
+230:[2020-11-11 10:46:58] <trace> T score for 95% confidence level = 4.30265
+231:[2020-11-11 10:46:58] <trace> expected CI width: 11065.7
+232:[2020-11-11 10:46:58] <trace> number of samples required: 4 (desired sample size 1 x opt. subsession size 4)
+233:[2020-11-11 10:46:58] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+234:[2020-11-11 10:46:58] <debug> High autocorrelation detected, merging every 4 samples to reduce autocorrelation
+235:[2020-11-11 10:46:58] <debug> Required reading size = subsession size (4) x required subsession sample size (30) = 120
+236:[2020-11-11 10:46:58] <debug> No need to refresh analytical result
+237:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.173357
+238:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.333987
+239:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.559156
+240:[2020-11-11 10:46:58] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: -0.00910347
+241:[2020-11-11 10:46:58] <trace> optimal subsession size (q) = 4
+242:[2020-11-11 10:46:58] <trace> T score for 95% confidence level = 4.30265
+243:[2020-11-11 10:46:58] <trace> expected CI width: 11065.7
+244:[2020-11-11 10:46:58] <trace> number of samples required: 4 (desired sample size 1 x opt. subsession size 4)
+245:[2020-11-11 10:46:58] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+246:[2020-11-11 10:46:58] <debug> High autocorrelation detected, merging every 4 samples to reduce autocorrelation
+247:[2020-11-11 10:46:58] <debug> Required reading size = subsession size (4) x required subsession sample size (30) = 120
+248:[2020-11-11 10:46:58] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+249:[2020-11-11 10:46:58] <info> 11  | throughput: R m5.533e+04 c4020 v6.546e+05 
+250:[2020-11-11 10:46:58] <debug> No need to refresh analytical result
+251:[2020-11-11 10:46:58] <debug> [PI 0] required readings sample size (-1 means not enough data): 120
+252:[2020-11-11 10:46:58] <info> [PI 0] needs 108 more readings
+253:[2020-11-11 10:46:58] <info> Starting workload round 12 with work_amount 0
+254:[2020-11-11 10:46:58] <debug> Executing client program: s b - . - 4 - r -
+255:[2020-11-11 10:57:30] <info> Got output from client program: 1.97,1.97,artificedev,1,1605119427,8G,,784,98,57658,4,26279,9,3811,98,54299,13,1866,48,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17004us,2413ms,5914ms,7359us,27197us,1013ms,4817us,444us,293us,1016us,32us,1030us
+256:[2020-11-11 10:57:30] <debug> [PI 0] new reading: 57658
+257:[2020-11-11 10:57:30] <info> Finished workload round 12
+258:[2020-11-11 10:57:30] <debug> [PI 0] has no unit readings data in round 12
+259:[2020-11-11 10:57:30] <info> [PI 0] analyzing results
+260:[2020-11-11 10:57:30] <debug> No need to refresh analytical result
+261:[2020-11-11 10:57:30] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.0917369
+262:[2020-11-11 10:57:30] <trace> optimal subsession size (q) = 1
+263:[2020-11-11 10:57:30] <trace> T score for 95% confidence level = 2.17881
+264:[2020-11-11 10:57:30] <trace> expected CI width: 11101.5
+265:[2020-11-11 10:57:30] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+266:[2020-11-11 10:57:30] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+267:[2020-11-11 10:57:30] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+268:[2020-11-11 10:57:30] <debug> No need to refresh analytical result
+269:[2020-11-11 10:57:30] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.0917369
+270:[2020-11-11 10:57:30] <trace> optimal subsession size (q) = 1
+271:[2020-11-11 10:57:30] <trace> T score for 95% confidence level = 2.17881
+272:[2020-11-11 10:57:30] <trace> expected CI width: 11101.5
+273:[2020-11-11 10:57:30] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+274:[2020-11-11 10:57:30] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+275:[2020-11-11 10:57:30] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+276:[2020-11-11 10:57:30] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+277:[2020-11-11 10:57:30] <info> 12  | throughput: R m5.551e+04 c2410 v3.976e+06 
+278:[2020-11-11 10:57:30] <debug> No need to refresh analytical result
+279:[2020-11-11 10:57:30] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+280:[2020-11-11 10:57:30] <info> [PI 0] needs 17 more readings
+281:[2020-11-11 10:57:30] <info> Starting workload round 13 with work_amount 0
+282:[2020-11-11 10:57:30] <debug> Executing client program: s b - . - 4 - r -
+283:[2020-11-11 11:08:13] <info> Got output from client program: 1.97,1.97,artificedev,1,1605118091,8G,,811,98,53947,3,26472,9,3762,99,53511,14,2036,59,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,16703us,7011ms,4464ms,7431us,31006us,1063ms,5244us,952us,891us,111us,39us,41us
+284:[2020-11-11 11:08:13] <debug> [PI 0] new reading: 53947
+285:[2020-11-11 11:08:13] <info> Finished workload round 13
+286:[2020-11-11 11:08:13] <debug> [PI 0] has no unit readings data in round 13
+287:[2020-11-11 11:08:13] <info> [PI 0] analyzing results
+288:[2020-11-11 11:08:13] <debug> No need to refresh analytical result
+289:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.154127
+290:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.232978
+291:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.533884
+292:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.00351492
+293:[2020-11-11 11:08:13] <trace> optimal subsession size (q) = 4
+294:[2020-11-11 11:08:13] <trace> T score for 95% confidence level = 4.30265
+295:[2020-11-11 11:08:13] <trace> expected CI width: 11079.2
+296:[2020-11-11 11:08:13] <trace> number of samples required: 4 (desired sample size 1 x opt. subsession size 4)
+297:[2020-11-11 11:08:13] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+298:[2020-11-11 11:08:13] <debug> High autocorrelation detected, merging every 4 samples to reduce autocorrelation
+299:[2020-11-11 11:08:13] <debug> Required reading size = subsession size (4) x required subsession sample size (30) = 120
+300:[2020-11-11 11:08:13] <debug> No need to refresh analytical result
+301:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.154127
+302:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.232978
+303:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.533884
+304:[2020-11-11 11:08:13] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.00351492
+305:[2020-11-11 11:08:13] <trace> optimal subsession size (q) = 4
+306:[2020-11-11 11:08:13] <trace> T score for 95% confidence level = 4.30265
+307:[2020-11-11 11:08:13] <trace> expected CI width: 11079.2
+308:[2020-11-11 11:08:13] <trace> number of samples required: 4 (desired sample size 1 x opt. subsession size 4)
+309:[2020-11-11 11:08:13] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+310:[2020-11-11 11:08:13] <debug> High autocorrelation detected, merging every 4 samples to reduce autocorrelation
+311:[2020-11-11 11:08:13] <debug> Required reading size = subsession size (4) x required subsession sample size (30) = 120
+312:[2020-11-11 11:08:13] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+313:[2020-11-11 11:08:13] <info> 13  | throughput: R m5.54e+04 c4041 v6.614e+05 
+314:[2020-11-11 11:08:13] <debug> No need to refresh analytical result
+315:[2020-11-11 11:08:13] <debug> [PI 0] required readings sample size (-1 means not enough data): 120
+316:[2020-11-11 11:08:13] <info> [PI 0] needs 106 more readings
+317:[2020-11-11 11:08:13] <info> Starting workload round 14 with work_amount 0
+318:[2020-11-11 11:08:13] <debug> Executing client program: s b - . - 4 - r -
+319:[2020-11-11 11:18:52] <info> Got output from client program: 1.97,1.97,artificedev,1,1605118558,8G,,788,98,57785,3,25480,8,3517,98,55223,13,1929,48,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19119us,3943ms,8333ms,9216us,22234us,1063ms,2588us,427us,4203us,164us,42us,71us
+320:[2020-11-11 11:18:52] <debug> [PI 0] new reading: 57785
+321:[2020-11-11 11:18:52] <info> Finished workload round 14
+322:[2020-11-11 11:18:52] <debug> [PI 0] has no unit readings data in round 14
+323:[2020-11-11 11:18:52] <info> [PI 0] analyzing results
+324:[2020-11-11 11:18:52] <debug> No need to refresh analytical result
+325:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.203134
+326:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.213944
+327:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.140043
+328:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.0791879
+329:[2020-11-11 11:18:52] <trace> optimal subsession size (q) = 4
+330:[2020-11-11 11:18:52] <trace> T score for 95% confidence level = 4.30265
+331:[2020-11-11 11:18:52] <trace> expected CI width: 11111.1
+332:[2020-11-11 11:18:52] <trace> number of samples required: 4 (desired sample size 1 x opt. subsession size 4)
+333:[2020-11-11 11:18:52] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+334:[2020-11-11 11:18:52] <debug> High autocorrelation detected, merging every 4 samples to reduce autocorrelation
+335:[2020-11-11 11:18:52] <debug> Required reading size = subsession size (4) x required subsession sample size (30) = 120
+336:[2020-11-11 11:18:52] <debug> No need to refresh analytical result
+337:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.203134
+338:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.213944
+339:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.140043
+340:[2020-11-11 11:18:52] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.0791879
+341:[2020-11-11 11:18:52] <trace> optimal subsession size (q) = 4
+342:[2020-11-11 11:18:52] <trace> T score for 95% confidence level = 4.30265
+343:[2020-11-11 11:18:52] <trace> expected CI width: 11111.1
+344:[2020-11-11 11:18:52] <trace> number of samples required: 4 (desired sample size 1 x opt. subsession size 4)
+345:[2020-11-11 11:18:52] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+346:[2020-11-11 11:18:52] <debug> High autocorrelation detected, merging every 4 samples to reduce autocorrelation
+347:[2020-11-11 11:18:52] <debug> Required reading size = subsession size (4) x required subsession sample size (30) = 120
+348:[2020-11-11 11:18:52] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+349:[2020-11-11 11:18:52] <info> 14  | throughput: R m5.556e+04 c4250 v7.318e+05 
+350:[2020-11-11 11:18:52] <debug> No need to refresh analytical result
+351:[2020-11-11 11:18:52] <debug> [PI 0] required readings sample size (-1 means not enough data): 120
+352:[2020-11-11 11:18:52] <info> [PI 0] needs 105 more readings
+353:[2020-11-11 11:18:52] <info> Starting workload round 15 with work_amount 0
+354:[2020-11-11 11:18:52] <debug> Executing client program: s b - . - 4 - r -
+355:[2020-11-11 11:29:37] <info> Got output from client program: 1.97,1.97,artificedev,1,1605116947,8G,,794,98,53980,3,25979,9,3498,99,54770,14,2140,59,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,15620us,9036ms,8215ms,5598us,21444us,1013ms,820us,311us,399us,288us,20us,163us
+356:[2020-11-11 11:29:37] <debug> [PI 0] new reading: 53980
+357:[2020-11-11 11:29:37] <info> Finished workload round 15
+358:[2020-11-11 11:29:37] <debug> [PI 0] has no unit readings data in round 15
+359:[2020-11-11 11:29:37] <info> [PI 0] analyzing results
+360:[2020-11-11 11:29:37] <debug> No need to refresh analytical result
+361:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.255312
+362:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.210576
+363:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.138183
+364:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.209937
+365:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 5, auto. cor. coef.: -0.422112
+366:[2020-11-11 11:29:37] <debug> Don't have enough data to calculate required readings sample size yet
+367:[2020-11-11 11:29:37] <debug> No need to refresh analytical result
+368:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.255312
+369:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.210576
+370:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.138183
+371:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.209937
+372:[2020-11-11 11:29:37] <trace> pilot_optimal_subsession_size(): subsession size: 5, auto. cor. coef.: -0.422112
+373:[2020-11-11 11:29:37] <debug> Don't have enough data to calculate required readings sample size yet
+374:[2020-11-11 11:29:37] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+375:[2020-11-11 11:29:37] <info> 15  | throughput: R m5.546e+04 c v 
+376:[2020-11-11 11:29:37] <debug> No need to refresh analytical result
+377:[2020-11-11 11:29:37] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+378:[2020-11-11 11:29:37] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+379:[2020-11-11 11:29:37] <info> Starting workload round 16 with work_amount 0
+380:[2020-11-11 11:29:37] <debug> Executing client program: s b - . - 4 - r -
+381:[2020-11-11 11:40:14] <info> Got output from client program: 1.97,1.97,artificedev,1,1605117664,8G,,740,99,56314,3,26149,9,4000,98,54452,14,1997,51,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18321us,4912ms,9088ms,7848us,31949us,1012ms,1456us,668us,2727us,414us,145us,416us
+382:[2020-11-11 11:40:14] <debug> [PI 0] new reading: 56314
+383:[2020-11-11 11:40:14] <info> Finished workload round 16
+384:[2020-11-11 11:40:14] <debug> [PI 0] has no unit readings data in round 16
+385:[2020-11-11 11:40:14] <info> [PI 0] analyzing results
+386:[2020-11-11 11:40:14] <debug> No need to refresh analytical result
+387:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.274325
+388:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.208932
+389:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.141404
+390:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.197213
+391:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 5, auto. cor. coef.: -0.411739
+392:[2020-11-11 11:40:14] <debug> Don't have enough data to calculate required readings sample size yet
+393:[2020-11-11 11:40:14] <debug> No need to refresh analytical result
+394:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.274325
+395:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.208932
+396:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.141404
+397:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.197213
+398:[2020-11-11 11:40:14] <trace> pilot_optimal_subsession_size(): subsession size: 5, auto. cor. coef.: -0.411739
+399:[2020-11-11 11:40:14] <debug> Don't have enough data to calculate required readings sample size yet
+400:[2020-11-11 11:40:14] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+401:[2020-11-11 11:40:14] <info> 16  | throughput: R m5.551e+04 c v 
+402:[2020-11-11 11:40:14] <debug> No need to refresh analytical result
+403:[2020-11-11 11:40:14] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+404:[2020-11-11 11:40:14] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+405:[2020-11-11 11:40:14] <info> Starting workload round 17 with work_amount 0
+406:[2020-11-11 11:40:14] <debug> Executing client program: s b - . - 4 - r -
+407:[2020-11-11 11:50:46] <info> Got output from client program: 1.97,1.97,artificedev,1,1605116783,8G,,756,98,54878,3,27141,9,3440,98,53538,14,2703,69,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,23433us,4579ms,8219ms,7149us,21836us,1016ms,17593us,375us,2398us,1834us,6381us,897us
+408:[2020-11-11 11:50:46] <debug> [PI 0] new reading: 54878
+409:[2020-11-11 11:50:46] <info> Finished workload round 17
+410:[2020-11-11 11:50:46] <debug> [PI 0] has no unit readings data in round 17
+411:[2020-11-11 11:50:46] <info> [PI 0] analyzing results
+412:[2020-11-11 11:50:46] <debug> No need to refresh analytical result
+413:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.281017
+414:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.204885
+415:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.214142
+416:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.20524
+417:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 5, auto. cor. coef.: -0.419642
+418:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 6, auto. cor. coef.: -0.0507719
+419:[2020-11-11 11:50:46] <trace> optimal subsession size (q) = 6
+420:[2020-11-11 11:50:46] <trace> T score for 95% confidence level = 4.30265
+421:[2020-11-11 11:50:46] <trace> expected CI width: 11094.5
+422:[2020-11-11 11:50:46] <trace> number of samples required: 6 (desired sample size 1 x opt. subsession size 6)
+423:[2020-11-11 11:50:46] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+424:[2020-11-11 11:50:46] <debug> High autocorrelation detected, merging every 6 samples to reduce autocorrelation
+425:[2020-11-11 11:50:46] <debug> Required reading size = subsession size (6) x required subsession sample size (30) = 180
+426:[2020-11-11 11:50:46] <debug> No need to refresh analytical result
+427:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.281017
+428:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.204885
+429:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 3, auto. cor. coef.: -0.214142
+430:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 4, auto. cor. coef.: 0.20524
+431:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 5, auto. cor. coef.: -0.419642
+432:[2020-11-11 11:50:46] <trace> pilot_optimal_subsession_size(): subsession size: 6, auto. cor. coef.: -0.0507719
+433:[2020-11-11 11:50:46] <trace> optimal subsession size (q) = 6
+434:[2020-11-11 11:50:46] <trace> T score for 95% confidence level = 4.30265
+435:[2020-11-11 11:50:46] <trace> expected CI width: 11094.5
+436:[2020-11-11 11:50:46] <trace> number of samples required: 6 (desired sample size 1 x opt. subsession size 6)
+437:[2020-11-11 11:50:46] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+438:[2020-11-11 11:50:46] <debug> High autocorrelation detected, merging every 6 samples to reduce autocorrelation
+439:[2020-11-11 11:50:46] <debug> Required reading size = subsession size (6) x required subsession sample size (30) = 180
+440:[2020-11-11 11:50:46] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+441:[2020-11-11 11:50:46] <info> 17  | throughput: R m5.547e+04 c1277 v6.604e+04 
+442:[2020-11-11 11:50:46] <debug> No need to refresh analytical result
+443:[2020-11-11 11:50:46] <debug> [PI 0] required readings sample size (-1 means not enough data): 180
+444:[2020-11-11 11:50:46] <info> [PI 0] needs 162 more readings
+445:[2020-11-11 11:50:46] <info> Starting workload round 18 with work_amount 0
+446:[2020-11-11 11:50:46] <debug> Executing client program: s b - . - 4 - r -
+447:[2020-11-11 11:54:38] <error> Client program returned 5
+448:[2020-11-11 11:54:38] <info> Finished workload round 18
+449:[2020-11-11 11:54:38] <debug> No need to refresh analytical result

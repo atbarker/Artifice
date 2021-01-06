@@ -1,0 +1,921 @@
+1:[2020-11-12 06:57:19] <info> Saving results to directory pilot_result_20201112_145719
+2:[2020-11-12 06:57:19] <info> Pilot 0.14 (compiled by gcc-7.3.1 on Apr  1 2019)
+3:[2020-11-12 06:57:19] <debug> Program path and args: sudo bonnie++ -d ../test -r 4096 -u root -q
+4:[2020-11-12 06:57:19] <debug> Total number of PIs: 1
+5:[2020-11-12 06:57:19] <debug> PI[0] name: throughput, unit: KB/s, reading must satisfy: yes, mean method: harmonic
+6:[2020-11-12 06:57:19] <info> Preset mode activated: quick
+7:[2020-11-12 06:57:19] <info> Setting the required width of confidence interval to 90% of mean
+8:[2020-11-12 06:57:19] <info> Setting the limit of autocorrelation coefficient to 0.8
+9:[2020-11-12 06:57:19] <info> Setting the required minimum subsession sample size to 30
+10:[2020-11-12 06:57:19] <info> Disabled short round detection because work amount information is not set.
+11:[2020-11-12 06:57:19] <info> Starting workload round 0 with work_amount 0
+12:[2020-11-12 06:57:19] <debug> Executing client program: s b - . - 4 - r -
+13:[2020-11-12 07:04:46] <info> Got output from client program: 1.97,1.97,artificedev,1,1605179572,8G,,582,99,109040,9,37480,12,3035,99,62325,14,3888,100,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,29148us,2049ms,2115ms,4852us,30679us,140ms,7508us,426us,450us,147us,138us,148us
+14:[2020-11-12 07:04:46] <debug> [PI 0] new reading: 62325
+15:[2020-11-12 07:04:46] <info> Finished workload round 0
+16:[2020-11-12 07:04:46] <debug> [PI 0] has no unit readings data in round 0
+17:[2020-11-12 07:04:46] <info> [PI 0] analyzing results
+18:[2020-11-12 07:04:46] <debug> refresh_wps_analysis_results(): need more than 3 rounds data for WPS analysis
+19:[2020-11-12 07:04:46] <info> 0   | throughput: 
+20:[2020-11-12 07:04:46] <debug> No need to refresh analytical result
+21:[2020-11-12 07:04:46] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+22:[2020-11-12 07:04:46] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+23:[2020-11-12 07:04:46] <info> Starting workload round 1 with work_amount 0
+24:[2020-11-12 07:04:47] <debug> Executing client program: s b - . - 4 - r -
+25:[2020-11-12 07:11:34] <info> Got output from client program: 1.97,1.97,artificedev,1,1605179671,8G,,632,99,106614,9,40619,13,3249,99,76131,18,4835,111,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,29312us,2295ms,3355ms,7038us,13102us,20091us,897us,298us,519us,92us,30us,3628us
+26:[2020-11-12 07:11:34] <debug> [PI 0] new reading: 76131
+27:[2020-11-12 07:11:34] <info> Finished workload round 1
+28:[2020-11-12 07:11:34] <debug> [PI 0] has no unit readings data in round 1
+29:[2020-11-12 07:11:34] <info> [PI 0] analyzing results
+30:[2020-11-12 07:11:34] <debug> Need more than 3 samples to calculate required sample size
+31:[2020-11-12 07:11:34] <debug> Need more than 3 samples to calculate required sample size
+32:[2020-11-12 07:11:34] <debug> refresh_wps_analysis_results(): need more than 3 rounds data for WPS analysis
+33:[2020-11-12 07:11:34] <info> 1   | throughput: 
+34:[2020-11-12 07:11:34] <debug> No need to refresh analytical result
+35:[2020-11-12 07:11:34] <debug> [PI 0] required readings sample size (-1 means not enough data): -1
+36:[2020-11-12 07:11:34] <info> [PI 0] doesn't have enough readings for calculating required sample size, continuing to next round
+37:[2020-11-12 07:11:34] <info> Starting workload round 2 with work_amount 0
+38:[2020-11-12 07:11:34] <debug> Executing client program: s b - . - 4 - r -
+39:[2020-11-12 07:17:41] <info> Got output from client program: 1.97,1.97,artificedev,1,1605174934,8G,,776,98,131244,9,44942,13,3643,99,79631,17,3473,79,16,,,,,30779,29,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,22326us,1811ms,2734ms,7072us,11356us,1018ms,133ms,633us,2087us,342us,56us,47us
+40:[2020-11-12 07:17:41] <debug> [PI 0] new reading: 79631
+41:[2020-11-12 07:17:41] <info> Finished workload round 2
+42:[2020-11-12 07:17:41] <debug> [PI 0] has no unit readings data in round 2
+43:[2020-11-12 07:17:41] <info> [PI 0] analyzing results
+44:[2020-11-12 07:17:41] <debug> No need to refresh analytical result
+45:[2020-11-12 07:17:41] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.0704774
+46:[2020-11-12 07:17:41] <trace> optimal subsession size (q) = 1
+47:[2020-11-12 07:17:41] <trace> T score for 95% confidence level = 4.30265
+48:[2020-11-12 07:17:41] <trace> expected CI width: 65426.1
+49:[2020-11-12 07:17:41] <trace> number of samples required: 2 (desired sample size 2 x opt. subsession size 1)
+50:[2020-11-12 07:17:41] <debug> optimal sample size (2) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+51:[2020-11-12 07:17:41] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+52:[2020-11-12 07:17:41] <debug> No need to refresh analytical result
+53:[2020-11-12 07:17:41] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: -0.0704774
+54:[2020-11-12 07:17:41] <trace> optimal subsession size (q) = 1
+55:[2020-11-12 07:17:41] <trace> T score for 95% confidence level = 4.30265
+56:[2020-11-12 07:17:41] <trace> expected CI width: 65426.1
+57:[2020-11-12 07:17:41] <trace> number of samples required: 2 (desired sample size 2 x opt. subsession size 1)
+58:[2020-11-12 07:17:41] <debug> optimal sample size (2) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+59:[2020-11-12 07:17:41] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+60:[2020-11-12 07:17:41] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+61:[2020-11-12 07:17:41] <info> 2   | throughput: 
+62:[2020-11-12 07:17:41] <debug> No need to refresh analytical result
+63:[2020-11-12 07:17:41] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+64:[2020-11-12 07:17:41] <info> [PI 0] needs 27 more readings
+65:[2020-11-12 07:17:41] <info> Starting workload round 3 with work_amount 0
+66:[2020-11-12 07:17:41] <debug> Executing client program: s b - . - 4 - r -
+67:[2020-11-12 07:23:54] <info> Got output from client program: 1.97,1.97,artificedev,1,1605174352,8G,,723,99,128631,9,44502,14,3659,99,78103,17,2736,75,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17040us,1787ms,2727ms,4120us,18795us,1254ms,2325us,308us,390us,114us,571us,521us
+68:[2020-11-12 07:23:54] <debug> [PI 0] new reading: 78103
+69:[2020-11-12 07:23:54] <info> Finished workload round 3
+70:[2020-11-12 07:23:54] <debug> [PI 0] has no unit readings data in round 3
+71:[2020-11-12 07:23:54] <info> [PI 0] analyzing results
+72:[2020-11-12 07:23:54] <debug> No need to refresh analytical result
+73:[2020-11-12 07:23:54] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.052029
+74:[2020-11-12 07:23:54] <trace> optimal subsession size (q) = 1
+75:[2020-11-12 07:23:54] <trace> T score for 95% confidence level = 3.18245
+76:[2020-11-12 07:23:54] <trace> expected CI width: 66642.8
+77:[2020-11-12 07:23:54] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+78:[2020-11-12 07:23:54] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+79:[2020-11-12 07:23:54] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+80:[2020-11-12 07:23:54] <debug> No need to refresh analytical result
+81:[2020-11-12 07:23:54] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.052029
+82:[2020-11-12 07:23:54] <trace> optimal subsession size (q) = 1
+83:[2020-11-12 07:23:54] <trace> T score for 95% confidence level = 3.18245
+84:[2020-11-12 07:23:54] <trace> expected CI width: 66642.8
+85:[2020-11-12 07:23:54] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+86:[2020-11-12 07:23:54] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+87:[2020-11-12 07:23:54] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+88:[2020-11-12 07:23:54] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+89:[2020-11-12 07:23:54] <info> 3   | throughput: 
+90:[2020-11-12 07:23:54] <debug> No need to refresh analytical result
+91:[2020-11-12 07:23:54] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+92:[2020-11-12 07:23:54] <info> [PI 0] needs 26 more readings
+93:[2020-11-12 07:23:54] <info> Starting workload round 4 with work_amount 0
+94:[2020-11-12 07:23:54] <debug> Executing client program: s b - . - 4 - r -
+95:[2020-11-12 07:30:14] <info> Got output from client program: 1.97,1.97,artificedev,1,1605174739,8G,,701,99,126572,9,43864,14,3265,96,76492,17,3203,73,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19156us,2051ms,2811ms,33370us,132ms,1012ms,9150us,982us,343us,935us,55us,1287us
+96:[2020-11-12 07:30:14] <debug> [PI 0] new reading: 76492
+97:[2020-11-12 07:30:14] <info> Finished workload round 4
+98:[2020-11-12 07:30:14] <debug> [PI 0] has no unit readings data in round 4
+99:[2020-11-12 07:30:14] <info> [PI 0] analyzing results
+100:[2020-11-12 07:30:14] <debug> No need to refresh analytical result
+101:[2020-11-12 07:30:14] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0710585
+102:[2020-11-12 07:30:14] <trace> optimal subsession size (q) = 1
+103:[2020-11-12 07:30:14] <trace> T score for 95% confidence level = 2.77645
+104:[2020-11-12 07:30:14] <trace> expected CI width: 67082.8
+105:[2020-11-12 07:30:14] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+106:[2020-11-12 07:30:14] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+107:[2020-11-12 07:30:14] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+108:[2020-11-12 07:30:14] <debug> No need to refresh analytical result
+109:[2020-11-12 07:30:14] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0710585
+110:[2020-11-12 07:30:14] <trace> optimal subsession size (q) = 1
+111:[2020-11-12 07:30:14] <trace> T score for 95% confidence level = 2.77645
+112:[2020-11-12 07:30:14] <trace> expected CI width: 67082.8
+113:[2020-11-12 07:30:14] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+114:[2020-11-12 07:30:14] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+115:[2020-11-12 07:30:14] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+116:[2020-11-12 07:30:14] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+117:[2020-11-12 07:30:14] <info> 4   | throughput: R m7.454e+04 c1.73e+04 v4.854e+07 
+118:[2020-11-12 07:30:14] <debug> No need to refresh analytical result
+119:[2020-11-12 07:30:14] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+120:[2020-11-12 07:30:14] <info> [PI 0] needs 25 more readings
+121:[2020-11-12 07:30:14] <info> Starting workload round 5 with work_amount 0
+122:[2020-11-12 07:30:14] <debug> Executing client program: s b - . - 4 - r -
+123:[2020-11-12 07:36:31] <info> Got output from client program: 1.97,1.97,artificedev,1,1605174143,8G,,717,99,126296,9,44240,14,3572,96,77338,17,2826,66,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17539us,1964ms,2412ms,22489us,205ms,1421ms,5120us,291us,298us,461us,15us,83us
+124:[2020-11-12 07:36:31] <debug> [PI 0] new reading: 77338
+125:[2020-11-12 07:36:31] <info> Finished workload round 5
+126:[2020-11-12 07:36:31] <debug> [PI 0] has no unit readings data in round 5
+127:[2020-11-12 07:36:31] <info> [PI 0] analyzing results
+128:[2020-11-12 07:36:31] <debug> No need to refresh analytical result
+129:[2020-11-12 07:36:31] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0665448
+130:[2020-11-12 07:36:31] <trace> optimal subsession size (q) = 1
+131:[2020-11-12 07:36:31] <trace> T score for 95% confidence level = 2.57058
+132:[2020-11-12 07:36:31] <trace> expected CI width: 67503
+133:[2020-11-12 07:36:31] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+134:[2020-11-12 07:36:31] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+135:[2020-11-12 07:36:31] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+136:[2020-11-12 07:36:31] <debug> No need to refresh analytical result
+137:[2020-11-12 07:36:31] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0665448
+138:[2020-11-12 07:36:31] <trace> optimal subsession size (q) = 1
+139:[2020-11-12 07:36:31] <trace> T score for 95% confidence level = 2.57058
+140:[2020-11-12 07:36:31] <trace> expected CI width: 67503
+141:[2020-11-12 07:36:31] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+142:[2020-11-12 07:36:31] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+143:[2020-11-12 07:36:31] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+144:[2020-11-12 07:36:31] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+145:[2020-11-12 07:36:31] <info> 5   | throughput: R m7.5e+04 c1.33e+04 v4.014e+07 
+146:[2020-11-12 07:36:31] <debug> No need to refresh analytical result
+147:[2020-11-12 07:36:31] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+148:[2020-11-12 07:36:31] <info> [PI 0] needs 24 more readings
+149:[2020-11-12 07:36:31] <info> Starting workload round 6 with work_amount 0
+150:[2020-11-12 07:36:31] <debug> Executing client program: s b - . - 4 - r -
+151:[2020-11-12 07:42:45] <info> Got output from client program: 1.97,1.97,artificedev,1,1605173491,8G,,741,99,129309,9,43954,14,3953,96,79017,17,3369,81,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18697us,1822ms,1816ms,20696us,89304us,1012ms,123ms,797us,312us,123us,36us,94us
+152:[2020-11-12 07:42:45] <debug> [PI 0] new reading: 79017
+153:[2020-11-12 07:42:45] <info> Finished workload round 6
+154:[2020-11-12 07:42:45] <debug> [PI 0] has no unit readings data in round 6
+155:[2020-11-12 07:42:45] <info> [PI 0] analyzing results
+156:[2020-11-12 07:42:45] <debug> No need to refresh analytical result
+157:[2020-11-12 07:42:45] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0705233
+158:[2020-11-12 07:42:45] <trace> optimal subsession size (q) = 1
+159:[2020-11-12 07:42:45] <trace> T score for 95% confidence level = 2.44691
+160:[2020-11-12 07:42:45] <trace> expected CI width: 68019
+161:[2020-11-12 07:42:45] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+162:[2020-11-12 07:42:45] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+163:[2020-11-12 07:42:45] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+164:[2020-11-12 07:42:45] <debug> No need to refresh analytical result
+165:[2020-11-12 07:42:45] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0705233
+166:[2020-11-12 07:42:45] <trace> optimal subsession size (q) = 1
+167:[2020-11-12 07:42:45] <trace> T score for 95% confidence level = 2.44691
+168:[2020-11-12 07:42:45] <trace> expected CI width: 68019
+169:[2020-11-12 07:42:45] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+170:[2020-11-12 07:42:45] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+171:[2020-11-12 07:42:45] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+172:[2020-11-12 07:42:45] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+173:[2020-11-12 07:42:45] <info> 6   | throughput: R m7.558e+04 c1.106e+04 v3.575e+07 
+174:[2020-11-12 07:42:45] <debug> No need to refresh analytical result
+175:[2020-11-12 07:42:45] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+176:[2020-11-12 07:42:45] <info> [PI 0] needs 23 more readings
+177:[2020-11-12 07:42:45] <info> Starting workload round 7 with work_amount 0
+178:[2020-11-12 07:42:45] <debug> Executing client program: s b - . - 4 - r -
+179:[2020-11-12 07:49:03] <info> Got output from client program: 1.97,1.97,artificedev,1,1605173589,8G,,732,99,129775,9,44598,14,3765,93,75443,16,1812,55,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18608us,1960ms,1721ms,37601us,185ms,1139ms,813us,802us,313us,943us,39us,70us
+180:[2020-11-12 07:49:03] <debug> [PI 0] new reading: 75443
+181:[2020-11-12 07:49:03] <info> Finished workload round 7
+182:[2020-11-12 07:49:03] <debug> [PI 0] has no unit readings data in round 7
+183:[2020-11-12 07:49:03] <info> [PI 0] analyzing results
+184:[2020-11-12 07:49:03] <debug> No need to refresh analytical result
+185:[2020-11-12 07:49:03] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.069405
+186:[2020-11-12 07:49:03] <trace> optimal subsession size (q) = 1
+187:[2020-11-12 07:49:03] <trace> T score for 95% confidence level = 2.36462
+188:[2020-11-12 07:49:03] <trace> expected CI width: 68004
+189:[2020-11-12 07:49:03] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+190:[2020-11-12 07:49:03] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+191:[2020-11-12 07:49:03] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+192:[2020-11-12 07:49:03] <debug> No need to refresh analytical result
+193:[2020-11-12 07:49:03] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.069405
+194:[2020-11-12 07:49:03] <trace> optimal subsession size (q) = 1
+195:[2020-11-12 07:49:03] <trace> T score for 95% confidence level = 2.36462
+196:[2020-11-12 07:49:03] <trace> expected CI width: 68004
+197:[2020-11-12 07:49:03] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+198:[2020-11-12 07:49:03] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+199:[2020-11-12 07:49:03] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+200:[2020-11-12 07:49:03] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+201:[2020-11-12 07:49:03] <info> 7   | throughput: R m7.556e+04 c9256 v3.065e+07 
+202:[2020-11-12 07:49:03] <debug> No need to refresh analytical result
+203:[2020-11-12 07:49:03] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+204:[2020-11-12 07:49:03] <info> [PI 0] needs 22 more readings
+205:[2020-11-12 07:49:03] <info> Starting workload round 8 with work_amount 0
+206:[2020-11-12 07:49:03] <debug> Executing client program: s b - . - 4 - r -
+207:[2020-11-12 07:55:05] <info> Got output from client program: 1.97,1.97,artificedev,1,1605177309,8G,,778,99,134874,9,45987,14,3387,97,78963,17,4073,82,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18464us,1921ms,2044ms,21091us,81394us,289ms,838us,277us,293us,229us,16us,1552us
+208:[2020-11-12 07:55:05] <debug> [PI 0] new reading: 78963
+209:[2020-11-12 07:55:05] <info> Finished workload round 8
+210:[2020-11-12 07:55:05] <debug> [PI 0] has no unit readings data in round 8
+211:[2020-11-12 07:55:05] <info> [PI 0] analyzing results
+212:[2020-11-12 07:55:05] <debug> No need to refresh analytical result
+213:[2020-11-12 07:55:05] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0415611
+214:[2020-11-12 07:55:05] <trace> optimal subsession size (q) = 1
+215:[2020-11-12 07:55:05] <trace> T score for 95% confidence level = 2.306
+216:[2020-11-12 07:55:05] <trace> expected CI width: 68344.3
+217:[2020-11-12 07:55:05] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+218:[2020-11-12 07:55:05] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+219:[2020-11-12 07:55:05] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+220:[2020-11-12 07:55:05] <debug> No need to refresh analytical result
+221:[2020-11-12 07:55:05] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0415611
+222:[2020-11-12 07:55:05] <trace> optimal subsession size (q) = 1
+223:[2020-11-12 07:55:05] <trace> T score for 95% confidence level = 2.306
+224:[2020-11-12 07:55:05] <trace> expected CI width: 68344.3
+225:[2020-11-12 07:55:05] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+226:[2020-11-12 07:55:05] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+227:[2020-11-12 07:55:05] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+228:[2020-11-12 07:55:05] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+229:[2020-11-12 07:55:05] <info> 8   | throughput: R m7.594e+04 c8150 v2.81e+07 
+230:[2020-11-12 07:55:05] <debug> No need to refresh analytical result
+231:[2020-11-12 07:55:05] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+232:[2020-11-12 07:55:05] <info> [PI 0] needs 21 more readings
+233:[2020-11-12 07:55:05] <info> Starting workload round 9 with work_amount 0
+234:[2020-11-12 07:55:05] <debug> Executing client program: s b - . - 4 - r -
+235:[2020-11-12 08:01:14] <info> Got output from client program: 1.97,1.97,artificedev,1,1605176349,8G,,760,99,131422,9,45427,14,3420,96,76478,17,4368,93,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17806us,1689ms,2028ms,18448us,141ms,117ms,7910us,303us,359us,948us,38us,1667us
+236:[2020-11-12 08:01:14] <debug> [PI 0] new reading: 76478
+237:[2020-11-12 08:01:14] <info> Finished workload round 9
+238:[2020-11-12 08:01:14] <debug> [PI 0] has no unit readings data in round 9
+239:[2020-11-12 08:01:14] <info> [PI 0] analyzing results
+240:[2020-11-12 08:01:14] <debug> No need to refresh analytical result
+241:[2020-11-12 08:01:14] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.04549
+242:[2020-11-12 08:01:14] <trace> optimal subsession size (q) = 1
+243:[2020-11-12 08:01:14] <trace> T score for 95% confidence level = 2.26216
+244:[2020-11-12 08:01:14] <trace> expected CI width: 68392.9
+245:[2020-11-12 08:01:14] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+246:[2020-11-12 08:01:14] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+247:[2020-11-12 08:01:14] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+248:[2020-11-12 08:01:14] <debug> No need to refresh analytical result
+249:[2020-11-12 08:01:14] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.04549
+250:[2020-11-12 08:01:14] <trace> optimal subsession size (q) = 1
+251:[2020-11-12 08:01:14] <trace> T score for 95% confidence level = 2.26216
+252:[2020-11-12 08:01:14] <trace> expected CI width: 68392.9
+253:[2020-11-12 08:01:14] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+254:[2020-11-12 08:01:14] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+255:[2020-11-12 08:01:14] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+256:[2020-11-12 08:01:14] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+257:[2020-11-12 08:01:14] <info> 9   | throughput: R m7.599e+04 c7155 v2.501e+07 
+258:[2020-11-12 08:01:14] <debug> No need to refresh analytical result
+259:[2020-11-12 08:01:14] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+260:[2020-11-12 08:01:14] <info> [PI 0] needs 20 more readings
+261:[2020-11-12 08:01:14] <info> Starting workload round 10 with work_amount 0
+262:[2020-11-12 08:01:14] <debug> Executing client program: s b - . - 4 - r -
+263:[2020-11-12 08:07:21] <info> Got output from client program: 1.97,1.97,artificedev,1,1605175965,8G,,743,99,132047,9,45948,14,2646,72,77313,17,2838,71,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18131us,1762ms,1637ms,282ms,657ms,1014ms,792us,705us,821us,306us,46us,70us
+264:[2020-11-12 08:07:21] <debug> [PI 0] new reading: 77313
+265:[2020-11-12 08:07:21] <info> Finished workload round 10
+266:[2020-11-12 08:07:21] <debug> [PI 0] has no unit readings data in round 10
+267:[2020-11-12 08:07:21] <info> [PI 0] analyzing results
+268:[2020-11-12 08:07:21] <debug> No need to refresh analytical result
+269:[2020-11-12 08:07:21] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0406992
+270:[2020-11-12 08:07:21] <trace> optimal subsession size (q) = 1
+271:[2020-11-12 08:07:21] <trace> T score for 95% confidence level = 2.22814
+272:[2020-11-12 08:07:21] <trace> expected CI width: 68501
+273:[2020-11-12 08:07:21] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+274:[2020-11-12 08:07:21] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+275:[2020-11-12 08:07:21] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+276:[2020-11-12 08:07:21] <debug> No need to refresh analytical result
+277:[2020-11-12 08:07:21] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0406992
+278:[2020-11-12 08:07:21] <trace> optimal subsession size (q) = 1
+279:[2020-11-12 08:07:21] <trace> T score for 95% confidence level = 2.22814
+280:[2020-11-12 08:07:21] <trace> expected CI width: 68501
+281:[2020-11-12 08:07:21] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+282:[2020-11-12 08:07:21] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+283:[2020-11-12 08:07:21] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+284:[2020-11-12 08:07:21] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+285:[2020-11-12 08:07:21] <info> 10  | throughput: R m7.611e+04 c6397 v2.267e+07 
+286:[2020-11-12 08:07:21] <debug> No need to refresh analytical result
+287:[2020-11-12 08:07:21] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+288:[2020-11-12 08:07:21] <info> [PI 0] needs 19 more readings
+289:[2020-11-12 08:07:21] <info> Starting workload round 11 with work_amount 0
+290:[2020-11-12 08:07:21] <debug> Executing client program: s b - . - 4 - r -
+291:[2020-11-12 08:13:26] <info> Got output from client program: 1.97,1.97,artificedev,1,1605176146,8G,,771,97,132598,9,45504,14,3884,98,78981,17,2973,80,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,15384us,1452ms,1819ms,8916us,25792us,1014ms,6023us,756us,299us,500us,22us,63us
+292:[2020-11-12 08:13:26] <debug> [PI 0] new reading: 78981
+293:[2020-11-12 08:13:26] <info> Finished workload round 11
+294:[2020-11-12 08:13:26] <debug> [PI 0] has no unit readings data in round 11
+295:[2020-11-12 08:13:26] <info> [PI 0] analyzing results
+296:[2020-11-12 08:13:26] <debug> No need to refresh analytical result
+297:[2020-11-12 08:13:26] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0397798
+298:[2020-11-12 08:13:26] <trace> optimal subsession size (q) = 1
+299:[2020-11-12 08:13:26] <trace> T score for 95% confidence level = 2.20099
+300:[2020-11-12 08:13:26] <trace> expected CI width: 68716.1
+301:[2020-11-12 08:13:26] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+302:[2020-11-12 08:13:26] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+303:[2020-11-12 08:13:26] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+304:[2020-11-12 08:13:26] <debug> No need to refresh analytical result
+305:[2020-11-12 08:13:26] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0397798
+306:[2020-11-12 08:13:26] <trace> optimal subsession size (q) = 1
+307:[2020-11-12 08:13:26] <trace> T score for 95% confidence level = 2.20099
+308:[2020-11-12 08:13:26] <trace> expected CI width: 68716.1
+309:[2020-11-12 08:13:26] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+310:[2020-11-12 08:13:26] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+311:[2020-11-12 08:13:26] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+312:[2020-11-12 08:13:26] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+313:[2020-11-12 08:13:26] <info> 11  | throughput: R m7.635e+04 c5864 v2.129e+07 
+314:[2020-11-12 08:13:26] <debug> No need to refresh analytical result
+315:[2020-11-12 08:13:26] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+316:[2020-11-12 08:13:26] <info> [PI 0] needs 18 more readings
+317:[2020-11-12 08:13:26] <info> Starting workload round 12 with work_amount 0
+318:[2020-11-12 08:13:26] <debug> Executing client program: s b - . - 4 - r -
+319:[2020-11-12 08:19:37] <info> Got output from client program: 1.97,1.97,artificedev,1,1605175769,8G,,768,99,131565,9,45585,14,3613,93,78303,17,2957,70,16,,,,,12146,11,+++++,+++,14841,11,10647,9,+++++,+++,28743,30,15970us,1895ms,1747ms,46025us,150ms,1206ms,859us,318us,299us,136us,92us,98us
+320:[2020-11-12 08:19:37] <debug> [PI 0] new reading: 78303
+321:[2020-11-12 08:19:37] <info> Finished workload round 12
+322:[2020-11-12 08:19:37] <debug> [PI 0] has no unit readings data in round 12
+323:[2020-11-12 08:19:37] <info> [PI 0] analyzing results
+324:[2020-11-12 08:19:37] <debug> No need to refresh analytical result
+325:[2020-11-12 08:19:37] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0518287
+326:[2020-11-12 08:19:37] <trace> optimal subsession size (q) = 1
+327:[2020-11-12 08:19:37] <trace> T score for 95% confidence level = 2.17881
+328:[2020-11-12 08:19:37] <trace> expected CI width: 68851.2
+329:[2020-11-12 08:19:37] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+330:[2020-11-12 08:19:37] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+331:[2020-11-12 08:19:37] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+332:[2020-11-12 08:19:37] <debug> No need to refresh analytical result
+333:[2020-11-12 08:19:37] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0518287
+334:[2020-11-12 08:19:37] <trace> optimal subsession size (q) = 1
+335:[2020-11-12 08:19:37] <trace> T score for 95% confidence level = 2.17881
+336:[2020-11-12 08:19:37] <trace> expected CI width: 68851.2
+337:[2020-11-12 08:19:37] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+338:[2020-11-12 08:19:37] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+339:[2020-11-12 08:19:37] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+340:[2020-11-12 08:19:37] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+341:[2020-11-12 08:19:37] <info> 12  | throughput: R m7.65e+04 c5379 v1.981e+07 
+342:[2020-11-12 08:19:37] <debug> No need to refresh analytical result
+343:[2020-11-12 08:19:37] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+344:[2020-11-12 08:19:37] <info> [PI 0] needs 17 more readings
+345:[2020-11-12 08:19:37] <info> Starting workload round 13 with work_amount 0
+346:[2020-11-12 08:19:37] <debug> Executing client program: s b - . - 4 - r -
+347:[2020-11-12 08:25:46] <info> Got output from client program: 1.97,1.97,artificedev,1,1605187457,8G,,747,99,129631,9,45664,14,3952,99,76991,18,2538,66,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,16299us,1847ms,6386ms,6249us,19672us,1012ms,6798us,609us,317us,130us,51us,74us
+348:[2020-11-12 08:25:46] <debug> [PI 0] new reading: 76991
+349:[2020-11-12 08:25:46] <info> Finished workload round 13
+350:[2020-11-12 08:25:46] <debug> [PI 0] has no unit readings data in round 13
+351:[2020-11-12 08:25:46] <info> [PI 0] analyzing results
+352:[2020-11-12 08:25:46] <debug> No need to refresh analytical result
+353:[2020-11-12 08:25:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0533986
+354:[2020-11-12 08:25:46] <trace> optimal subsession size (q) = 1
+355:[2020-11-12 08:25:46] <trace> T score for 95% confidence level = 2.16037
+356:[2020-11-12 08:25:46] <trace> expected CI width: 68882.7
+357:[2020-11-12 08:25:46] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+358:[2020-11-12 08:25:46] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+359:[2020-11-12 08:25:46] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+360:[2020-11-12 08:25:46] <debug> No need to refresh analytical result
+361:[2020-11-12 08:25:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0533986
+362:[2020-11-12 08:25:46] <trace> optimal subsession size (q) = 1
+363:[2020-11-12 08:25:46] <trace> T score for 95% confidence level = 2.16037
+364:[2020-11-12 08:25:46] <trace> expected CI width: 68882.7
+365:[2020-11-12 08:25:46] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+366:[2020-11-12 08:25:46] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+367:[2020-11-12 08:25:46] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+368:[2020-11-12 08:25:46] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+369:[2020-11-12 08:25:46] <info> 13  | throughput: R m7.654e+04 c4940 v1.83e+07 
+370:[2020-11-12 08:25:46] <debug> No need to refresh analytical result
+371:[2020-11-12 08:25:46] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+372:[2020-11-12 08:25:46] <info> [PI 0] needs 16 more readings
+373:[2020-11-12 08:25:46] <info> Starting workload round 14 with work_amount 0
+374:[2020-11-12 08:25:46] <debug> Executing client program: s b - . - 4 - r -
+375:[2020-11-12 08:31:58] <info> Got output from client program: 1.97,1.97,artificedev,1,1605186890,8G,,742,99,129133,9,44283,14,3606,94,79318,17,3129,79,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19532us,1850ms,4887ms,50609us,160ms,1014ms,5666us,453us,488us,77us,221us,111us
+376:[2020-11-12 08:31:58] <debug> [PI 0] new reading: 79318
+377:[2020-11-12 08:31:58] <info> Finished workload round 14
+378:[2020-11-12 08:31:58] <debug> [PI 0] has no unit readings data in round 14
+379:[2020-11-12 08:31:58] <info> [PI 0] analyzing results
+380:[2020-11-12 08:31:58] <debug> No need to refresh analytical result
+381:[2020-11-12 08:31:58] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0460945
+382:[2020-11-12 08:31:58] <trace> optimal subsession size (q) = 1
+383:[2020-11-12 08:31:58] <trace> T score for 95% confidence level = 2.14479
+384:[2020-11-12 08:31:58] <trace> expected CI width: 69049.6
+385:[2020-11-12 08:31:58] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+386:[2020-11-12 08:31:58] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+387:[2020-11-12 08:31:58] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+388:[2020-11-12 08:31:58] <debug> No need to refresh analytical result
+389:[2020-11-12 08:31:58] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0460945
+390:[2020-11-12 08:31:58] <trace> optimal subsession size (q) = 1
+391:[2020-11-12 08:31:58] <trace> T score for 95% confidence level = 2.14479
+392:[2020-11-12 08:31:58] <trace> expected CI width: 69049.6
+393:[2020-11-12 08:31:58] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+394:[2020-11-12 08:31:58] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+395:[2020-11-12 08:31:58] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+396:[2020-11-12 08:31:58] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+397:[2020-11-12 08:31:58] <info> 14  | throughput: R m7.672e+04 c4635 v1.751e+07 
+398:[2020-11-12 08:31:58] <debug> No need to refresh analytical result
+399:[2020-11-12 08:31:58] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+400:[2020-11-12 08:31:58] <info> [PI 0] needs 15 more readings
+401:[2020-11-12 08:31:58] <info> Starting workload round 15 with work_amount 0
+402:[2020-11-12 08:31:58] <debug> Executing client program: s b - . - 4 - r -
+403:[2020-11-12 08:38:09] <info> Got output from client program: 1.97,1.97,artificedev,1,1605186578,8G,,739,99,131666,9,44318,13,3678,98,79445,17,2604,65,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,16665us,1708ms,3367ms,3684us,12203us,1153ms,1286us,684us,324us,186us,326us,51us
+404:[2020-11-12 08:38:09] <debug> [PI 0] new reading: 79445
+405:[2020-11-12 08:38:09] <info> Finished workload round 15
+406:[2020-11-12 08:38:09] <debug> [PI 0] has no unit readings data in round 15
+407:[2020-11-12 08:38:09] <info> [PI 0] analyzing results
+408:[2020-11-12 08:38:09] <debug> No need to refresh analytical result
+409:[2020-11-12 08:38:09] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0630314
+410:[2020-11-12 08:38:09] <trace> optimal subsession size (q) = 1
+411:[2020-11-12 08:38:09] <trace> T score for 95% confidence level = 2.13145
+412:[2020-11-12 08:38:09] <trace> expected CI width: 69202.8
+413:[2020-11-12 08:38:09] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+414:[2020-11-12 08:38:09] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+415:[2020-11-12 08:38:09] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+416:[2020-11-12 08:38:09] <debug> No need to refresh analytical result
+417:[2020-11-12 08:38:09] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0630314
+418:[2020-11-12 08:38:09] <trace> optimal subsession size (q) = 1
+419:[2020-11-12 08:38:09] <trace> T score for 95% confidence level = 2.13145
+420:[2020-11-12 08:38:09] <trace> expected CI width: 69202.8
+421:[2020-11-12 08:38:09] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+422:[2020-11-12 08:38:09] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+423:[2020-11-12 08:38:09] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+424:[2020-11-12 08:38:09] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+425:[2020-11-12 08:38:09] <info> 15  | throughput: R m7.689e+04 c4369 v1.681e+07 
+426:[2020-11-12 08:38:09] <debug> No need to refresh analytical result
+427:[2020-11-12 08:38:09] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+428:[2020-11-12 08:38:09] <info> [PI 0] needs 14 more readings
+429:[2020-11-12 08:38:09] <info> Starting workload round 16 with work_amount 0
+430:[2020-11-12 08:38:09] <debug> Executing client program: s b - . - 4 - r -
+431:[2020-11-12 08:44:36] <info> Got output from client program: 1.97,1.97,artificedev,1,1605186417,8G,,726,99,114650,8,43255,13,3672,99,78900,17,2130,61,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18775us,6660ms,7256ms,7122us,56949us,1212ms,852us,719us,422us,1652us,91us,86us
+432:[2020-11-12 08:44:36] <debug> [PI 0] new reading: 78900
+433:[2020-11-12 08:44:36] <info> Finished workload round 16
+434:[2020-11-12 08:44:36] <debug> [PI 0] has no unit readings data in round 16
+435:[2020-11-12 08:44:36] <info> [PI 0] analyzing results
+436:[2020-11-12 08:44:36] <debug> No need to refresh analytical result
+437:[2020-11-12 08:44:36] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0753503
+438:[2020-11-12 08:44:36] <trace> optimal subsession size (q) = 1
+439:[2020-11-12 08:44:36] <trace> T score for 95% confidence level = 2.11991
+440:[2020-11-12 08:44:36] <trace> expected CI width: 69309.1
+441:[2020-11-12 08:44:36] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+442:[2020-11-12 08:44:36] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+443:[2020-11-12 08:44:36] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+444:[2020-11-12 08:44:36] <debug> No need to refresh analytical result
+445:[2020-11-12 08:44:36] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0753503
+446:[2020-11-12 08:44:36] <trace> optimal subsession size (q) = 1
+447:[2020-11-12 08:44:36] <trace> T score for 95% confidence level = 2.11991
+448:[2020-11-12 08:44:36] <trace> expected CI width: 69309.1
+449:[2020-11-12 08:44:36] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+450:[2020-11-12 08:44:36] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+451:[2020-11-12 08:44:36] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+452:[2020-11-12 08:44:36] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+453:[2020-11-12 08:44:36] <info> 16  | throughput: R m7.701e+04 c4113 v1.599e+07 
+454:[2020-11-12 08:44:36] <debug> No need to refresh analytical result
+455:[2020-11-12 08:44:36] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+456:[2020-11-12 08:44:36] <info> [PI 0] needs 13 more readings
+457:[2020-11-12 08:44:36] <info> Starting workload round 17 with work_amount 0
+458:[2020-11-12 08:44:36] <debug> Executing client program: s b - . - 4 - r -
+459:[2020-11-12 08:50:47] <info> Got output from client program: 1.97,1.97,artificedev,1,1605186019,8G,,757,98,129230,9,44939,14,3153,82,77786,17,3061,72,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19080us,1941ms,1833ms,169ms,81012us,1011ms,1044us,750us,507us,121us,110us,2568us
+460:[2020-11-12 08:50:47] <debug> [PI 0] new reading: 77786
+461:[2020-11-12 08:50:47] <info> Finished workload round 17
+462:[2020-11-12 08:50:47] <debug> [PI 0] has no unit readings data in round 17
+463:[2020-11-12 08:50:47] <info> [PI 0] analyzing results
+464:[2020-11-12 08:50:47] <debug> No need to refresh analytical result
+465:[2020-11-12 08:50:47] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.078425
+466:[2020-11-12 08:50:47] <trace> optimal subsession size (q) = 1
+467:[2020-11-12 08:50:47] <trace> T score for 95% confidence level = 2.10982
+468:[2020-11-12 08:50:47] <trace> expected CI width: 69347.9
+469:[2020-11-12 08:50:47] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+470:[2020-11-12 08:50:47] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+471:[2020-11-12 08:50:47] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+472:[2020-11-12 08:50:47] <debug> No need to refresh analytical result
+473:[2020-11-12 08:50:47] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.078425
+474:[2020-11-12 08:50:47] <trace> optimal subsession size (q) = 1
+475:[2020-11-12 08:50:47] <trace> T score for 95% confidence level = 2.10982
+476:[2020-11-12 08:50:47] <trace> expected CI width: 69347.9
+477:[2020-11-12 08:50:47] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+478:[2020-11-12 08:50:47] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+479:[2020-11-12 08:50:47] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+480:[2020-11-12 08:50:47] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+481:[2020-11-12 08:50:47] <info> 17  | throughput: R m7.705e+04 c3863 v1.509e+07 
+482:[2020-11-12 08:50:47] <debug> No need to refresh analytical result
+483:[2020-11-12 08:50:47] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+484:[2020-11-12 08:50:47] <info> [PI 0] needs 12 more readings
+485:[2020-11-12 08:50:47] <info> Starting workload round 18 with work_amount 0
+486:[2020-11-12 08:50:47] <debug> Executing client program: s b - . - 4 - r -
+487:[2020-11-12 08:57:01] <info> Got output from client program: 1.97,1.97,artificedev,1,1605185612,8G,,659,95,126804,9,44304,14,3927,99,79227,18,3763,100,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19387us,1985ms,5769ms,9213us,11414us,1017ms,5032us,313us,613us,72us,29us,4659us
+488:[2020-11-12 08:57:01] <debug> [PI 0] new reading: 79227
+489:[2020-11-12 08:57:01] <info> Finished workload round 18
+490:[2020-11-12 08:57:01] <debug> [PI 0] has no unit readings data in round 18
+491:[2020-11-12 08:57:01] <info> [PI 0] analyzing results
+492:[2020-11-12 08:57:01] <debug> No need to refresh analytical result
+493:[2020-11-12 08:57:01] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0766764
+494:[2020-11-12 08:57:01] <trace> optimal subsession size (q) = 1
+495:[2020-11-12 08:57:01] <trace> T score for 95% confidence level = 2.10092
+496:[2020-11-12 08:57:01] <trace> expected CI width: 69450.9
+497:[2020-11-12 08:57:01] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+498:[2020-11-12 08:57:01] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+499:[2020-11-12 08:57:01] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+500:[2020-11-12 08:57:01] <debug> No need to refresh analytical result
+501:[2020-11-12 08:57:01] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0766764
+502:[2020-11-12 08:57:01] <trace> optimal subsession size (q) = 1
+503:[2020-11-12 08:57:01] <trace> T score for 95% confidence level = 2.10092
+504:[2020-11-12 08:57:01] <trace> expected CI width: 69450.9
+505:[2020-11-12 08:57:01] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+506:[2020-11-12 08:57:01] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+507:[2020-11-12 08:57:01] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+508:[2020-11-12 08:57:01] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+509:[2020-11-12 08:57:01] <info> 18  | throughput: R m7.717e+04 c3670 v1.45e+07 
+510:[2020-11-12 08:57:01] <debug> No need to refresh analytical result
+511:[2020-11-12 08:57:01] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+512:[2020-11-12 08:57:01] <info> [PI 0] needs 11 more readings
+513:[2020-11-12 08:57:01] <info> Starting workload round 19 with work_amount 0
+514:[2020-11-12 08:57:01] <debug> Executing client program: s b - . - 4 - r -
+515:[2020-11-12 09:03:20] <info> Got output from client program: 1.97,1.97,artificedev,1,1605189346,8G,,746,99,128540,9,43717,14,3489,99,75570,17,4038,96,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17423us,1862ms,2432ms,7434us,18234us,163ms,8690us,476us,2159us,1140us,36us,633us
+516:[2020-11-12 09:03:20] <debug> [PI 0] new reading: 75570
+517:[2020-11-12 09:03:20] <info> Finished workload round 19
+518:[2020-11-12 09:03:20] <debug> [PI 0] has no unit readings data in round 19
+519:[2020-11-12 09:03:20] <info> [PI 0] analyzing results
+520:[2020-11-12 09:03:20] <debug> No need to refresh analytical result
+521:[2020-11-12 09:03:20] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0679564
+522:[2020-11-12 09:03:20] <trace> optimal subsession size (q) = 1
+523:[2020-11-12 09:03:20] <trace> T score for 95% confidence level = 2.09302
+524:[2020-11-12 09:03:20] <trace> expected CI width: 69379
+525:[2020-11-12 09:03:20] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+526:[2020-11-12 09:03:20] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+527:[2020-11-12 09:03:20] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+528:[2020-11-12 09:03:20] <debug> No need to refresh analytical result
+529:[2020-11-12 09:03:20] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0679564
+530:[2020-11-12 09:03:20] <trace> optimal subsession size (q) = 1
+531:[2020-11-12 09:03:20] <trace> T score for 95% confidence level = 2.09302
+532:[2020-11-12 09:03:20] <trace> expected CI width: 69379
+533:[2020-11-12 09:03:20] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+534:[2020-11-12 09:03:20] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+535:[2020-11-12 09:03:20] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+536:[2020-11-12 09:03:20] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+537:[2020-11-12 09:03:20] <info> 19  | throughput: R m7.709e+04 c3485 v1.386e+07 
+538:[2020-11-12 09:03:20] <debug> No need to refresh analytical result
+539:[2020-11-12 09:03:20] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+540:[2020-11-12 09:03:20] <info> [PI 0] needs 10 more readings
+541:[2020-11-12 09:03:20] <info> Starting workload round 20 with work_amount 0
+542:[2020-11-12 09:03:20] <debug> Executing client program: s b - . - 4 - r -
+543:[2020-11-12 09:09:46] <info> Got output from client program: 1.97,1.97,artificedev,1,1605188909,8G,,702,99,123518,9,42348,14,3548,98,77468,17,4933,97,16,,,,,20643,21,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19454us,1868ms,3017ms,6891us,15447us,259ms,403ms,752us,1141us,739us,48us,596us
+544:[2020-11-12 09:09:46] <debug> [PI 0] new reading: 77468
+545:[2020-11-12 09:09:46] <info> Finished workload round 20
+546:[2020-11-12 09:09:46] <debug> [PI 0] has no unit readings data in round 20
+547:[2020-11-12 09:09:46] <info> [PI 0] analyzing results
+548:[2020-11-12 09:09:46] <debug> No need to refresh analytical result
+549:[2020-11-12 09:09:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0647153
+550:[2020-11-12 09:09:46] <trace> optimal subsession size (q) = 1
+551:[2020-11-12 09:09:46] <trace> T score for 95% confidence level = 2.08596
+552:[2020-11-12 09:09:46] <trace> expected CI width: 69395.3
+553:[2020-11-12 09:09:46] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+554:[2020-11-12 09:09:46] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+555:[2020-11-12 09:09:46] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+556:[2020-11-12 09:09:46] <debug> No need to refresh analytical result
+557:[2020-11-12 09:09:46] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0647153
+558:[2020-11-12 09:09:46] <trace> optimal subsession size (q) = 1
+559:[2020-11-12 09:09:46] <trace> T score for 95% confidence level = 2.08596
+560:[2020-11-12 09:09:46] <trace> expected CI width: 69395.3
+561:[2020-11-12 09:09:46] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+562:[2020-11-12 09:09:46] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+563:[2020-11-12 09:09:46] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+564:[2020-11-12 09:09:46] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+565:[2020-11-12 09:09:46] <info> 20  | throughput: R m7.711e+04 c3305 v1.318e+07 
+566:[2020-11-12 09:09:46] <debug> No need to refresh analytical result
+567:[2020-11-12 09:09:46] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+568:[2020-11-12 09:09:46] <info> [PI 0] needs 9 more readings
+569:[2020-11-12 09:09:46] <info> Starting workload round 21 with work_amount 0
+570:[2020-11-12 09:09:46] <debug> Executing client program: s b - . - 4 - r -
+571:[2020-11-12 09:16:03] <info> Got output from client program: 1.97,1.97,artificedev,1,1605186645,8G,,722,99,126195,9,43740,14,3428,98,77954,17,3669,86,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,21003us,2019ms,2515ms,6160us,14265us,623ms,3221us,1124us,324us,96us,36us,115us
+572:[2020-11-12 09:16:03] <debug> [PI 0] new reading: 77954
+573:[2020-11-12 09:16:03] <info> Finished workload round 21
+574:[2020-11-12 09:16:03] <debug> [PI 0] has no unit readings data in round 21
+575:[2020-11-12 09:16:03] <info> [PI 0] analyzing results
+576:[2020-11-12 09:16:03] <debug> No need to refresh analytical result
+577:[2020-11-12 09:16:03] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0635473
+578:[2020-11-12 09:16:03] <trace> optimal subsession size (q) = 1
+579:[2020-11-12 09:16:03] <trace> T score for 95% confidence level = 2.07961
+580:[2020-11-12 09:16:03] <trace> expected CI width: 69430
+581:[2020-11-12 09:16:03] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+582:[2020-11-12 09:16:03] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+583:[2020-11-12 09:16:03] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+584:[2020-11-12 09:16:03] <debug> No need to refresh analytical result
+585:[2020-11-12 09:16:03] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0635473
+586:[2020-11-12 09:16:03] <trace> optimal subsession size (q) = 1
+587:[2020-11-12 09:16:03] <trace> T score for 95% confidence level = 2.07961
+588:[2020-11-12 09:16:03] <trace> expected CI width: 69430
+589:[2020-11-12 09:16:03] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+590:[2020-11-12 09:16:03] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+591:[2020-11-12 09:16:03] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+592:[2020-11-12 09:16:03] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+593:[2020-11-12 09:16:03] <info> 21  | throughput: R m7.714e+04 c3145 v1.258e+07 
+594:[2020-11-12 09:16:03] <debug> No need to refresh analytical result
+595:[2020-11-12 09:16:03] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+596:[2020-11-12 09:16:03] <info> [PI 0] needs 8 more readings
+597:[2020-11-12 09:16:03] <info> Starting workload round 22 with work_amount 0
+598:[2020-11-12 09:16:03] <debug> Executing client program: s b - . - 4 - r -
+599:[2020-11-12 09:22:30] <info> Got output from client program: 1.97,1.97,artificedev,1,1605187063,8G,,717,99,124935,9,42217,14,3590,99,77697,17,2932,64,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,21849us,2113ms,6780ms,7798us,67883us,1013ms,884us,293us,1060us,88us,66us,1461us
+600:[2020-11-12 09:22:30] <debug> [PI 0] new reading: 77697
+601:[2020-11-12 09:22:30] <info> Finished workload round 22
+602:[2020-11-12 09:22:30] <debug> [PI 0] has no unit readings data in round 22
+603:[2020-11-12 09:22:30] <info> [PI 0] analyzing results
+604:[2020-11-12 09:22:30] <debug> No need to refresh analytical result
+605:[2020-11-12 09:22:30] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0638202
+606:[2020-11-12 09:22:30] <trace> optimal subsession size (q) = 1
+607:[2020-11-12 09:22:30] <trace> T score for 95% confidence level = 2.07387
+608:[2020-11-12 09:22:30] <trace> expected CI width: 69451.6
+609:[2020-11-12 09:22:30] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+610:[2020-11-12 09:22:30] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+611:[2020-11-12 09:22:30] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+612:[2020-11-12 09:22:30] <debug> No need to refresh analytical result
+613:[2020-11-12 09:22:30] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0638202
+614:[2020-11-12 09:22:30] <trace> optimal subsession size (q) = 1
+615:[2020-11-12 09:22:30] <trace> T score for 95% confidence level = 2.07387
+616:[2020-11-12 09:22:30] <trace> expected CI width: 69451.6
+617:[2020-11-12 09:22:30] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+618:[2020-11-12 09:22:30] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+619:[2020-11-12 09:22:30] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+620:[2020-11-12 09:22:30] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+621:[2020-11-12 09:22:30] <info> 22  | throughput: R m7.717e+04 c2999 v1.202e+07 
+622:[2020-11-12 09:22:30] <debug> No need to refresh analytical result
+623:[2020-11-12 09:22:30] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+624:[2020-11-12 09:22:30] <info> [PI 0] needs 7 more readings
+625:[2020-11-12 09:22:30] <info> Starting workload round 23 with work_amount 0
+626:[2020-11-12 09:22:30] <debug> Executing client program: s b - . - 4 - r -
+627:[2020-11-12 09:28:52] <info> Got output from client program: 1.97,1.97,artificedev,1,1605187436,8G,,703,99,123845,9,43228,14,3749,99,76991,17,3214,74,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19487us,2013ms,5230ms,5238us,36545us,1013ms,3319us,447us,312us,113us,51us,87us
+628:[2020-11-12 09:28:52] <debug> [PI 0] new reading: 76991
+629:[2020-11-12 09:28:52] <info> Finished workload round 23
+630:[2020-11-12 09:28:52] <debug> [PI 0] has no unit readings data in round 23
+631:[2020-11-12 09:28:52] <info> [PI 0] analyzing results
+632:[2020-11-12 09:28:52] <debug> No need to refresh analytical result
+633:[2020-11-12 09:28:52] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.063873
+634:[2020-11-12 09:28:52] <trace> optimal subsession size (q) = 1
+635:[2020-11-12 09:28:52] <trace> T score for 95% confidence level = 2.06866
+636:[2020-11-12 09:28:52] <trace> expected CI width: 69444.9
+637:[2020-11-12 09:28:52] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+638:[2020-11-12 09:28:52] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+639:[2020-11-12 09:28:52] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+640:[2020-11-12 09:28:52] <debug> No need to refresh analytical result
+641:[2020-11-12 09:28:52] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.063873
+642:[2020-11-12 09:28:52] <trace> optimal subsession size (q) = 1
+643:[2020-11-12 09:28:52] <trace> T score for 95% confidence level = 2.06866
+644:[2020-11-12 09:28:52] <trace> expected CI width: 69444.9
+645:[2020-11-12 09:28:52] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+646:[2020-11-12 09:28:52] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+647:[2020-11-12 09:28:52] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+648:[2020-11-12 09:28:52] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+649:[2020-11-12 09:28:52] <info> 23  | throughput: R m7.716e+04 c2864 v1.15e+07 
+650:[2020-11-12 09:28:52] <debug> No need to refresh analytical result
+651:[2020-11-12 09:28:52] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+652:[2020-11-12 09:28:52] <info> [PI 0] needs 6 more readings
+653:[2020-11-12 09:28:52] <info> Starting workload round 24 with work_amount 0
+654:[2020-11-12 09:28:52] <debug> Executing client program: s b - . - 4 - r -
+655:[2020-11-12 09:35:10] <info> Got output from client program: 1.97,1.97,artificedev,1,1605183621,8G,,734,99,124537,9,43737,14,3241,98,78565,17,3401,93,16,,,,,20585,19,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,20910us,2138ms,4711ms,9981us,14115us,701ms,390ms,453us,370us,853us,20us,1130us
+656:[2020-11-12 09:35:10] <debug> [PI 0] new reading: 78565
+657:[2020-11-12 09:35:10] <info> Finished workload round 24
+658:[2020-11-12 09:35:10] <debug> [PI 0] has no unit readings data in round 24
+659:[2020-11-12 09:35:10] <info> [PI 0] analyzing results
+660:[2020-11-12 09:35:10] <debug> No need to refresh analytical result
+661:[2020-11-12 09:35:10] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0593843
+662:[2020-11-12 09:35:10] <trace> optimal subsession size (q) = 1
+663:[2020-11-12 09:35:10] <trace> T score for 95% confidence level = 2.0639
+664:[2020-11-12 09:35:10] <trace> expected CI width: 69495.5
+665:[2020-11-12 09:35:10] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+666:[2020-11-12 09:35:10] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+667:[2020-11-12 09:35:10] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+668:[2020-11-12 09:35:10] <debug> No need to refresh analytical result
+669:[2020-11-12 09:35:10] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0593843
+670:[2020-11-12 09:35:10] <trace> optimal subsession size (q) = 1
+671:[2020-11-12 09:35:10] <trace> T score for 95% confidence level = 2.0639
+672:[2020-11-12 09:35:10] <trace> expected CI width: 69495.5
+673:[2020-11-12 09:35:10] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+674:[2020-11-12 09:35:10] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+675:[2020-11-12 09:35:10] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+676:[2020-11-12 09:35:10] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+677:[2020-11-12 09:35:10] <info> 24  | throughput: R m7.722e+04 c2751 v1.11e+07 
+678:[2020-11-12 09:35:10] <debug> No need to refresh analytical result
+679:[2020-11-12 09:35:10] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+680:[2020-11-12 09:35:10] <info> [PI 0] needs 5 more readings
+681:[2020-11-12 09:35:10] <info> Starting workload round 25 with work_amount 0
+682:[2020-11-12 09:35:10] <debug> Executing client program: s b - . - 4 - r -
+683:[2020-11-12 09:41:30] <info> Got output from client program: 1.97,1.97,artificedev,1,1605184032,8G,,751,99,126694,9,43296,14,3320,99,77421,18,3337,81,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,15521us,2136ms,8146ms,7961us,14861us,1214ms,4013us,618us,449us,583us,36us,425us
+684:[2020-11-12 09:41:30] <debug> [PI 0] new reading: 77421
+685:[2020-11-12 09:41:30] <info> Finished workload round 25
+686:[2020-11-12 09:41:30] <debug> [PI 0] has no unit readings data in round 25
+687:[2020-11-12 09:41:30] <info> [PI 0] analyzing results
+688:[2020-11-12 09:41:30] <debug> No need to refresh analytical result
+689:[2020-11-12 09:41:30] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.059968
+690:[2020-11-12 09:41:30] <trace> optimal subsession size (q) = 1
+691:[2020-11-12 09:41:30] <trace> T score for 95% confidence level = 2.05954
+692:[2020-11-12 09:41:30] <trace> expected CI width: 69502.5
+693:[2020-11-12 09:41:30] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+694:[2020-11-12 09:41:30] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+695:[2020-11-12 09:41:30] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+696:[2020-11-12 09:41:30] <debug> No need to refresh analytical result
+697:[2020-11-12 09:41:30] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.059968
+698:[2020-11-12 09:41:30] <trace> optimal subsession size (q) = 1
+699:[2020-11-12 09:41:30] <trace> T score for 95% confidence level = 2.05954
+700:[2020-11-12 09:41:30] <trace> expected CI width: 69502.5
+701:[2020-11-12 09:41:30] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+702:[2020-11-12 09:41:30] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+703:[2020-11-12 09:41:30] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+704:[2020-11-12 09:41:30] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+705:[2020-11-12 09:41:30] <info> 25  | throughput: R m7.723e+04 c2637 v1.066e+07 
+706:[2020-11-12 09:41:30] <debug> No need to refresh analytical result
+707:[2020-11-12 09:41:30] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+708:[2020-11-12 09:41:30] <info> [PI 0] needs 4 more readings
+709:[2020-11-12 09:41:30] <info> Starting workload round 26 with work_amount 0
+710:[2020-11-12 09:41:30] <debug> Executing client program: s b - . - 4 - r -
+711:[2020-11-12 09:47:51] <info> Got output from client program: 1.97,1.97,artificedev,1,1605184345,8G,,756,99,123995,9,43556,14,3233,98,77387,18,2954,68,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,16921us,2124ms,9699ms,12579us,26889us,1012ms,1526us,277us,380us,111us,32us,64us
+712:[2020-11-12 09:47:51] <debug> [PI 0] new reading: 77387
+713:[2020-11-12 09:47:51] <info> Finished workload round 26
+714:[2020-11-12 09:47:51] <debug> [PI 0] has no unit readings data in round 26
+715:[2020-11-12 09:47:51] <info> [PI 0] analyzing results
+716:[2020-11-12 09:47:51] <debug> No need to refresh analytical result
+717:[2020-11-12 09:47:51] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0597458
+718:[2020-11-12 09:47:51] <trace> optimal subsession size (q) = 1
+719:[2020-11-12 09:47:51] <trace> T score for 95% confidence level = 2.05553
+720:[2020-11-12 09:47:51] <trace> expected CI width: 69507.9
+721:[2020-11-12 09:47:51] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+722:[2020-11-12 09:47:51] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+723:[2020-11-12 09:47:51] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+724:[2020-11-12 09:47:51] <debug> No need to refresh analytical result
+725:[2020-11-12 09:47:51] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0597458
+726:[2020-11-12 09:47:51] <trace> optimal subsession size (q) = 1
+727:[2020-11-12 09:47:51] <trace> T score for 95% confidence level = 2.05553
+728:[2020-11-12 09:47:51] <trace> expected CI width: 69507.9
+729:[2020-11-12 09:47:51] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+730:[2020-11-12 09:47:51] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+731:[2020-11-12 09:47:51] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+732:[2020-11-12 09:47:51] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+733:[2020-11-12 09:47:51] <info> 26  | throughput: R m7.723e+04 c2533 v1.025e+07 
+734:[2020-11-12 09:47:51] <debug> No need to refresh analytical result
+735:[2020-11-12 09:47:51] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+736:[2020-11-12 09:47:51] <info> [PI 0] needs 3 more readings
+737:[2020-11-12 09:47:51] <info> Starting workload round 27 with work_amount 0
+738:[2020-11-12 09:47:51] <debug> Executing client program: s b - . - 4 - r -
+739:[2020-11-12 09:54:09] <info> Got output from client program: 1.97,1.97,artificedev,1,1605184994,8G,,747,99,124031,9,43335,14,3569,99,80131,18,3247,71,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17207us,2109ms,6231ms,7347us,12660us,1200ms,969us,337us,317us,1374us,34us,943us
+740:[2020-11-12 09:54:09] <debug> [PI 0] new reading: 80131
+741:[2020-11-12 09:54:09] <info> Finished workload round 27
+742:[2020-11-12 09:54:09] <debug> [PI 0] has no unit readings data in round 27
+743:[2020-11-12 09:54:09] <info> [PI 0] analyzing results
+744:[2020-11-12 09:54:09] <debug> No need to refresh analytical result
+745:[2020-11-12 09:54:09] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0539675
+746:[2020-11-12 09:54:09] <trace> optimal subsession size (q) = 1
+747:[2020-11-12 09:54:09] <trace> T score for 95% confidence level = 2.05183
+748:[2020-11-12 09:54:09] <trace> expected CI width: 69601.1
+749:[2020-11-12 09:54:09] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+750:[2020-11-12 09:54:09] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+751:[2020-11-12 09:54:09] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+752:[2020-11-12 09:54:09] <debug> No need to refresh analytical result
+753:[2020-11-12 09:54:09] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0539675
+754:[2020-11-12 09:54:09] <trace> optimal subsession size (q) = 1
+755:[2020-11-12 09:54:09] <trace> T score for 95% confidence level = 2.05183
+756:[2020-11-12 09:54:09] <trace> expected CI width: 69601.1
+757:[2020-11-12 09:54:09] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+758:[2020-11-12 09:54:09] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+759:[2020-11-12 09:54:09] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+760:[2020-11-12 09:54:09] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+761:[2020-11-12 09:54:09] <info> 27  | throughput: R m7.733e+04 c2473 v1.017e+07 
+762:[2020-11-12 09:54:09] <debug> No need to refresh analytical result
+763:[2020-11-12 09:54:09] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+764:[2020-11-12 09:54:09] <info> [PI 0] needs 2 more readings
+765:[2020-11-12 09:54:09] <info> Starting workload round 28 with work_amount 0
+766:[2020-11-12 09:54:09] <debug> Executing client program: s b - . - 4 - r -
+767:[2020-11-12 10:00:22] <info> Got output from client program: 1.97,1.97,artificedev,1,1605185147,8G,,735,98,124788,9,43960,14,3509,99,81031,18,2907,59,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,19662us,2058ms,5731ms,3660us,11358us,1206ms,5792us,427us,1133us,627us,30us,663us
+768:[2020-11-12 10:00:22] <debug> [PI 0] new reading: 81031
+769:[2020-11-12 10:00:22] <info> Finished workload round 28
+770:[2020-11-12 10:00:22] <debug> [PI 0] has no unit readings data in round 28
+771:[2020-11-12 10:00:22] <info> [PI 0] analyzing results
+772:[2020-11-12 10:00:22] <debug> No need to refresh analytical result
+773:[2020-11-12 10:00:22] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.080706
+774:[2020-11-12 10:00:22] <trace> optimal subsession size (q) = 1
+775:[2020-11-12 10:00:22] <trace> T score for 95% confidence level = 2.04841
+776:[2020-11-12 10:00:22] <trace> expected CI width: 69715.9
+777:[2020-11-12 10:00:22] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+778:[2020-11-12 10:00:22] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+779:[2020-11-12 10:00:22] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+780:[2020-11-12 10:00:22] <debug> No need to refresh analytical result
+781:[2020-11-12 10:00:22] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.080706
+782:[2020-11-12 10:00:22] <trace> optimal subsession size (q) = 1
+783:[2020-11-12 10:00:22] <trace> T score for 95% confidence level = 2.04841
+784:[2020-11-12 10:00:22] <trace> expected CI width: 69715.9
+785:[2020-11-12 10:00:22] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+786:[2020-11-12 10:00:22] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+787:[2020-11-12 10:00:22] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+788:[2020-11-12 10:00:22] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+789:[2020-11-12 10:00:22] <info> 28  | throughput: R m7.746e+04 c2439 v1.028e+07 
+790:[2020-11-12 10:00:22] <debug> No need to refresh analytical result
+791:[2020-11-12 10:00:22] <debug> [PI 0] required readings sample size (-1 means not enough data): 30
+792:[2020-11-12 10:00:22] <info> [PI 0] needs 1 more readings
+793:[2020-11-12 10:00:22] <info> Starting workload round 29 with work_amount 0
+794:[2020-11-12 10:00:22] <debug> Executing client program: s b - . - 4 - r -
+795:[2020-11-12 10:06:37] <info> Got output from client program: 1.97,1.97,artificedev,1,1605181671,8G,,714,99,128264,9,43993,14,3405,95,79424,17,2688,55,16,,,,,31462,30,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18882us,1852ms,3096ms,39343us,199ms,1012ms,135ms,282us,2477us,87us,40us,52us
+796:[2020-11-12 10:06:37] <debug> [PI 0] new reading: 79424
+797:[2020-11-12 10:06:37] <info> Finished workload round 29
+798:[2020-11-12 10:06:37] <debug> [PI 0] has no unit readings data in round 29
+799:[2020-11-12 10:06:37] <info> [PI 0] analyzing results
+800:[2020-11-12 10:06:37] <debug> No need to refresh analytical result
+801:[2020-11-12 10:06:37] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.100285
+802:[2020-11-12 10:06:37] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.0735417
+803:[2020-11-12 10:06:37] <trace> optimal subsession size (q) = 2
+804:[2020-11-12 10:06:37] <trace> T score for 95% confidence level = 2.14479
+805:[2020-11-12 10:06:37] <trace> expected CI width: 69774.7
+806:[2020-11-12 10:06:37] <trace> number of samples required: 2 (desired sample size 1 x opt. subsession size 2)
+807:[2020-11-12 10:06:37] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+808:[2020-11-12 10:06:37] <debug> High autocorrelation detected, merging every 2 samples to reduce autocorrelation
+809:[2020-11-12 10:06:37] <debug> Required reading size = subsession size (2) x required subsession sample size (30) = 60
+810:[2020-11-12 10:06:37] <debug> No need to refresh analytical result
+811:[2020-11-12 10:06:37] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.100285
+812:[2020-11-12 10:06:37] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.0735417
+813:[2020-11-12 10:06:37] <trace> optimal subsession size (q) = 2
+814:[2020-11-12 10:06:37] <trace> T score for 95% confidence level = 2.14479
+815:[2020-11-12 10:06:37] <trace> expected CI width: 69774.7
+816:[2020-11-12 10:06:37] <trace> number of samples required: 2 (desired sample size 1 x opt. subsession size 2)
+817:[2020-11-12 10:06:37] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+818:[2020-11-12 10:06:37] <debug> High autocorrelation detected, merging every 2 samples to reduce autocorrelation
+819:[2020-11-12 10:06:37] <debug> Required reading size = subsession size (2) x required subsession sample size (30) = 60
+820:[2020-11-12 10:06:37] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+821:[2020-11-12 10:06:37] <info> 29  | throughput: R m7.753e+04 c2726 v6.056e+06 
+822:[2020-11-12 10:06:37] <debug> No need to refresh analytical result
+823:[2020-11-12 10:06:37] <debug> [PI 0] required readings sample size (-1 means not enough data): 60
+824:[2020-11-12 10:06:37] <info> [PI 0] needs 30 more readings
+825:[2020-11-12 10:06:37] <info> Starting workload round 30 with work_amount 0
+826:[2020-11-12 10:06:37] <debug> Executing client program: s b - . - 4 - r -
+827:[2020-11-12 10:12:56] <info> Got output from client program: 1.97,1.97,artificedev,1,1605181771,8G,,702,97,123989,9,42804,13,3309,94,81084,18,3375,73,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,21988us,1753ms,6792ms,53090us,11563us,875ms,4409us,749us,936us,74us,84us,128us
+828:[2020-11-12 10:12:56] <debug> [PI 0] new reading: 81084
+829:[2020-11-12 10:12:56] <info> Finished workload round 30
+830:[2020-11-12 10:12:56] <debug> [PI 0] has no unit readings data in round 30
+831:[2020-11-12 10:12:56] <info> [PI 0] analyzing results
+832:[2020-11-12 10:12:56] <debug> refresh_analytical_result(): readings have no changepoint detected
+833:[2020-11-12 10:12:56] <debug> No need to refresh analytical result
+834:[2020-11-12 10:12:56] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.112664
+835:[2020-11-12 10:12:56] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.0787618
+836:[2020-11-12 10:12:56] <trace> optimal subsession size (q) = 2
+837:[2020-11-12 10:12:56] <trace> T score for 95% confidence level = 2.14479
+838:[2020-11-12 10:12:56] <trace> expected CI width: 69878
+839:[2020-11-12 10:12:56] <trace> number of samples required: 2 (desired sample size 1 x opt. subsession size 2)
+840:[2020-11-12 10:12:56] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+841:[2020-11-12 10:12:56] <debug> High autocorrelation detected, merging every 2 samples to reduce autocorrelation
+842:[2020-11-12 10:12:56] <debug> Required reading size = subsession size (2) x required subsession sample size (30) = 60
+843:[2020-11-12 10:12:56] <debug> No need to refresh analytical result
+844:[2020-11-12 10:12:56] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.112664
+845:[2020-11-12 10:12:56] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.0787618
+846:[2020-11-12 10:12:56] <trace> optimal subsession size (q) = 2
+847:[2020-11-12 10:12:56] <trace> T score for 95% confidence level = 2.14479
+848:[2020-11-12 10:12:56] <trace> expected CI width: 69878
+849:[2020-11-12 10:12:56] <trace> number of samples required: 2 (desired sample size 1 x opt. subsession size 2)
+850:[2020-11-12 10:12:56] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+851:[2020-11-12 10:12:56] <debug> High autocorrelation detected, merging every 2 samples to reduce autocorrelation
+852:[2020-11-12 10:12:56] <debug> Required reading size = subsession size (2) x required subsession sample size (30) = 60
+853:[2020-11-12 10:12:56] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+854:[2020-11-12 10:12:56] <info> 30  | throughput: R m7.764e+04 c2729 v6.07e+06 
+855:[2020-11-12 10:12:56] <debug> No need to refresh analytical result
+856:[2020-11-12 10:12:56] <debug> [PI 0] required readings sample size (-1 means not enough data): 60
+857:[2020-11-12 10:12:56] <info> [PI 0] needs 29 more readings
+858:[2020-11-12 10:12:56] <info> Starting workload round 31 with work_amount 0
+859:[2020-11-12 10:12:56] <debug> Executing client program: s b - . - 4 - r -
+860:[2020-11-12 10:19:18] <info> Got output from client program: 1.97,1.97,artificedev,1,1605182419,8G,,716,99,123066,9,43590,14,3737,95,77710,17,2345,66,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,18651us,2021ms,1933ms,35125us,13158us,1216ms,813us,574us,2474us,118us,52us,146us
+861:[2020-11-12 10:19:18] <debug> [PI 0] new reading: 77710
+862:[2020-11-12 10:19:18] <info> Finished workload round 31
+863:[2020-11-12 10:19:18] <debug> [PI 0] has no unit readings data in round 31
+864:[2020-11-12 10:19:18] <info> [PI 0] analyzing results
+865:[2020-11-12 10:19:18] <debug> refresh_analytical_result(): readings have no changepoint detected
+866:[2020-11-12 10:19:18] <debug> No need to refresh analytical result
+867:[2020-11-12 10:19:18] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.113323
+868:[2020-11-12 10:19:18] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.0246511
+869:[2020-11-12 10:19:18] <trace> optimal subsession size (q) = 2
+870:[2020-11-12 10:19:18] <trace> T score for 95% confidence level = 2.13145
+871:[2020-11-12 10:19:18] <trace> expected CI width: 69879.9
+872:[2020-11-12 10:19:18] <trace> number of samples required: 2 (desired sample size 1 x opt. subsession size 2)
+873:[2020-11-12 10:19:18] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+874:[2020-11-12 10:19:18] <debug> High autocorrelation detected, merging every 2 samples to reduce autocorrelation
+875:[2020-11-12 10:19:18] <debug> Required reading size = subsession size (2) x required subsession sample size (30) = 60
+876:[2020-11-12 10:19:18] <debug> No need to refresh analytical result
+877:[2020-11-12 10:19:18] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.113323
+878:[2020-11-12 10:19:18] <trace> pilot_optimal_subsession_size(): subsession size: 2, auto. cor. coef.: -0.0246511
+879:[2020-11-12 10:19:18] <trace> optimal subsession size (q) = 2
+880:[2020-11-12 10:19:18] <trace> T score for 95% confidence level = 2.13145
+881:[2020-11-12 10:19:18] <trace> expected CI width: 69879.9
+882:[2020-11-12 10:19:18] <trace> number of samples required: 2 (desired sample size 1 x opt. subsession size 2)
+883:[2020-11-12 10:19:18] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+884:[2020-11-12 10:19:18] <debug> High autocorrelation detected, merging every 2 samples to reduce autocorrelation
+885:[2020-11-12 10:19:18] <debug> Required reading size = subsession size (2) x required subsession sample size (30) = 60
+886:[2020-11-12 10:19:18] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+887:[2020-11-12 10:19:18] <info> 31  | throughput: R m7.764e+04 c2582 v5.871e+06 
+888:[2020-11-12 10:19:18] <debug> No need to refresh analytical result
+889:[2020-11-12 10:19:18] <debug> [PI 0] required readings sample size (-1 means not enough data): 60
+890:[2020-11-12 10:19:18] <info> [PI 0] needs 28 more readings
+891:[2020-11-12 10:19:18] <info> Starting workload round 32 with work_amount 0
+892:[2020-11-12 10:19:18] <debug> Executing client program: s b - . - 4 - r -
+893:[2020-11-12 10:25:58] <info> Got output from client program: 1.97,1.97,artificedev,1,1605182900,8G,,745,99,125476,9,44001,14,3238,96,64606,14,2514,66,16,,,,,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,+++++,+++,17219us,1872ms,1835ms,35615us,261ms,1019ms,5649us,471us,1629us,173us,231us,315us
+894:[2020-11-12 10:25:58] <debug> [PI 0] new reading: 64606
+895:[2020-11-12 10:25:58] <info> Finished workload round 32
+896:[2020-11-12 10:25:58] <debug> [PI 0] has no unit readings data in round 32
+897:[2020-11-12 10:25:58] <info> [PI 0] analyzing results
+898:[2020-11-12 10:25:58] <debug> refresh_analytical_result(): readings have no changepoint detected
+899:[2020-11-12 10:25:58] <debug> No need to refresh analytical result
+900:[2020-11-12 10:25:58] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0842142
+901:[2020-11-12 10:25:58] <trace> optimal subsession size (q) = 1
+902:[2020-11-12 10:25:58] <trace> T score for 95% confidence level = 2.03693
+903:[2020-11-12 10:25:58] <trace> expected CI width: 69524.3
+904:[2020-11-12 10:25:58] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+905:[2020-11-12 10:25:58] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+906:[2020-11-12 10:25:58] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+907:[2020-11-12 10:25:58] <debug> No need to refresh analytical result
+908:[2020-11-12 10:25:58] <trace> pilot_optimal_subsession_size(): subsession size: 1, auto. cor. coef.: 0.0842142
+909:[2020-11-12 10:25:58] <trace> optimal subsession size (q) = 1
+910:[2020-11-12 10:25:58] <trace> T score for 95% confidence level = 2.03693
+911:[2020-11-12 10:25:58] <trace> expected CI width: 69524.3
+912:[2020-11-12 10:25:58] <trace> number of samples required: 1 (desired sample size 1 x opt. subsession size 1)
+913:[2020-11-12 10:25:58] <debug> optimal sample size (1) is smaller than the sample size lower threshold (30). Using the lower threshold instead.
+914:[2020-11-12 10:25:58] <debug> Required reading size = subsession size (1) x required subsession sample size (30) = 30
+915:[2020-11-12 10:25:58] <debug> refresh_wps_analysis_results(): WPS analysis is disabled
+916:[2020-11-12 10:25:58] <info> 32  | throughput: R m7.725e+04 c2714 v1.464e+07 
+917:[2020-11-12 10:25:58] <debug> No need to refresh analytical result
+918:[2020-11-12 10:25:58] <debug> [PI 0] required readings sample size (-1 means not enough data): 33
+919:[2020-11-12 10:25:58] <info> [PI 0] already has enough readings
+920:[2020-11-12 10:25:58] <info> Analytical requirement achieved, exiting
+921:[2020-11-12 10:25:58] <debug> No need to refresh analytical result
