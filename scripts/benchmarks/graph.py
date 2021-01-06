@@ -6,9 +6,9 @@ import numpy as np
 #public, public_std = (303187.77, 323907.92), (1956.91, 27188.35)
 #hidden, hidden_std = (51876, 34476), (1232.92, 2291.85)
 #public, public_std = (303.18777, 323.90792), (1.95691, 27.18835)
-public, public_std = (771.3, 519.505), (121.1, 20.074)
-hiddenAONT, hidden_stdAONT = (134.1, 77.25), (1.981, 2.714)
-hiddenSSS, hidden_stdSSS = (55.547, 54.131), (1.277, 1.490)
+public, public_std = (808.343, 496.430), (35.848, 24.676)
+hiddenAONT, hidden_stdAONT = (128.659, 82.716), (4.016, 1.062)
+hiddenSSS, hidden_stdSSS = (46.946, 69.214), (0.986, 1.166)
 #hidden, hidden_std = (51.876, 34.476), (1.23292, 2.29185)
 
 width = 0.25
