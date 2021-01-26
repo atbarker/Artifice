@@ -36,6 +36,7 @@ detect_fs(struct block_device *device, struct afs_passive_fs *fs)
     // Add more detection functions as a series of else..if blocks.
     // TODO: add afs_shadow_detect...
     // TODO: modify passive block device size (config.bdev_size) to exclude reserved block so those are removed from the allocation vector
+
     if (afs_fat32_detect(page, device, fs)) {
         ret = FS_FAT32;
     } else if (afs_ext4_detect(page, device, fs)) {
