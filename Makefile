@@ -14,7 +14,7 @@ AFS_MODULES :=	src/modules/dm_afs_fat32.o	\
                                 src/modules/dm_afs_shadow.o
 
 # Libraries
-AFS_LIBRARIES := src/lib/bit_vector.o src/lib/cauchy_rs.o src/lib/libgfshare.o src/lib/city.o src/lib/aont.o
+AFS_LIBRARIES := src/lib/bit_vector.o src/lib/cauchy_rs.o src/lib/libgfshare.o src/lib/city.o src/lib/aont.o src/lib/speck.c src/lib/sha3.c
 
 # Kernel module.
 obj-m 	 := dm_afs.o
