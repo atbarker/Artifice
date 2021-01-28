@@ -8,6 +8,8 @@ Artifice was developed at the UC Santa Cruz [Storage Systems Research Center](ht
 
 It is described in the workshop paper ["Artifice: A Deniable Steganographic File System"](https://www.ssrc.ucsc.edu/pub/barker-foci19.html) presented at [FOCI'19](https://www.usenix.org/conference/foci19) and the conference paper ["Artifice: Data in Disguise"](https://www.ssrc.ucsc.edu/pub/barker-msst20.html) presented at [MSST'20](https://storageconference.us/).
 
+Some of the cryptographic implementations for Artifice are contained in [this repository](https://github.com/kyle-fredrickson/artifice-crypto).
+
 
 ### Collaborators
 

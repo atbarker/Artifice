@@ -294,7 +294,7 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
         bio_add_page(read_bios[i], page_structure, AFS_BLOCK_SIZE, page_offset);
         read_bios[i]->bi_private = req;
         read_bios[i]->bi_end_io = afs_read_endio;
-        generic_make_request(read_bios[i]);
+        submit_bio(read_bios[i]);
     }
 done:
     for(i = 0; i < num_pages; i++) read_bios[i] = NULL;
@@ -332,7 +332,7 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
         bio_add_page(write_bios[i], page_structure, AFS_BLOCK_SIZE, page_offset);
         write_bios[i]->bi_private = req;
         write_bios[i]->bi_end_io = afs_write_endio;
-        generic_make_request(write_bios[i]);
+        submit_bio(write_bios[i]);
     }
 done:
     for(i = 0; i < num_pages; i++) write_bios[i] = NULL;
