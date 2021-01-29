@@ -9,6 +9,8 @@
 
 #include <stddef.h>
 
+#define ATTRS_DONE 0xFFFFFFFF
+
 /**
  * Detect the presence of an NTFS file system
  * on 'device'.
@@ -225,7 +227,6 @@ int read_ntfs_cluster(void *page, struct ntfs_volume *vol, struct block_device *
     return 0;
 }
 
-const uint32_t ATTRS_DONE = 0xFFFFFFFF;
 
 enum ntfs_attributes {
     $UNUSED                 = 0x00,
