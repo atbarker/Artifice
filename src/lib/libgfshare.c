@@ -160,7 +160,7 @@ static void _gfshare_fill_rand_using_random_bytes(uint8_t* buffer, size_t count)
  * Better performance can be had by computing round keys once.
  * This function is obtained from the following paper, https://eprint.iacr.org/2013/404
  */
-void speck_encrypt(uint64_t ct[2], uint64_t const pt[2], uint64_t const K[2])
+void speck_encrypt_rng(uint64_t ct[2], uint64_t const pt[2], uint64_t const K[2])
 {
     uint64_t y = pt[0], x = pt[1], b = K[0], a = K[1];
     int i = 0;
@@ -198,7 +198,7 @@ void generate_block_ctr(size_t output_length, uint8_t *output_block, uint8_t *se
     ctr[1] = 0;
 
     for(i = 0; i < rounds; i++){
-       speck_encrypt(output, ctr, key);
+       speck_encrypt_rng(output, ctr, key);
        ((uint64_t *)output_block)[j + 1] = output[1];
        ((uint64_t *)output_block)[j + 0] = output[0];
        ctr[0]++;
