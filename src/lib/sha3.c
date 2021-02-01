@@ -1,4 +1,4 @@
-#include "sha3.h"
+#include "lib/sha3.h"
 
 #define R 1088
 
