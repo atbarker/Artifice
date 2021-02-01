@@ -8,6 +8,7 @@
 #include <dm_afs_modules.h>
 #include <linux/delay.h>
 #include "lib/cauchy_rs.h"
+#include "lib/sha3.h"
 
 /**
  * A procedure to detect the existing file system on a block
@@ -326,6 +327,7 @@ init_request(struct afs_private *context) {
     req->encoder = NULL;
     req->num_erasures = 0;
     req->encoding_type = context->encoding_type;
+    memcpy(req->iv, context->passphrase_hash, 32);
     atomic_set(&req->rebuild_flag, 0);
     spin_lock_init(&req->req_lock);
     atomic64_set(&req->state, REQ_STATE_GROUND);
@@ -513,6 +515,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     // Parge instance arguments.
     args = &context->args;
     ret = parse_afs_args(args, argc, argv);
+    sha3_256((uint8_t*)args->passphrase, PASSPHRASE_SZ, context->passphrase_hash);
     afs_assert(!ret, args_err, "unable to parse arguments");
     //TODO, set this as a command line option
     context->encoding_type = AONT_RS;

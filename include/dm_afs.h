@@ -78,6 +78,7 @@ struct afs_private {
     // Map information.
     uint8_t *afs_map;
     uint8_t *afs_map_blocks;
+    uint8_t passphrase_hash[32];
     struct afs_ptr_block *afs_ptr_blocks;
 
     //Encoding stuff
