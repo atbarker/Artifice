@@ -327,7 +327,7 @@ init_request(struct afs_private *context) {
     req->encoder = NULL;
     req->num_erasures = 0;
     req->encoding_type = context->encoding_type;
-    memcpy(req->iv, context->passphrase_hash, 32);
+    memcpy(req->iv, context->passphrase_hash, 16);
     atomic_set(&req->rebuild_flag, 0);
     spin_lock_init(&req->req_lock);
     atomic64_set(&req->state, REQ_STATE_GROUND);
