@@ -1,10 +1,11 @@
 #include "lib/cauchy_rs.h"
 #include "lib/aont.h"
 #include "lib/speck.h"
+#include "lib/sha3.h"
 
 #define HASH_SIZE 32 
 
-struct sdesc {
+/*struct sdesc {
     struct shash_desc shash;
     char ctx[];
 };
@@ -27,7 +28,7 @@ static int calc_hash(const uint8_t *data, size_t datalen, uint8_t *digest) {
     kfree(sdesc);
     crypto_free_shash(alg);
     return ret;
-}
+}*/
 
 //TODO change sizes here
 int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_length, uint8_t **shares, size_t data_blocks, size_t parity_blocks, uint64_t *nonce){
@@ -65,7 +66,7 @@ int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_le
     params.OriginalCount = data_blocks;
     params.RecoveryCount = parity_blocks;
 
-    calc_hash(ciphertext_buffer, cipher_size, (uint8_t*)hash);
+    sha3_256(ciphertext_buffer, cipher_size, (uint8_t*)hash);
 
     for (i = 0; i < 4; i++) {
         ((uint64_t*)difference)[i] = key[i] ^ hash[i];
@@ -116,7 +117,7 @@ int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, 
         memcpy(&ciphertext_buffer[rs_block_size * i], shares[i], rs_block_size);
     }
 
-    calc_hash(ciphertext_buffer, cipher_size, (uint8_t*)hash);
+    sha3_256(ciphertext_buffer, cipher_size, (uint8_t*)hash);
 
     memcpy(difference, &ciphertext_buffer[cipher_size], KEY_SIZE);
 
