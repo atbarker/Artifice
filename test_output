@@ -2,37 +2,47 @@
 
 The Artifice File System is a pseudo file system which exists in the free space of another file system. By doing so, Artifice remains hidden from suspecting users and hence can be used to store information with concrete deniability. Artifice is implemented using device mapper, and it performs a block to block mapping of information.
 
-For contributions to this project, please contact `Yash Gupta`, `Austen Barker`, or `Eugene Chou` {ygupta,atbarker,euchou}@ucsc.edu.
+For contributions to this project, please contact `Austen Barker` at atbarker@ucsc.edu.
+
+Artifice was developed at the UC Santa Cruz [Storage Systems Research Center](https://www.ssrc.ucsc.edu/index.html) (SSRC) with support from National  Science  Foundation  grant  number  IIP-1266400, and award CNS-1814347.
+
+It is described in the workshop paper ["Artifice: A Deniable Steganographic File System"](https://www.ssrc.ucsc.edu/pub/barker-foci19.html) presented at [FOCI'19](https://www.usenix.org/conference/foci19) and the conference paper ["Artifice: Data in Disguise"](https://www.ssrc.ucsc.edu/pub/barker-msst20.html) presented at [MSST'20](https://storageconference.us/).
+
+Some of the cryptographic implementations for Artifice are contained in [this repository](https://github.com/kyle-fredrickson/artifice-crypto).
+
+
+### Collaborators
+
+`Yash Gupta`, ygupta@ucsc.edu
+
+`Eugene Chou` euchou@ucsc.edu
+
+`Darrell Long` darrell@ucsc.edu
+
+`Sabrina Au` scau@ucsc.edu
+
+`Kyle Fredrickson` kyfredi@ucsc.edu
+
+`James Houghton` jhoughton@virginia.edu
+
+`Ethan Miller` elm@ucsc.edu
 
 ## Build
+
+Artifice is tested on and designed for Linux kernel versions 4.4 to 5.0.
 
 ```
 $ make
 $ sudo insmod dm-afs.ko afs_debug_mode=1
 $ sudo rmmod dm_afs
-
+```
 Please look at the Makefile targets `debug_create`, `debug_mount` and `debug_end` for information on how to setup a dm-target.
-```
 
-## Guidelines
-
-All code pushed to the repository is formatted using `clang-format`. Style guide parameters are as follows:
-
-```
-{
-    BasedOnStyle: WebKit,
-    AlignTrailingComments: true,
-    AllowShortIfStatementsOnASingleLine: true,
-    AlwaysBreakAfterDefinitionReturnType: true,
-    PointerAlignment: Right,
-    ForEachMacros: ['list_for_each_entry', 'list_for_each_entry_safe', 'bio_for_each_segment']
-}
-```
-Add 'ForEachMacros' definitions as required in the code.
-
-Code which has not been formatted with these options will be rejected for a merge.
+There are also a variety of other Makefile targets for benchmarking and IO testing that also appear with the `debug_*` prefix. 
 
 ## Design
+
+![Artifice Design Overview](https://github.com/atbarker/Artifice/blob/master/doc/newartificediagram.png)
 
 The design portion of this markdown is not intended to be reference information. It won't make sense unless you read from start to end.
 
@@ -46,14 +56,10 @@ Before we can explain the design of Artifice, it is important to understand it's
 
 Hence, when you create a dm-target for `artifice`, you will have a block device which may look like `/dev/mapper/artifice` (depending on how you name your instance). Any kind of I/O on this virtual block device is sent over to the Artifice kernel module. This module intercepts this IO, remaps it to the location it needs to be remapped to, and then "submits" it. 
 
-Accordingly, the idea is that one can technically format `/dev/mapper/artifice` with a file system such as "FAT32", and Artifice can remap each of the FAT32 writes over to an underlying physical block device (such as `/dev/sdb`). Based on our design, we will only utilize the free blocks in `/dev/sdb`, hence, `/dev/sdb` needs to be formatted with a supported file system, and there should be enough free space left in that underlying file system.
+Accordingly, the idea is that one will format `/dev/mapper/artifice` with a file system such as "FAT32", and Artifice can remap each of the FAT32 writes over to an underlying physical block device (such as `/dev/sdb`). Based on our design, we will only utilize the free blocks in the file system on `/dev/sdb`, hence, `/dev/sdb` needs to be formatted with a supported file system, and there should be enough free space left in that underlying file system to fit the desired Artifice volume(s).
 
 Support for underlying file systems is added through `modules`.
 
 ### Modules
 
-By now you should be comfortable with understanding the hierarchy of file systems in Artifice. There is the file system which is used on `/dev/mapper/artifice` virtual block device (we call this the active file system), and then there is the file system present on the underlying physical block device such as `/dev/sdb` (we call this the passive file system). The idea is that writes onto the active file system are mapped into the free space of the passive file system.
-
-Since the writes are simple mappings, theoretically, you could use _any_ file system as the active file system. This is not entirely true in practice however, since certain file systems (such as EXT4) require some extra support like ZONE_INFORMATION. Currently, Artifice is unable to map these special requests onto a physical device.
-
-On the other hand, we need discrete support for the passive file system. This is where `Artifice Modules` come into play. A modules task, given a physical block device, is to figure out whether or not a particular fule system exists on the physical block device. Moreover, if a module detects that a certain file system is present, then it needs to provide pointers to the free
+By now you should be comfortable with understanding the hierarchy of file systems in Artifice. There is the file system which is used on `/dev/mapper/artifice` virtual block device (we call this the active file system), and then there is the file system present on the underlying physical block device such as `/dev/sdb` (we call this the passive file system). The idea is that writes onto the active file system are mapped into the free space of 

@@ -32,8 +32,8 @@ static int calc_hash(const uint8_t *data, size_t datalen, uint8_t *digest) {
 
 //TODO change sizes here
 int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_length, uint8_t **shares, size_t data_blocks, size_t parity_blocks, uint64_t *nonce){
-    uint8_t canary[CANARY_SIZE];
-    size_t cipher_size = data_length + CANARY_SIZE;
+    //uint8_t canary[CANARY_SIZE];
+    size_t cipher_size = data_length;
     size_t encrypted_payload_size = cipher_size + KEY_SIZE;
     size_t rs_block_size = encrypted_payload_size / data_blocks;
     uint64_t key[4];
@@ -52,9 +52,9 @@ int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_le
     
 
     //TODO Compute canary of the data block (small hash?)
-    memset(canary, 0, CANARY_SIZE);
+    //memset(canary, 0, CANARY_SIZE);
     memcpy(plaintext_buffer, data, data_length);
-    memcpy(&plaintext_buffer[data_length], canary, CANARY_SIZE);
+    //memcpy(&plaintext_buffer[data_length], canary, CANARY_SIZE);
 
     //generate key and IV
     get_random_bytes(key, sizeof(key)); 
@@ -87,8 +87,8 @@ int encode_aont_package(uint8_t *difference, const uint8_t *data, size_t data_le
 }
 
 int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, uint8_t **shares, size_t data_blocks, size_t parity_blocks, uint64_t *nonce, uint8_t *erasures, uint8_t num_erasures){
-    uint8_t canary[CANARY_SIZE];
-    size_t cipher_size = data_length + CANARY_SIZE;
+    //uint8_t canary[CANARY_SIZE];
+    size_t cipher_size = data_length;
     size_t encrypted_payload_size = cipher_size + KEY_SIZE;
     size_t rs_block_size = encrypted_payload_size / data_blocks;
     uint64_t key[4];
@@ -105,7 +105,7 @@ int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, 
     ciphertext_buffer = kmalloc(encrypted_payload_size, GFP_KERNEL);
     if(ciphertext_buffer == NULL) return -1;
 
-    memset(canary, 0, CANARY_SIZE);
+    //memset(canary, 0, CANARY_SIZE);
 
     params.BlockBytes = rs_block_size;
     params.OriginalCount = data_blocks;
@@ -128,9 +128,9 @@ int decode_aont_package(uint8_t *difference, uint8_t *data, size_t data_length, 
     speck_ctr((uint64_t*)ciphertext_buffer, (uint64_t*)plaintext_buffer, cipher_size, key, nonce);
 
     //encrypt_payload(encode_buffer, cipher_size, key, KEY_SIZE, 0);
-    if(memcmp(canary, &plaintext_buffer[data_length], CANARY_SIZE)){
-        return -1;
-    }
+    //if(memcmp(canary, &plaintext_buffer[data_length], CANARY_SIZE)){
+    //    return -1;
+    //}
     memcpy(data, plaintext_buffer, data_length);
 
     kfree(plaintext_buffer);
