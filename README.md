@@ -184,7 +184,7 @@ rtifice. A secure delete file system is one where the data is stored encrypted s
 - [ ] NTFS support.
 - [ ] APFS support.
 - [ ] F2FS/YAFFS/some other log structured system.
-- [ ] Verify compatibility with ARM systems (SIMD or other inline assembly operations).
+- [ ] Verify compatibility with ARM systems (SIMD and that one bit scan reverse inline function).
 
 ## Guidelines
 
