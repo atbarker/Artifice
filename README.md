@@ -1,6 +1,4 @@
-```diff
-- WARNING
-```
+***WARNING***
 This is an active research project and is still under development. As such there may be any number of incomplete, quickly written, or outright broken parts of this project. As with most research code the programs in this repository have not been thoroughly tested and if you intend to use this software do so at your own risk.
 
 *DO NOT USE THIS TO HIDE SENSITIVE INFORMATION WITHOUT EXTENSIVE RED TEAM TESTING SPECIFIC TO YOUR USE CASE*
