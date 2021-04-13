@@ -1,3 +1,5 @@
+<span style="color:blue">NOTE</span>
+
 # Artifice
 
 The Artifice File System is a pseudo file system which exists in the free space of another file system. By doing so, Artifice remains hidden from suspecting users and hence can be used to store information with concrete deniability. Artifice is implemented using device mapper, and it performs a block to block mapping of information.
