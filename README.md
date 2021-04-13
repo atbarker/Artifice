@@ -1,4 +1,6 @@
-<span style="color:blue">NOTE</span>
+```diff
+- WARNING
+```
 
 # Artifice
 
