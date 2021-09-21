@@ -83,7 +83,7 @@ for i in m_values:
     prob3.append(rs.get_overhead())
 
 plt.xlabel("Number of Carrier Blocks")
-plt.ylabel("Metadata Overhead (percentage)")
+plt.ylabel("Metadata Overhead (% of total data)")
 plt.title("Number of Carrier Blocks vs Metadata Overhead")
 rs = plt.plot(m_values, prob3, label='RS', marker="o")
 shamir = plt.plot(m_values, prob1, label='SSS', marker="D")
