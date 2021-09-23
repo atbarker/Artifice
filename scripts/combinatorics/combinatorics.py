@@ -18,18 +18,6 @@ num_days = 365
 small_checksum = 0 #checksum used to verify carrier block integrity
 
 
-#in mathematica this is represented as Sum[PDF[BinomialDistribution[k+m,p],i], {i, 0, m}]
-#as this is just a cumulative distribution function, python can do this for us
-def prob_survival_sss(k, m, p):
-    #return binom.cdf(m, k+m, p)
-    return binom.cdf(m-k, m, p)
-
-def prob_survival_rs(e, d, m, p):
-    return binom.cdf(m-d, e+m, p)
-
-def prob_survival_aont(d, m, p):
-    return binom.cdf(m, m+d, p)
-
 def calc_metadata_size_rs(blocks, parity, entropy, data, replicas, verbose):
     pointer_size = 4
     art_block_hash = 16
@@ -180,58 +168,6 @@ def calc_total_size_ssms(size, k, m):
 def calc_total_size_aont(size, parity, data):
     return (size * ((parity + data) / data)) + calc_metadata_size_aont(size, parity, data, 8, False)
 
-def prob_metadata_alive_rs(e, d, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    metadata = calc_metadata_size_rs(art_size, m, e, d, 8, False)
-    return math.pow(prob_survival_rs(e, d, m, prob), (metadata * num_days))
-
-#in this case k is the reconstruct threshold, m is the number of additional shares
-def prob_metadata_alive_sss(k, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    metadata = calc_metadata_size_shamir(art_size, m, k, 8, False)
-    return math.pow(prob_survival_sss(k, m, prob), (metadata * num_days))
-
-def prob_metadata_alive_ssms(k, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    metadata = calc_metadata_size_ssms(art_size, m, k, 8, False)
-    return math.pow(prob_survival_sss(k, m, prob), (metadata * num_days))
-
-def prob_metadata_alive_aont(d, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    metadata = calc_metadata_size_aont(art_size, m, d, 8, False)
-    return math.pow(prob_survival_aont(d, m, prob), (metadata * num_days))
-
-
-#k is data + entropy, m 
-def prob_artifice_alive_rs(e, d, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    total_size = calc_total_size_rs(art_size, m, d, e)
-    return math.pow(prob_survival_rs(e, d, m, prob), (total_size * num_days))
-
-#k is the reconstruct threshold, m is the number of additional shares
-def prob_artifice_alive_sss(k, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    total_size = calc_total_size_sss(art_size, m, k)
-    return math.pow(prob_survival_sss(k, m, prob), (total_size * num_days))
-
-def prob_artifice_alive_ssms(k, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    total_size = calc_total_size_ssms(art_size, m, k)
-    return math.pow(prob_survival_sss(k, m, prob), (total_size * num_days))
-
-def prob_artifice_alive_aont(d, m, art_size, blocks_over, free_blocks):
-    prob = blocks_over / free_blocks
-    total_size = calc_total_size_aont(art_size, m, d)
-    return math.pow(prob_survival_aont(d, m, prob), (total_size * num_days))
-
-def prob_nines(k, m, p):
-    return -math.log10(1 - prob_survival(k, m, p))
-
-#mean time to failure (MTTF) is in hours
-#calculates the probability that a given disk will die
-def prob_disk_alive(mttf, days):
-    return ((1 - (1/mttf)) ** (days * 24))
-
 def main(args):
 
     calc_metadata_size_rs(def_art_size, 4, 1, 2, 8, True)
@@ -239,26 +175,8 @@ def main(args):
     calc_metadata_size_ssms(def_art_size, 8, 5, 8, True)
     calc_metadata_size_aont(def_art_size, 8, 5, 8, True)
     
-    if args[1] == "nines":
-        m_max = 0.05
-        m_values = np.arange(0.0001, 0.05, 0.0001)
-        prob1 = []
-        prob2 = []
-        prob3 = []
-        prob4 = []
-        prob5 = []
-        for i in m_values:
-            prob1.append(prob_nines(3, 3, i))
-            prob2.append(prob_nines(3, 4, i))
-            prob3.append(prob_nines(3, 5, i))
-            prob4.append(prob_nines(3, 6, i))
-            prob5.append(prob_nines(3, 7, i))
-        plt.axis([0, 0.05, 0, 14])
-        plt.plot(m_values, prob1, m_values, prob2, m_values, prob3, m_values, prob4, m_values, prob5)
-        plt.show()
-
     #probability of survival for metadata, reed solomon
-    elif args[1] == "metadata":
+    if args[1] == "metadata":
         m_values = np.arange(3, 10, 1)
         prob1 = []
         prob2 = []
@@ -335,137 +253,6 @@ def main(args):
         #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
         aont = plt.plot(m_values, prob7, label='AONT, threshold 2', marker="x")
         aont2 = plt.plot(m_values, prob8, label='AONT, threshold 3', marker="+")
-        plt.legend()
-        plt.show()
-
-    elif args[1] == "disk":
-        print("Probability of the disk being alive {}".format(prob_disk_alive(200000, 365)))
-
-    elif args[1] == "volume":
-        print("Graph for the probability of survival based on Artifice volume size")
-        #256MB to 4GB volume in powers of 2 (2^29, 2^30, 2^31, ...)
-        m_values = np.power(2, np.arange(16, 21, 0.01)) 
-        prob1 = []
-        prob2 = []
-        prob3 = []
-        prob4 = []
-        prob5 = []
-        prob6 = []
-
-        for i in m_values:
-            prob1.append(prob_artifice_alive_rs(1, 1, 8, i, def_overwritten, def_free_blocks))
-            prob2.append(prob_artifice_alive_sss(2, 8, i, def_overwritten, def_free_blocks))
-            prob3.append(prob_artifice_alive_aont(2, 8, i, def_overwritten, def_free_blocks))
-            prob4.append(prob_artifice_alive_rs(1, 2, 8, i, def_overwritten, def_free_blocks))
-            prob5.append(prob_artifice_alive_sss(3, 8, i, def_overwritten, def_free_blocks))
-            prob6.append(prob_artifice_alive_aont(3, 8, i, def_overwritten, def_free_blocks))           
-
-        plt.xlabel("Size of the Artifice Volume (blocks)")
-        plt.ylabel("Probability of Survival")
-        plt.title("Probability of Artifice Survival vs Size of the Artifice Volume")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
-        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
-        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
-        plt.legend()
-        plt.show()
-
-    elif args[1] == "write":
-        print("Graph for amount written per day")
-        #256MB to 8GB
-        m_values = np.power(2, np.arange(16, 21, 0.01))
-        prob1 = []
-        prob2 = []
-        prob3 = []
-        prob4 = []
-        prob5 = []
-        prob6 = []
-
-        for i in m_values:
-            prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, i, def_free_blocks))
-            prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, i, def_free_blocks))
-            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, i, def_free_blocks))
-            prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, i, def_free_blocks))
-            prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, i, def_free_blocks))
-            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, i, def_free_blocks))
-
-        plt.xlabel("Amount written per day (blocks)")
-        plt.ylabel("Probability of Survival")
-        plt.title("Probability of Artifice Surivival vs Amount Written per Day")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
-        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
-        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
-        plt.legend()
-        plt.show()
-
-    elif args[1] == "freespace":
-        print("Graph for size based on the amount of free space")
-        #64GB to 512GB
-        m_values = np.power(2, np.arange(24, 27, 0.01))
-        prob1 = []
-        prob2 = []
-        prob3 = []
-        prob4 = []
-        prob5 = []
-        prob6 = []
-
-        for i in m_values:
-            prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, def_overwritten, i))
-            prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, def_overwritten, i))
-            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, def_overwritten, i))
-            prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, def_overwritten, i))
-            prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, def_overwritten, i))
-            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, def_overwritten, i))
-
-        plt.xlabel("Unallocated Space (blocks)")
-        plt.ylabel("Probability of Survival")
-        plt.title("Probability of Artifice Survival vs Size of Unallocated Space")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
-        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
-        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
-        plt.legend()
-        plt.show()
-
-    elif args[1] == "overhead":
-        print("Graph for size of the artifice volume")
-        #vary by number of carrier blocks, include an equation used to generate the graph
-        #do we modulate the threshold or the total number of carrier blocks? In the case of SSMS or AONT then it will vary depending on the threshold
-        #For secret sharing we get a simple linear relationship, the size of the metadata raises linearly and the metadata structures are fixed
-        #In the case of AONT or SSMS we see the size complexity increase by a factor of threshold/
-        #metadata could possibly grow and shrink depending on how many blocks are in use (due to high overhead).
-        m_values = np.power(2, np.arange(24, 29, 0.01))
-        prob1 = []
-        prob2 = []
-        prob3 = []
-        prob4 = []
-        prob5 = []
-        prob6 = []
-
-        for i in m_values:
-            prob1.append(prob_artifice_alive_rs(1, 1, 8, def_art_size, def_overwritten, i))
-            prob2.append(prob_artifice_alive_sss(2, 8, def_art_size, def_overwritten, i))
-            prob3.append(prob_artifice_alive_aont(2, 8, def_art_size, def_overwritten, i))
-            prob4.append(prob_artifice_alive_rs(1, 2, 8, def_art_size, def_overwritten, i))
-            prob5.append(prob_artifice_alive_sss(3, 8, def_art_size, def_overwritten, i))
-            prob6.append(prob_artifice_alive_aont(3, 8, def_art_size, def_overwritten, i))
-
-        plt.xlabel("Unallocated Space (blocks)")
-        plt.ylabel("Probability of Survival")
-        plt.title("Probability of Artifice Survival vs Size of Unallocated Space")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block')
-        rs2 = plt.plot(m_values, prob4, label='RS, 2 data blocks')
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2')
-        #shamir2 = plt.plot(m_values, prob5, label='SSS, threshold 3')
-        aont = plt.plot(m_values, prob3, label='AONT, threshold 2')
-        aont2 = plt.plot(m_values, prob6, label='AONT, threshold 3')
         plt.legend()
         plt.show()
 
