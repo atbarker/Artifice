@@ -206,6 +206,34 @@ def main(args):
         shamir = plt.plot(m_values, prob1, label='SSS', marker="x")
         plt.legend()
         plt.show()
+    elif args[1] == "freespace":
+        m_values = np.power(2, np.arange(24, 27, 0.01))
+        prob1 = []
+        for i in m_values:
+            #1 entropy block, 1 data block, i parity blocks
+            prob1.append(calc_comb_sss(def_free_blocks, def_art_size, i, 10))
+            #reconstruct threshold of 2, i additional blocks
+
+        plt.xlabel("Size of Freespace (blocks)")
+        plt.ylabel("Number of possible combinations (2^x)")
+        plt.title("Possible combinations versus Freespace Size")
+        shamir = plt.plot(m_values, prob1, label='SSS', marker="x")
+        plt.legend()
+        plt.show()
+    elif args[1] == "size":
+        m_values = np.power(2, np.arange(18, 21, 0.01))
+        prob1 = []
+        for i in m_values:
+            #1 entropy block, 1 data block, i parity blocks
+            prob1.append(calc_comb_sss(def_free_blocks, def_art_size, i, 10))
+            #reconstruct threshold of 2, i additional blocks
+
+        plt.xlabel("Size of Artifice Volume (blocks)")
+        plt.ylabel("Number of possible combinations (2^x)")
+        plt.title("Possible combinations versus Artifice Size")
+        shamir = plt.plot(m_values, prob1, label='SSS', marker="x")
+        plt.legend()
+        plt.show()
 
     else:
         print("Invalid argument")
