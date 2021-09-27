@@ -2,14 +2,12 @@
 import numpy as np
 import math
 import sys
-from scipy.stats import binom
-from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
 block_size = 4096 #4KB
 def_total_size = 549755813888 #512GB
 def_free_blocks = def_total_size / block_size
-def_overwritten = 1310720 #5GB in blocks
+def_overwritten = 1310720 #5GB in 4KB blocks
 def_art_size = 262144 #1GB artifice instance
 #def_art_size = 524288 #2GB artifice instance
 #def_art_size = 1310720 #5GB artifice instance
@@ -168,6 +166,25 @@ def calc_total_size_ssms(size, k, m):
 def calc_total_size_aont(size, parity, data):
     return (size * ((parity + data) / data)) + calc_metadata_size_aont(size, parity, data, 8, False)
 
+def calc_comb_sss(freespace, size, k, m):
+    if freespace == size:
+        return k * freespace
+    else: 
+        return size * k
+
+
+def calc_comb_ssms(freespace, size, k, m):
+    if freespace == size:
+        return k * freespace
+    else:
+        return size * k
+
+def calc_comb_aont(freespace, size, parity, data):
+    if freespace == size:
+        return freespace * parity
+    else: 
+        return size * k
+
 def main(args):
 
     calc_metadata_size_rs(def_art_size, 4, 1, 2, 8, True)
@@ -175,84 +192,18 @@ def main(args):
     calc_metadata_size_ssms(def_art_size, 8, 5, 8, True)
     calc_metadata_size_aont(def_art_size, 8, 5, 8, True)
     
-    #probability of survival for metadata, reed solomon
-    if args[1] == "metadata":
+    if args[1] == "shares":
         m_values = np.arange(3, 10, 1)
         prob1 = []
-        prob2 = []
-        prob3 = []
-        prob4 = []
-        prob5 = []
-        prob6 = []
-        prob7 = []
-        prob8 = []
         for i in m_values:
             #1 entropy block, 1 data block, i parity blocks
-            #in this case at least i-2 blocks must survive, the threshold is tied to the 
-            #number of carrier blocks in the keyword
-            prob1.append(prob_metadata_alive_rs(1, 1, i, def_art_size, def_overwritten, def_free_blocks))
+            prob1.append(calc_comb_sss(def_free_blocks, def_art_size, i, 10))
             #reconstruct threshold of 2, i additional blocks
-            prob2.append(prob_metadata_alive_sss(2, i, def_art_size, def_overwritten, def_free_blocks))
-            #1 entropy block, 2 data blocks, i parity blocks
-            prob3.append(prob_metadata_alive_rs(1, 2, i, def_art_size, def_overwritten, def_free_blocks))
-            #reconstruct threshold of 3, i additional blocks
-            prob4.append(prob_metadata_alive_sss(3, i, def_art_size, def_overwritten, def_free_blocks))
-            prob5.append(prob_metadata_alive_ssms(2, i, def_art_size, def_overwritten, def_free_blocks))
-            prob6.append(prob_metadata_alive_ssms(3, i, def_art_size, def_overwritten, def_free_blocks))
-            prob7.append(prob_metadata_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
-            prob8.append(prob_metadata_alive_aont(3, i, def_art_size, def_overwritten, def_free_blocks))
 
-        plt.xlabel("Number of Carrier Blocks")
-        plt.ylabel("Probability of Survival")
-        plt.title("Probability of Metadata Survival vs Number of Carrier Blocks")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
-        rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
-        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        #ssms = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
-        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
-        aont = plt.plot(m_values, prob7, label='AONT, threshold 2', marker="x")
-        aont2 = plt.plot(m_values, prob8, label='AONT, threshold 3', marker="+")
-        plt.legend()
-        plt.show()
-
-    elif args[1] == "all":
-        m_values = np.arange(3, 10, 1)
-        prob1 = []
-        prob2 = []
-        prob3 = []
-        prob4 = []
-        prob5 = []
-        prob6 = []
-        prob7 = []
-        prob8 = []
-        for i in m_values:
-            #1 entropy block, 1 data block, i parity blocks
-            prob1.append(prob_artifice_alive_rs(1, 1, i, def_art_size, def_overwritten, def_free_blocks))
-            #reconstruct threshold of 2, i additional blocks
-            prob2.append(prob_artifice_alive_sss(2, i, def_art_size, def_overwritten, def_free_blocks))
-            #1 entropy block, 2 data blocks, i parity blocks
-            prob3.append(prob_artifice_alive_rs(1, 2, i, def_art_size, def_overwritten, def_free_blocks))
-            #reconstruct threshold of 3, i additional blocks
-            prob4.append(prob_artifice_alive_sss(3, i, def_art_size, def_overwritten, def_free_blocks))
-            #reconstruct threshold of 4, i additional shares
-            prob5.append(prob_artifice_alive_ssms(2, i, def_art_size, def_overwritten, def_free_blocks))
-            prob6.append(prob_artifice_alive_ssms(3, i, def_art_size, def_overwritten, def_free_blocks))
-            prob7.append(prob_artifice_alive_aont(2, i, def_art_size, def_overwritten, def_free_blocks))
-            prob8.append(prob_artifice_alive_aont(3, i, def_art_size, def_overwritten, def_free_blocks))
-
-
-        plt.xlabel("Number of Carrier Blocks")
-        plt.ylabel("Probability of Survival")
-        plt.title("Probability of Artifice Survival vs Number of Carrier Blocks")
-        rs = plt.plot(m_values, prob1, label='RS, 1 data block', marker="o")
-        rs2 = plt.plot(m_values, prob3, label='RS, 2 data blocks', marker="s")
-        shamir = plt.plot(m_values, prob2, label='SSS, threshold 2', marker="D")
-        shamir2 = plt.plot(m_values, prob4, label='SSS, threshold 3', marker="p")
-        #ssms = plt.plot(m_values, prob5, label='SSMS, threshold 2', marker="x")
-        #ssms2 = plt.plot(m_values, prob6, label='SSMS, threshold 3', marker="+")
-        aont = plt.plot(m_values, prob7, label='AONT, threshold 2', marker="x")
-        aont2 = plt.plot(m_values, prob8, label='AONT, threshold 3', marker="+")
+        plt.xlabel("Reconstruction Threshold")
+        plt.ylabel("Number of possible combinations (2^x)")
+        plt.title("Possible combinations versus Reconstruction Threshold")
+        shamir = plt.plot(m_values, prob1, label='SSS', marker="x")
         plt.legend()
         plt.show()
 
