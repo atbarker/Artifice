@@ -525,8 +525,12 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     ret = dm_get_device(ti, args->passive_dev, dm_table_get_mode(ti->table), &context->passive_dev);
     afs_assert(!ret, args_err, "could not find given disk [%s]", args->passive_dev);
     context->bdev = context->passive_dev->bdev;
-    //context->config.bdev_size = context->bdev->bd_part->nr_sects;
+    //They changed how you get sector size, eliminating hd_struct *bd_part from the bdev struct, so we now have a helper
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,78)
     context->config.bdev_size = bdev_nr_sectors(context->bdev);
+#else
+    context->config.bdev_size = context->bdev->bd_part->nr_sects;
+#endif
 
     fs = &context->passive_fs;
     detected_fs = detect_fs(context->bdev, fs);
