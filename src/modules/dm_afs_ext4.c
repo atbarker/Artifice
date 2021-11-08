@@ -945,9 +945,9 @@ print_free_range(uint64_t grp_num, bit_vector_t *bvec, uint32_t offset,
 
         for (i = 0; i < bvec->length; ++i) {
             if (!bit_vector_get(bvec, i)) {
-                printk(KERN_CONT "0");
+                //printk(KERN_CONT "0");
             } else {
-                printk(KERN_CONT "1");
+                //printk(KERN_CONT "1");
             }
         }
 
@@ -967,7 +967,7 @@ print_free_range(uint64_t grp_num, bit_vector_t *bvec, uint32_t offset,
                 //afs_debug("  Free blocks: %lld - %lld", start, end);
 	    }
             else {
-                afs_debug("  Free block: %lld", start);
+                //afs_debug("  Free block: %lld", start);
 	    }
 
             i = j;
@@ -1102,6 +1102,7 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
     uint64_t k = 0;
     uint64_t blk_offset;
     uint64_t blk_grp_offset;
+    uint64_t total_offset;
     uint32_t *block_list = NULL;
     bit_vector_t *bvec = NULL;
 
@@ -1112,6 +1113,7 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
     }
 
     block_list = vmalloc(disk->free_block_count * sizeof(uint32_t));
+    afs_debug("free block count %u", disk->free_block_count);
     if (!block_list) {
         afs_debug("Couldn't allocate free block list!");
         goto err_free_bvec;
@@ -1132,7 +1134,11 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
                 blk_offset = j + disk->first_data_block;
 
                 if (blk_grp_offset + blk_offset <= 0xFFFFFFFF) {
-                    block_list[k++] = blk_grp_offset + blk_offset;
+		    total_offset = blk_grp_offset + blk_offset;
+                    block_list[k] = total_offset;
+		    //afs_debug("total offset %llu", total_offset);
+		    //afs_debug("stored offset %u", block_list[k]);
+		    k++;
                 }
             }
 
@@ -1141,7 +1147,9 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
     }
 
     fs->list_len = k;
+    afs_debug("list length %llu", k);
     fs->block_list = vmalloc(fs->list_len * sizeof(uint32_t));
+    afs_debug("is there a problem? %u", fs->block_list[0]);
     if (!fs->block_list) {
         afs_debug("Couldn't allocate free block list!");
         goto err_free_bvec;

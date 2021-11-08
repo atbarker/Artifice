@@ -562,6 +562,7 @@ afs_write_request(struct afs_map_request *req, struct bio *bio)
         // Allocate new block, or use old one.
         //allocation_free(req->vector, req->map_entry_tuple[i].carrier_block_ptr);
         block_num = (modification) ? req->map_entry_tuple[i].carrier_block_ptr : acquire_block(req->fs, req->vector);
+	//afs_debug("block num %u", block_num);
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, reset_entry, "no free space left");
         req->map_entry_tuple[i].carrier_block_ptr = block_num;
 	req->block_nums[i] = block_num;

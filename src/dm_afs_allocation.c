@@ -46,12 +46,13 @@ allocation_set(struct afs_allocation_vector *vector, uint32_t index)
     // Make sure index is not already taken.
     if (allocation_get(vector, index)) {
         return false;
-    }
-    ret = bit_vector_set(vector->vector, index);
+    }else{
+       ret = bit_vector_set(vector->vector, index);
 
     // Make sure return code was valid.
-    afs_assert(!ret, err, "bit_vector_set returned %d", ret);
-    return true;
+       afs_assert(!ret, err, "bit_vector_set returned %d", ret);
+       return true;
+    }
 
 err:
     return false;
@@ -78,7 +79,7 @@ allocation_free(struct afs_allocation_vector *vector, uint32_t index)
 uint32_t
 acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
 {
-    static uint32_t block_num = 0;
+    uint32_t block_num = 0;
     uint32_t current_num;
     uint32_t ret;
 
@@ -88,7 +89,8 @@ acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
     do {
         if (allocation_set(vector, block_num)) {
             ret = fs->block_list[block_num];
-            block_num = (block_num + 1) % fs->list_len;
+	    afs_debug("block list entry %u", fs->block_list[block_num]);
+            //block_num = (block_num + 1) % fs->list_len;
             spin_unlock(&vector->lock);
             return ret;
         }
