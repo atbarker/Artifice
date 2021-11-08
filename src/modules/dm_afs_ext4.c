@@ -1149,7 +1149,7 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
     fs->list_len = k;
     afs_debug("list length %llu", k);
     fs->block_list = vmalloc(fs->list_len * sizeof(uint32_t));
-    afs_debug("is there a problem? %u", fs->block_list[0]);
+    //afs_debug("is there a problem? %u", fs->block_list[0]);
     if (!fs->block_list) {
         afs_debug("Couldn't allocate free block list!");
         goto err_free_bvec;
