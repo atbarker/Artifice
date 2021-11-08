@@ -16,8 +16,8 @@ uint32_t random_block_index(struct afs_passive_fs *fs, struct afs_allocation_vec
     do {
     get_random_bytes(&block_num, sizeof(uint32_t));
     block_num = block_num % fs->list_len;
-    afs_debug("block_num %u", block_num);
-    afs_debug("block_num offset %u", fs->block_list[block_num]);
+    //afs_debug("block_num %u", block_num);
+    //afs_debug("block_num offset %u", fs->block_list[block_num]);
     }while (fs->block_list[block_num] == 0);
     return block_num; 
 }
