@@ -625,8 +625,8 @@ print_group_desc(struct ext4_group_desc *gd, struct ext4_superblock *sb,
     imap_block = sb->s_blocks_per_group * flex_grp_num;
     imap_offset = inode_bmap - imap_block;
 
-    afs_debug("Group %lld: (Blocks: %lld-%lld) csum 0x%04X",
-        grp_num, block_start, block_end, gd->bg_checksum);
+    //afs_debug("Group %lld: (Blocks: %lld-%lld) csum 0x%04X",
+    //    grp_num, block_start, block_end, gd->bg_checksum);
 
     /* afs_debug("Group descriptor flags:"); */
     /* if (gd->bg_flags & INODE_UNINIT) */
@@ -636,13 +636,13 @@ print_group_desc(struct ext4_group_desc *gd, struct ext4_superblock *sb,
     /* if (gd->bg_flags & ITABLE_ZEROED) */
     /*     afs_debug("ITABLE_ZEROED"); */
 
-    afs_debug("  Block bitmap at %lld (bg #%lld + %lld), csum 0x%04X",
-        block_bmap, flex_grp_num, bmap_offset, block_bmap_csum);
+    //afs_debug("  Block bitmap at %lld (bg #%lld + %lld), csum 0x%04X",
+    //    block_bmap, flex_grp_num, bmap_offset, block_bmap_csum);
 
-    afs_debug("  Inode bitmap at %lld (bg #%lld + %lld), csum 0x%04X",
-        inode_bmap, flex_grp_num, imap_offset, inode_bmap_csum);
+    //afs_debug("  Inode bitmap at %lld (bg #%lld + %lld), csum 0x%04X",
+    //    inode_bmap, flex_grp_num, imap_offset, inode_bmap_csum);
 
-    afs_debug("  %d free blocks, %d free inodes", free_blocks, free_inodes);
+    //afs_debug("  %d free blocks, %d free inodes", free_blocks, free_inodes);
 }
 
 /**
@@ -684,7 +684,7 @@ new_group_desc_arr(struct ext4_superblock *sb, uint64_t num_grp_descs)
     for (i = 0; i < num_grp_descs; ++i) {
         gd_arr[i] = new_group_desc(sb);
         if (!gd_arr[i]) {
-            afs_debug("Failed to allocate group descriptor array!");
+            //afs_debug("Failed to allocate group descriptor array!");
             goto err_free_gd_arr;
         }
     }
@@ -832,7 +832,7 @@ read_superblock(struct ext4_superblock *sb, const void *data)
         afs_debug("Found 32-bit EXT4");
     }
 
-    print_superblock(sb);
+    //print_superblock(sb);
 
     return 0;
 }
@@ -941,7 +941,7 @@ print_free_range(uint64_t grp_num, bit_vector_t *bvec, uint32_t offset,
     print_group_desc(disk->gd_arr[grp_num], sb, grp_num);
 
     if (grp_num == 17) {
-        afs_debug("Group number 17:");
+        //afs_debug("Group number 17:");
 
         for (i = 0; i < bvec->length; ++i) {
             if (!bit_vector_get(bvec, i)) {
@@ -963,10 +963,12 @@ print_free_range(uint64_t grp_num, bit_vector_t *bvec, uint32_t offset,
 
             end = (disk->blks_per_grp * grp_num) + j + disk->first_data_block;
 
-            if (start != end)
-                afs_debug("  Free blocks: %lld - %lld", start, end);
-            else
+            if (start != end) {
+                //afs_debug("  Free blocks: %lld - %lld", start, end);
+	    }
+            else {
                 afs_debug("  Free block: %lld", start);
+	    }
 
             i = j;
         }

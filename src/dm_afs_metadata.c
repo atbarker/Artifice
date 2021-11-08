@@ -397,12 +397,14 @@ write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
 
     // Write all the map blocks.
     ret = write_map_blocks(context, false);
+    afs_debug("map blocks written");
     afs_assert(!ret, done, "could not write Artifice map blocks [%d]", ret);
 
     num_ptr_blocks = config->num_ptr_blocks;
     if (!num_ptr_blocks) {
         return 0;
     }
+    afs_debug("it has somehow made it through this");
 
     // Write out the ptr blocks themselves to disk. Needs to be done in reverse
     // as ptr blocks themselves hold pointers to other ptr blocks.
@@ -419,7 +421,10 @@ write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
         memcpy(ptr_blocks[i].hash, ptr_block_digest, sizeof(ptr_blocks[i].hash));
 
         // Write to disk and save pointer.
+	afs_debug("trying to acquire block");
         block_num = acquire_block(fs, &context->vector);
+	afs_debug("acquired block %u", block_num);
+
         afs_action(block_num != AFS_INVALID_BLOCK, ret = -ENOSPC, done, "no more free blocks");
         ret = write_page(ptr_blocks + i, context->bdev, block_num, data_sector_offset, false);
         afs_assert(!ret, done, "could not write ptr block [%d:%llu]", ret, i);
@@ -502,7 +507,9 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
 
     // Build the Artifice Pointer Blocks.
     sb->first_ptr_block = AFS_INVALID_BLOCK;
+    afs_debug("writing pointer blocks");
     ret = write_ptr_blocks(sb, fs, context);
+    afs_debug("pointer blocks written");
     afs_assert(!ret, ptr_block_err, "could not write pointer blocks [%d]", ret);
 
     // 1. Take note of the instance size.
