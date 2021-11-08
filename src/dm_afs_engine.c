@@ -234,6 +234,7 @@ afs_read_decode(struct afs_map_request *req){
     if(atomic_read(&req->rebuild_flag)) {
         //write a new function called write blocks, should have a flag to remap blocks
         //only after that is finished can we clean up the request so we return
+	//TODO apparently we have a segmentation fault here
         rebuild_blocks(req);
         return 0;
     }
@@ -346,7 +347,7 @@ done:
  */
 int 
 rebuild_blocks(struct afs_map_request *req) {
-    struct afs_config *config = NULL;
+    struct afs_config *config = req->config;
     int ret= 0, i;
     uint32_t block_num;
 
