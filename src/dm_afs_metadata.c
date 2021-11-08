@@ -397,6 +397,7 @@ write_ptr_blocks(struct afs_super_block *sb, struct afs_passive_fs *fs, struct a
 
     // Write all the map blocks.
     ret = write_map_blocks(context, false);
+    afs_debug("map blocks written");
     afs_assert(!ret, done, "could not write Artifice map blocks [%d]", ret);
 
     num_ptr_blocks = config->num_ptr_blocks;
@@ -502,7 +503,9 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
 
     // Build the Artifice Pointer Blocks.
     sb->first_ptr_block = AFS_INVALID_BLOCK;
+    afs_debug("writing pointer blocks");
     ret = write_ptr_blocks(sb, fs, context);
+    afs_debug("pointer blocks written");
     afs_assert(!ret, ptr_block_err, "could not write pointer blocks [%d]", ret);
 
     // 1. Take note of the instance size.

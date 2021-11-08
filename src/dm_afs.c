@@ -527,7 +527,8 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     context->bdev = context->passive_dev->bdev;
     //They changed how you get sector size, eliminating hd_struct *bd_part from the bdev struct, so we now have a helper
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5,10,78)
-    context->config.bdev_size = bdev_nr_sectors(context->bdev);
+    context->config.bdev_size = get_capacity(context->bdev->bd_disk);
+    afs_debug("block device size, %llu", context->config.bdev_size);
 #else
     context->config.bdev_size = context->bdev->bd_part->nr_sects;
 #endif
