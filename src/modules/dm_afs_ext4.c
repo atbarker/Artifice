@@ -1102,7 +1102,7 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
     uint64_t k = 0;
     uint64_t blk_offset;
     uint64_t blk_grp_offset;
-    uint64_t total_offset;
+    uint32_t total_offset;
     uint32_t *block_list = NULL;
     bit_vector_t *bvec = NULL;
 
@@ -1134,7 +1134,7 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
                 blk_offset = j + disk->first_data_block;
 
                 if (blk_grp_offset + blk_offset <= 0xFFFFFFFF) {
-		    total_offset = blk_grp_offset + blk_offset;
+		    total_offset = (uint32_t)(blk_grp_offset + blk_offset);
                     block_list[k] = total_offset;
 		    //afs_debug("total offset %llu", total_offset);
 		    //afs_debug("stored offset %u", block_list[k]);
@@ -1146,7 +1146,7 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
         }
     }
 
-    fs->list_len = k;
+    fs->list_len = (uint32_t)k;
     afs_debug("list length %llu", k);
     fs->block_list = vmalloc(fs->list_len * sizeof(uint32_t));
     //afs_debug("is there a problem? %u", fs->block_list[0]);

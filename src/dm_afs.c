@@ -495,7 +495,7 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     struct afs_passive_fs *fs = NULL;
     struct afs_super_block *sb = NULL;
     int ret;
-    uint32_t i;
+    //uint32_t i;
     int8_t detected_fs;
     uint64_t instance_size;
 
