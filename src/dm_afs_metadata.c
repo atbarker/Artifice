@@ -520,9 +520,10 @@ write_super_block(struct afs_super_block *sb, struct afs_passive_fs *fs, struct 
     strncpy(sb->entropy_dir, context->args.entropy_dir, ENTROPY_DIR_SZ);
     hash_sha256((uint8_t *)sb + SHA256_SZ, sizeof(*sb) - SHA256_SZ, sb->sb_hash);
     for(i = 0; i < NUM_SUPERBLOCK_REPLICAS; i++){
+	afs_debug("Trying to write block %u", sb_block[i]);
         ret = write_page(sb, context->bdev, fs->block_list[sb_block[i]], context->passive_fs.data_start_off, false);
         afs_assert(!ret, sb_err, "could not write super block [%d]", ret);
-        afs_debug("super blocks written to disk [block: %u]", sb_block[i]);
+        afs_debug("super blocks written to disk replica %u [block: %u]", i, sb_block[i]);
     }
 
     // We don't need the map blocks anymore.
