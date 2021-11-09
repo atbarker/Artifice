@@ -66,7 +66,7 @@ reload:
 #create an artifice instance with debug mode enabled
 debug_create:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 1048576 artifice 0 pass /dev/sdb1 --entropy /home/Documents/ | sudo dmsetup create artifice
+	@echo 0 524288 artifice 0 pass /dev/sdb1 --entropy /home/Documents/ | sudo dmsetup create artifice
 
 #mount an existing artifice instance with debug mode enabled
 debug_mount:
@@ -101,7 +101,7 @@ debug_end:
 #Performance results for papers were generated using these targets
 debug_bonnie:
 	@sudo insmod dm_afs.ko afs_debug_mode=1
-	@echo 0 33554432 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
+	@echo 0 524288 artifice 0 pass /dev/sdb1 --entropy /home/movies/ | sudo dmsetup create artifice
 	rm -rf test
 	mkdir test
 	@sudo mkfs.ext4 /dev/mapper/artifice
