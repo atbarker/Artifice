@@ -1156,9 +1156,10 @@ read_bitmaps(struct ext4_disk *disk, struct block_device *device,
     }
 
     // Copy over the temporary block list.
-    memcpy(fs->block_list, block_list, k);
+    //memcpy(fs->block_list, block_list, k);
+    fs->block_list = block_list;
 
-    vfree(block_list);
+    //vfree(block_list);
     bit_vector_free(bvec);
     return 0;
 
