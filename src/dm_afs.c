@@ -495,7 +495,6 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     struct afs_passive_fs *fs = NULL;
     struct afs_super_block *sb = NULL;
     int ret;
-    //uint32_t i;
     int8_t detected_fs;
     uint64_t instance_size;
 
@@ -576,9 +575,6 @@ afs_ctr(struct dm_target *ti, unsigned int argc, char **argv)
     allocation_set(&context->vector, AFS_INVALID_BLOCK);
 
     sb = &context->super_block;
-    //for (i = 0; i < 2048; i++){
-    //    afs_debug("block offset %u", fs->block_list[i]);
-    //} 
     switch (args->instance_type) {
     case TYPE_CREATE:
         // TODO: Acquire carrier block count from RS parameters.

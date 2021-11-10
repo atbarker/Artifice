@@ -15,8 +15,6 @@ uint32_t random_block_index(struct afs_passive_fs *fs, struct afs_allocation_vec
     uint32_t block_num;
     get_random_bytes(&block_num, sizeof(uint32_t));
     block_num = block_num % fs->list_len;
-    //afs_debug("block_num %u", block_num);
-    //afs_debug("block_num offset %u", fs->block_list[block_num]);
     return block_num; 
 }
 
@@ -87,12 +85,10 @@ acquire_block(struct afs_passive_fs *fs, struct afs_allocation_vector *vector)
 
     spin_lock(&vector->lock);
     block_num = random_block_index(fs, vector);
-    //afs_debug("random block offset %u", fs->block_list[block_num]);
     current_num = block_num;
     do {
         if (allocation_set(vector, block_num)) {
             ret = fs->block_list[block_num];
-	    //afs_debug("block list entry %u", fs->block_list[block_num]);
             //block_num = (block_num + 1) % fs->list_len;
             spin_unlock(&vector->lock);
             return ret;
