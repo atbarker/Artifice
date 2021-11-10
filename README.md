@@ -1,6 +1,11 @@
+***WARNING***
+This is an active research project and is still under development. As such there may be any number of incomplete, quickly written, or outright broken parts of this project. As with most research code the programs in this repository have not been thoroughly tested and if you intend to use this software do so at your own risk.
+
+*DO NOT USE THIS TO HIDE SENSITIVE INFORMATION WITHOUT EXTENSIVE RED TEAM TESTING SPECIFIC TO YOUR USE CASE*
+
 # Artifice
 
-The Artifice File System is a pseudo file system which exists in the free space of another file system. By doing so, Artifice remains hidden from suspecting users and hence can be used to store information with concrete deniability. Artifice is implemented using device mapper, and it performs a block to block mapping of information.
+Artifice is a virtual block device/pseudo file system that exists in the free space of another file system. By doing so, Artifice remains hidden from suspecting users and hence can be used to store information with concrete deniability. Artifice is implemented using device mapper, and it performs a block to block mapping of information.
 
 For contributions to this project, please contact `Austen Barker` at atbarker@ucsc.edu.
 
@@ -184,7 +189,7 @@ rtifice. A secure delete file system is one where the data is stored encrypted s
 - [ ] NTFS support.
 - [ ] APFS support.
 - [ ] F2FS/YAFFS/some other log structured system.
-- [ ] Verify compatibility with ARM systems (SIMD or other inline assembly operations).
+- [ ] Verify compatibility with ARM systems (SIMD and that one bit scan reverse inline function).
 
 ## Guidelines
 
