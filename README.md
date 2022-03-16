@@ -11,7 +11,7 @@ For contributions to this project, please contact `Austen Barker` at atbarker@uc
 
 Artifice was developed at the UC Santa Cruz [Storage Systems Research Center](https://www.ssrc.ucsc.edu/index.html) (SSRC) with support from National  Science  Foundation  grant  number  IIP-1266400, and award CNS-1814347.
 
-It is described in the workshop paper ["Artifice: A Deniable Steganographic File System"](https://www.ssrc.ucsc.edu/pub/barker-foci19.html) presented at [FOCI'19](https://www.usenix.org/conference/foci19) and the conference paper ["Artifice: Data in Disguise"](https://www.ssrc.ucsc.edu/pub/barker-msst20.html) presented at [MSST'20](https://storageconference.us/).
+It is described in the workshop paper ["Artifice: A Deniable Steganographic File System"](https://www.ssrc.ucsc.edu/pub/barker-foci19.html) presented at [FOCI'19](https://www.usenix.org/conference/foci19) and the conference paper ["Artifice: Data in Disguise"](https://www.ssrc.ucsc.edu/pub/barker-msst20.html) presented at [MSST'20](https://storageconference.us/). A multiple snapshot attack for use against deniable storage systems that uses Artifice as an example system is described in the paper ["A Multiple Snapshot Attack on Deniable Storage Systems"](https://www.crss.ucsc.edu/media/pubs/b5d2cdef04702983d608a8f3ca2994db1fc22f2d.pdf).
 
 Some of the cryptographic implementations for Artifice are contained in [this repository](https://github.com/kyle-fredrickson/artifice-crypto).
 
@@ -20,17 +20,17 @@ Some of the cryptographic implementations for Artifice are contained in [this re
 
 `Yash Gupta`, ygupta@ucsc.edu
 
+`Kyle Fredrickson` kyfredi@ucsc.edu
+
 `Eugene Chou` euchou@ucsc.edu
 
-`Darrell Long` darrell@ucsc.edu
-
 `Sabrina Au` scau@ucsc.edu
-
-`Kyle Fredrickson` kyfredi@ucsc.edu
 
 `James Houghton` jhoughton@virginia.edu
 
 `Ethan Miller` elm@ucsc.edu
+
+`Darrell Long` darrell@ucsc.edu
 
 ## Build
 
