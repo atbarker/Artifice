@@ -4,6 +4,7 @@
  */
 #include <dm_afs.h>
 #include <dm_afs_modules.h>
+#include <linux/vmalloc.h>
 
 /**
  * Detect the presence of an existing Artifice file system

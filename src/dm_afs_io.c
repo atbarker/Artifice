@@ -23,24 +23,26 @@ afs_blkdev_io(struct afs_io *request)
     const int page_offset = 0;
     int ret;
     struct bio *bio = NULL;
-
-    bio = bio_alloc(GFP_NOIO, 1);
-    afs_action(!IS_ERR(bio), ret = PTR_ERR(bio), alloc_err, "could not allocate bio [%d]", ret);
+    enum afs_io_type bi_opf;
 
     switch (request->type) {
     case IO_READ:
-        bio->bi_opf |= REQ_OP_READ;
+        bi_opf |= REQ_OP_READ;
         break;
 
     case IO_WRITE:
-        bio->bi_opf |= REQ_OP_WRITE;
+        bi_opf |= REQ_OP_WRITE;
         break;
 
     default:
         afs_action(0, ret = -EINVAL, invalid_type, "invalid IO type [%d]", request->type);
     }
 
-    bio_set_dev(bio, request->bdev);
+    ////bio = bio_alloc(GFP_NOIO, 1);	
+    bio = bio_alloc(request->bdev, 1 , bi_opf ,GFP_NOIO);
+    afs_action(!IS_ERR(bio), ret = PTR_ERR(bio), alloc_err, "could not allocate bio [%d]", ret);
+
+    ////bio_set_dev(bio, request->bdev);
     bio->bi_iter.bi_sector = request->io_sector;
     bio_add_page(bio, request->io_page, request->io_size, page_offset);
 

@@ -6,8 +6,9 @@
 #include <dm_afs_modules.h>
 
 #include <linux/kern_levels.h>
+#include <linux/vmalloc.h>
 
-#include <stddef.h>
+#include "/usr/lib/modules/5.18.7-arch1-1/build/include/linux/stddef.h"
 
 #define ATTRS_DONE 0xFFFFFFFF
 
