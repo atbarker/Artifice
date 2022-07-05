@@ -5,6 +5,7 @@
  */
 #include <dm_afs.h>
 #include <lib/bit_vector.h>
+#include <linux/vmalloc.h>
 
 /**
  * Create and initialize a bit vector with its default values

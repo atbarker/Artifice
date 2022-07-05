@@ -7,6 +7,7 @@
 #include <dm_afs_io.h>
 #include <dm_afs_modules.h>
 #include <linux/delay.h>
+#include <linux/vmalloc.h>
 #include "lib/cauchy_rs.h"
 #include "lib/sha3.h"
 
@@ -249,7 +250,9 @@ __clone_bio(struct bio *bio_src, uint8_t **allocated_page, bool end_bio_src)
         return bio_src;
     }
 
-    bio_ret = bio_alloc(GFP_NOIO, 1);
+    ////bio_ret = bio_alloc(GFP_NOIO, 1);
+    bio_ret = bio_alloc(bio_src->bi_bdev,1,bio_src->bi_opf,GFP_NOIO);
+    
     afs_assert(!IS_ERR(bio_ret), alloc_err, "could not allocate bio [%ld]", PTR_ERR(bio_ret));
 
     page = kmalloc(AFS_BLOCK_SIZE, GFP_KERNEL);
@@ -275,7 +278,7 @@ __clone_bio(struct bio *bio_src, uint8_t **allocated_page, bool end_bio_src)
     }
 
     bio_add_page(bio_ret, virt_to_page(page), req_size, sector_offset * AFS_SECTOR_SIZE);
-    bio_ret->bi_opf = bio_src->bi_opf;
+    ////bio_ret->bi_opf = bio_src->bi_opf;
     bio_ret->bi_iter.bi_sector = bio_src->bi_iter.bi_sector;
     bio_ret->bi_iter.bi_size = req_size;
     bio_ret->bi_iter.bi_idx = 0;

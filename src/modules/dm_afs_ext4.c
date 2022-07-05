@@ -10,6 +10,7 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/printk.h>
+#include <linux/vmalloc.h>
 
 /**
  * Constants relative to the data blocks

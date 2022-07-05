@@ -280,7 +280,8 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
     for(i = 0; i < num_pages; i++) {
 	struct page *page_structure;
 
-        read_bios[i] = bio_alloc(GFP_NOIO, 1);
+	////read_bios[i] = bio_alloc(GFP_NOIO, 1);
+        read_bios[i] = bio_alloc(req->bdev, 1, REQ_OP_READ, GFP_NOIO);
         afs_action(!IS_ERR(read_bios[i]), ret = PTR_ERR(read_bios[i]), done, "could not allocate bio [%d]", ret);
         // Make sure page is aligned.
         afs_action(!((uint64_t)req->carrier_blocks[i] & (AFS_BLOCK_SIZE - 1)), ret = -EINVAL, done, "page is not aligned [%d]", ret);
@@ -289,8 +290,8 @@ read_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) {
         page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
         sector_num = (req->block_nums[i] * AFS_SECTORS_PER_BLOCK) + req->fs->data_start_off;
 
-        read_bios[i]->bi_opf |= REQ_OP_READ;
-        bio_set_dev(read_bios[i], req->bdev);
+        ////read_bios[i]->bi_opf |= REQ_OP_READ;
+        ////bio_set_dev(read_bios[i], req->bdev);
         read_bios[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(read_bios[i], page_structure, AFS_BLOCK_SIZE, page_offset);
         read_bios[i]->bi_private = req;
@@ -317,7 +318,8 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
     for(i = 0; i < num_pages; i++) {
         struct page *page_structure;
 
-        write_bios[i] = bio_alloc(GFP_NOIO, 1);
+        ////write_bios[i] = bio_alloc(GFP_NOIO, 1);
+        write_bios[i] = bio_alloc(req->bdev, 1, REQ_OP_WRITE, GFP_NOIO);
         afs_action(!IS_ERR(write_bios[i]), ret = PTR_ERR(write_bios[i]), done, "could not allocate bio [%d]", ret);
 
         // Make sure page is aligned.
@@ -327,8 +329,8 @@ write_pages(struct afs_map_request *req, bool used_vmalloc, uint32_t num_pages) 
         page_structure = (used_vmalloc) ? vmalloc_to_page(req->carrier_blocks[i]) : virt_to_page(req->carrier_blocks[i]);
         sector_num = (req->block_nums[i] * AFS_SECTORS_PER_BLOCK) + req->fs->data_start_off;
 
-        write_bios[i]->bi_opf |= REQ_OP_WRITE;
-        bio_set_dev(write_bios[i], req->bdev);
+        ////write_bios[i]->bi_opf |= REQ_OP_WRITE;
+        ////bio_set_dev(write_bios[i], req->bdev);
         write_bios[i]->bi_iter.bi_sector = sector_num;
         bio_add_page(write_bios[i], page_structure, AFS_BLOCK_SIZE, page_offset);
         write_bios[i]->bi_private = req;

@@ -9,6 +9,7 @@
 #include <linux/crypto.h>
 #include <linux/errno.h>
 #include <linux/random.h>
+#include <linux/vmalloc.h>
 
 /**
  * Binary search for use in finding a superblock
